@@ -1,11 +1,20 @@
-# SAPUDOM Structure Analysis V1.5.2 Fix2
+# SAPUDOM Structure Analysis V1.6
 
-แก้ไขจาก V1.5.2 Fix:
+ต่อจาก V1.5.2 Fix2 Stable
 
-- เก็บผลวิเคราะห์แยกตาม Load Case และ Load Combination ภายใน session
-- สลับ DL / LL / Combination แล้วแสดงผลที่วิเคราะห์ไว้เดิมทันที
-- Case ที่ยังไม่วิเคราะห์จะแจ้งให้กด Analyze โดยไม่ล้างผลของ Case อื่น
-- เมื่อแก้โมเดลหรือโหลด ระบบจะล้าง cache ทั้งหมดเพื่อป้องกันผลเก่า
-- แก้ Header/Toolbar ถูกบังหลัง Open JSON หรือ Cloud
-- บังคับ viewport layout, resize canvas และเลื่อนกลับด้านบนหลังเปิดไฟล์
-- ไม่เปลี่ยน Supabase schema และไม่ต้องรัน SQL ใหม่
+## New in V1.6
+- Node loads: Global Fx, Fy and Mz
+- Member point load in local y
+- Uniform distributed load (UDL)
+- Trapezoidal/triangular distributed load
+- Concentrated member moment
+- Loads separated by Load Case and included in Load Combinations
+- Equivalent nodal-load formulation in the matrix-stiffness solver
+- Member loads saved in JSON and Supabase model JSON
+
+## Sign convention
+- Node Fx/Fy use global axes.
+- Member distributed and point loads use the member local y axis. For a horizontal member from left to right, negative means downward.
+- Positive member moment follows the local positive rotation convention.
+
+No new Supabase SQL is required.

@@ -61,7 +61,7 @@
 }
 
 
-/* V1.5.2 Fix2 — preserve header/toolbar after JSON or Cloud restore */
+/* V1.6 — preserve header/toolbar after JSON or Cloud restore */
 html,body{width:100%;height:100%;overflow:hidden}
 body{min-height:100dvh;max-height:100dvh}
 .topbar{flex:0 0 88px;min-height:88px;position:relative;z-index:20}
@@ -79,3 +79,6 @@ footer{flex:0 0 28px;min-height:28px}
  .workspace{height:calc(100dvh - 104px)}
  .results{flex-basis:205px}.result-content{height:155px}
 }
+
+/* V1.6 Member load tools */
+.tool[data-tool="memberLoad"]{border-color:#d97706!important;background:#fff7ed!important;color:#7c2d12!important}
