@@ -1,8 +1,8 @@
 # Changelog
 
-## V1.8
-- Added multi-member selection with modifier-click and box selection.
-- Added selection filters for beams, columns, braces, story/elevation and similar properties.
-- Added Property Manager groups and bulk Material/Section assignment.
-- Added bulk delete and bulk Apply compatibility.
-- Preserved solver, diagrams, JSON, CSV, Supabase, loads and combinations.
+## V1.8.1 Fix
+- Fixed Apply to Selected not updating member properties.
+- Fixed property panel not reflecting the selected member.
+- Added persistent custom Material/Section libraries via localStorage.
+- Added Material Library export/import.
+- Kept backward compatibility with V1.8 project JSON and Supabase model data.

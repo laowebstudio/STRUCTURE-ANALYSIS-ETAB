@@ -1,19 +1,15 @@
-# SAPUDOM Structure Analysis V1.8
+# SAPUDOM Structure Analysis V1.8.1 Fix
 
-V1.8 is based on V1.7.1 and keeps the solver, diagrams, member loads, load cases/combinations, JSON, CSV and Supabase Cloud compatible.
+พัฒนาต่อจาก V1.8 โดยแก้ระบบ Assign Material/Section ให้เขียนค่าลง Member จริงและแสดงผลทันที
 
-## V1.8 — Property Manager & Assign System
-- Shift/Cmd/Ctrl + click to select multiple members.
-- Drag a selection box over empty canvas space to select members by area.
-- Select All, Beams, Columns, Braces, members at a story/elevation, similar properties, or an existing property group.
-- Assign one Material and Section to all selected members at once.
-- Property groups show how many members use each Material/Section pair.
-- The existing Apply button also supports bulk assignment.
-- Delete removes all selected members together.
-- Existing V1.7.1 JSON projects remain compatible.
+## จุดที่แก้
+- Apply to Selected อัปเดต `materialId`, `sectionId`, `E`, `A`, `I`, `Iy`, `J` และน้ำหนักของ Member จริง
+- แผงด้านขวาและ Selection Info แสดง Material/Section ที่ Member ใช้อยู่จริง
+- รองรับการ Assign หลาย Member และคง Selection หลัง Apply
+- แสดงข้อความยืนยันจำนวน Member ที่อัปเดตสำเร็จ
+- Custom Material และ Section เก็บถาวรใน localStorage ของเว็บไซต์
+- เปิด Project JSON/Cloud แล้วรวม Library ที่สร้างเองกลับมาโดยไม่ลบข้อมูลเดิม
+- เพิ่ม Export/Import Material Library
+- คง Solver, Load Case, Load Combination, Member Load, Diagram, JSON, CSV และ Supabase Cloud
 
-## Apartment workflow
-1. Draw or open the building model.
-2. Click **Assign / Multi Select**.
-3. Select Columns, Beams, a Story, Similar members, or a property group.
-4. Choose Material and Section, then click Apply.
+ไม่ต้องรัน Supabase SQL ใหม่
