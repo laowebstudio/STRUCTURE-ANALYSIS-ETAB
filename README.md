@@ -1,15 +1,24 @@
-# SAPUDOM Structure Analysis V1.8.1 Fix
+# SAPUDOM Structure Analysis V1.9
 
-พัฒนาต่อจาก V1.8 โดยแก้ระบบ Assign Material/Section ให้เขียนค่าลง Member จริงและแสดงผลทันที
+## Building Generator & Story Manager
 
-## จุดที่แก้
-- Apply to Selected อัปเดต `materialId`, `sectionId`, `E`, `A`, `I`, `Iy`, `J` และน้ำหนักของ Member จริง
-- แผงด้านขวาและ Selection Info แสดง Material/Section ที่ Member ใช้อยู่จริง
-- รองรับการ Assign หลาย Member และคง Selection หลัง Apply
-- แสดงข้อความยืนยันจำนวน Member ที่อัปเดตสำเร็จ
-- Custom Material และ Section เก็บถาวรใน localStorage ของเว็บไซต์
-- เปิด Project JSON/Cloud แล้วรวม Library ที่สร้างเองกลับมาโดยไม่ลบข้อมูลเดิม
-- เพิ่ม Export/Import Material Library
-- คง Solver, Load Case, Load Combination, Member Load, Diagram, JSON, CSV และ Supabase Cloud
+V1.9 extends V1.8.1 Fix and keeps the existing solver, diagrams, loads, load cases/combinations, JSON, CSV, libraries, multi-assign, and Supabase Cloud.
 
-ไม่ต้องรัน Supabase SQL ใหม่
+### New
+- Generate regular 2D building frames from Stories and Bays.
+- Individual story heights and bay widths using comma-separated values.
+- Automatic Node, Beam, Column, and base Support creation.
+- Automatic beam/column Material and Section assignment.
+- Story metadata saved in JSON and Cloud model data.
+- Story Manager with one-click member selection by story.
+- Grid/elevation metadata for future Plan/3D expansion.
+
+### Example
+- Stories: 5
+- Bays: 3
+- Story heights: `3.5`
+- Bay widths: `6`
+
+Press **Building** then **Generate Building**.
+
+No new Supabase SQL is required.
