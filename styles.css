@@ -16,3 +16,46 @@
 
 /* V1.5.2 Load Combination */
 .factor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}.factor-grid label{display:flex;flex-direction:column;gap:5px;font-weight:700}.factor-grid input{padding:9px;border:1px solid #cbd5e1;border-radius:8px}.comb-btn{white-space:nowrap;background:#7c3aed!important;color:#fff!important}.analysis-banner{padding:9px 12px;margin-bottom:10px;border-left:4px solid #d99a16;background:#fff7df;border-radius:7px;color:#503600}.canvas-toolbar select#analysisResultSelect{max-width:230px}
+
+
+/* V1.5.2 Fix — responsive workspace and canvas sizing */
+.workspace{width:100%;max-width:100vw;overflow:hidden}
+.center{width:100%;min-width:0;overflow:hidden}
+.canvas-toolbar{
+  height:auto;
+  min-height:46px;
+  flex-wrap:wrap;
+  align-content:center;
+  column-gap:10px;
+  row-gap:6px;
+  overflow:visible;
+}
+.canvas-toolbar label{display:flex;align-items:center;gap:5px;min-width:0}
+.canvas-toolbar select{max-width:190px;min-width:105px}
+.canvas-toolbar #modeLabel{margin-left:0}
+.canvas-toolbar #coords{margin-left:auto;white-space:nowrap}
+.result-modes{flex:0 0 auto}
+.canvas-shell{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  overflow:hidden;
+  flex:1 1 auto;
+  height:auto;
+  min-height:300px;
+}
+#canvas{width:100%!important;height:100%!important;max-width:100%;min-width:0}
+.results{flex:0 0 245px;width:100%;min-width:0}
+.statusbar{flex:0 0 30px}
+@media (max-width:1280px){
+  .workspace{grid-template-columns:190px minmax(0,1fr) 240px}
+  .canvas-toolbar{font-size:12px;padding:6px 8px}
+  .canvas-toolbar select{max-width:155px}
+  .canvas-toolbar #coords{display:none}
+  .topbar{grid-template-columns:270px 1fr 390px}
+}
+@media (max-width:1080px){
+  .workspace{grid-template-columns:175px minmax(0,1fr) 225px}
+  .canvas-toolbar #modeLabel{display:none}
+  .result-mode{padding:6px 8px}
+}
