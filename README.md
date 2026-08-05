@@ -1,20 +1,13 @@
-# SAPUDOM Structure Analysis V1.6
+# SAPUDOM Structure Analysis V1.6.1
 
-ต่อจาก V1.5.2 Fix2 Stable
+2D frame analysis web application in Lao. V1.6.1 upgrades Member Load entry without removing the V1.6 solver, JSON, CSV, Supabase Cloud, load combinations or diagrams.
 
-## New in V1.6
-- Node loads: Global Fx, Fy and Mz
-- Member point load in local y
-- Uniform distributed load (UDL)
-- Trapezoidal/triangular distributed load
-- Concentrated member moment
-- Loads separated by Load Case and included in Load Combinations
-- Equivalent nodal-load formulation in the matrix-stiffness solver
-- Member loads saved in JSON and Supabase model JSON
+## Member Load workflow
+1. Choose **Member Load** from the left toolbar.
+2. Click a member.
+3. Choose UDL, Point, Trapezoidal or Moment from the dropdown.
+4. Enter direction, magnitude and position, review the preview, then Apply.
+5. Use the table in the same dialog to Edit, Duplicate or Delete loads.
 
-## Sign convention
-- Node Fx/Fy use global axes.
-- Member distributed and point loads use the member local y axis. For a horizontal member from left to right, negative means downward.
-- Positive member moment follows the local positive rotation convention.
-
-No new Supabase SQL is required.
+## Deployment
+Upload all files to the root of a GitHub Pages repository. Keep your existing `.git` folder when replacing an older version. No new Supabase SQL migration is required.
