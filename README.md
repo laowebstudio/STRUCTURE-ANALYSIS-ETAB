@@ -1,21 +1,16 @@
-# SAPUDOM Structure Analysis V1.4.3
+# SAPUDOM Structure Analysis V1.5
 
-พัฒนาต่อจาก V1.4.2 โดยเน้นให้การเปิดดูผล Diagram ชัดเจนและทดสอบง่ายขึ้น
+พัฒนาต่อจาก V1.4.3 โดยรักษา Solver, Diagram, JSON, CSV และ Supabase เดิมไว้
 
-## เพิ่มใน V1.4.3
-- แถบปุ่มผลลัพธ์ที่มองเห็นชัด: Model, Deformed, Axial N, Shear V, Moment M
-- ปุ่มลัด 1–5 สำหรับสลับผล
-- หลัง Analyze ระบบเปิด Deformed Shape อัตโนมัติ
-- Legend แสดงชนิด Diagram, Scale และค่า Min/Max
-- ปุ่ม Diagram จะถูกปิดจนกว่าจะวิเคราะห์สำเร็จ
-- ปรับ Scale และเปิด/ปิด Values ได้ทันที
-- Highlight Diagram ของ Member ที่เลือก
-- คง Solver, CSV, JSON และ Supabase Cloud จาก V1.4.2
-- ไม่ต้องรัน Supabase SQL ใหม่
+## ฟังก์ชันใหม่
+- Auto Scale สำหรับ Deformed, Axial, Shear และ Moment Diagram
+- คำนวณขนาด Diagram ตามพื้นที่หน้าจอและขนาดโมเดลอัตโนมัติ
+- สลับ Auto/Manual Scale ได้
+- ปุ่ม − / 1× / ＋ สำหรับปรับขนาดอย่างรวดเร็ว
+- Manual Scale รองรับ 0.2–10 เท่า
+- Legend ระบุว่าใช้ Auto Scale หรือ Manual Scale
+- ไม่เปลี่ยนค่าผลวิเคราะห์ เปลี่ยนเฉพาะขนาดภาพ Diagram
+- ใช้ Supabase schema เดิม ไม่ต้องรัน SQL เพิ่ม
 
-## วิธีทดสอบ
-1. สร้างหรือเปิด Sample model
-2. กด Analyze
-3. กดปุ่ม Deformed, Axial N, Shear V และ Moment M ที่อยู่เหนือ Canvas
-4. ปรับ Scale และ Values
-5. คลิก Member แล้วตรวจ Highlight และค่าใน Member Forces
+## การอัปเดต GitHub
+เก็บ V1.4.3 เป็น Backup แล้วคัดลอกไฟล์ทั้งหมดของ V1.5 ไปแทนไฟล์เดิม โดยห้ามลบโฟลเดอร์ `.git` จากนั้น Commit และ Push
