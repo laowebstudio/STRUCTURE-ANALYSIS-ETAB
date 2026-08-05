@@ -59,3 +59,23 @@
   .canvas-toolbar #modeLabel{display:none}
   .result-mode{padding:6px 8px}
 }
+
+
+/* V1.5.2 Fix2 — preserve header/toolbar after JSON or Cloud restore */
+html,body{width:100%;height:100%;overflow:hidden}
+body{min-height:100dvh;max-height:100dvh}
+.topbar{flex:0 0 88px;min-height:88px;position:relative;z-index:20}
+.workspace{flex:1 1 auto;height:calc(100dvh - 116px);min-height:0;overflow:hidden}
+.center,.left-panel,.right-panel{min-height:0}
+.center{position:relative}
+.canvas-toolbar{flex:0 0 auto;position:relative;z-index:4}
+.result-modes{position:relative;z-index:3}
+.canvas-shell{flex:1 1 auto;min-height:220px}
+.results{flex:0 0 245px}
+footer{flex:0 0 28px;min-height:28px}
+@media(max-height:760px){
+ .topbar{flex-basis:76px;min-height:76px;height:76px}
+ .brand img{width:50px;height:50px}.brand strong{font-size:20px}.title h1{font-size:19px}
+ .workspace{height:calc(100dvh - 104px)}
+ .results{flex-basis:205px}.result-content{height:155px}
+}

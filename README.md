@@ -1,14 +1,11 @@
-# SAPUDOM Structure Analysis V1.5.2 Fix
+# SAPUDOM Structure Analysis V1.5.2 Fix2
 
-แก้ปัญหา Layout บน Safari/MacBook หลังเพิ่ม Load Combination:
+แก้ไขจาก V1.5.2 Fix:
 
-- Canvas ใช้ความกว้างเต็มพื้นที่ตรงกลาง
-- Toolbar สามารถขึ้นบรรทัดใหม่โดยไม่บีบ Canvas
-- ตารางผลลัพธ์ยังอยู่ด้านล่าง
-- เพิ่ม ResizeObserver ให้ Canvas ปรับขนาดทันทีเมื่อ Layout เปลี่ยน
-- รองรับหน้าจอ MacBook หลายขนาด
-- คง Load Cases, Load Combinations, Solver, Diagram, JSON, CSV และ Supabase Cloud เดิม
-- ไม่ต้องรัน Supabase SQL ใหม่
-
-## อัปเดต
-คัดลอกไฟล์ทั้งหมดไปวางทับใน Repository เดิม โดยไม่ลบ `.git` แล้ว Commit/Push จากนั้นรีเฟรช Safari ด้วย Command + Option + R
+- เก็บผลวิเคราะห์แยกตาม Load Case และ Load Combination ภายใน session
+- สลับ DL / LL / Combination แล้วแสดงผลที่วิเคราะห์ไว้เดิมทันที
+- Case ที่ยังไม่วิเคราะห์จะแจ้งให้กด Analyze โดยไม่ล้างผลของ Case อื่น
+- เมื่อแก้โมเดลหรือโหลด ระบบจะล้าง cache ทั้งหมดเพื่อป้องกันผลเก่า
+- แก้ Header/Toolbar ถูกบังหลัง Open JSON หรือ Cloud
+- บังคับ viewport layout, resize canvas และเลื่อนกลับด้านบนหลังเปิดไฟล์
+- ไม่เปลี่ยน Supabase schema และไม่ต้องรัน SQL ใหม่
