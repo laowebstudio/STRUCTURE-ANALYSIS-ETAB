@@ -1,20 +1,21 @@
-# SAPUDOM Structure Analysis V1.4.2
+# SAPUDOM Structure Analysis V1.4.3
 
-V1.4.1 remains the stable analysis-core baseline. V1.4.2 adds result visualization without changing the existing Supabase schema.
+พัฒนาต่อจาก V1.4.2 โดยเน้นให้การเปิดดูผล Diagram ชัดเจนและทดสอบง่ายขึ้น
 
-## New in V1.4.2
-- Adjustable deformed-shape scale
-- Axial force diagram (N)
-- Shear force diagram (V)
-- Bending moment diagram (M)
-- Optional value labels on diagrams
-- Global Min/Max result summary
-- Click a Member or result-table row to inspect its end forces
-- Export analysis results to CSV
-- Existing JSON and Supabase Cloud Save/Open retained
+## เพิ่มใน V1.4.3
+- แถบปุ่มผลลัพธ์ที่มองเห็นชัด: Model, Deformed, Axial N, Shear V, Moment M
+- ปุ่มลัด 1–5 สำหรับสลับผล
+- หลัง Analyze ระบบเปิด Deformed Shape อัตโนมัติ
+- Legend แสดงชนิด Diagram, Scale และค่า Min/Max
+- ปุ่ม Diagram จะถูกปิดจนกว่าจะวิเคราะห์สำเร็จ
+- ปรับ Scale และเปิด/ปิด Values ได้ทันที
+- Highlight Diagram ของ Member ที่เลือก
+- คง Solver, CSV, JSON และ Supabase Cloud จาก V1.4.2
+- ไม่ต้องรัน Supabase SQL ใหม่
 
-## Supabase
-No new SQL migration is required. Keep the existing `supabase-config.js` and `supabase-setup.sql` from the working repository.
-
-## Scope / limitations
-Linear elastic 2D frame analysis with nodal loads. Diagram interpolation is based on member end forces; distributed member loads and nonlinear analysis are not included yet.
+## วิธีทดสอบ
+1. สร้างหรือเปิด Sample model
+2. กด Analyze
+3. กดปุ่ม Deformed, Axial N, Shear V และ Moment M ที่อยู่เหนือ Canvas
+4. ปรับ Scale และ Values
+5. คลิก Member แล้วตรวจ Highlight และค่าใน Member Forces
