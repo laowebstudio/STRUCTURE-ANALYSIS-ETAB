@@ -1,14 +1,14 @@
-# SAPUDOM Structure Analysis V1.7
+# SAPUDOM Structure Analysis V1.7.1
 
-V1.7 extends V1.6.1 with a Section Database & Properties calculator.
+V1.7.1 is based on V1.7 and keeps all existing analysis, load, diagram, JSON, CSV and Supabase features.
 
-## New
-- RC rectangular and circular sections
-- Steel I, Channel, Box, Pipe, rectangular and solid round sections
-- Automatic A, Ix, Iy, J, rx, ry and weight per metre
-- Section preview and searchable library
-- Import/export section libraries as JSON
-- Assign calculated sections to members while preserving the V1.6.1 solver, member loads, load cases, combinations, diagrams, JSON, CSV and Supabase Cloud
+## Improvements
+- Fixed dark-blue Section Library rows that were difficult to read.
+- White rows with dark text; selected row uses blue with white text and gold accent.
+- Added All / RC / Steel filters.
+- Added quick custom RC square presets: 20×20, 30×30, 40×40, 50×50 and 60×60 cm.
+- Users can still type any custom width and depth in metres, calculate A/Ix/Iy/J/rx/ry/weight, and add it to the library.
+- Import/export section library remains compatible.
 
-## Upgrade
-Copy all files into the existing repository without deleting `.git`, then commit and push. No new Supabase SQL is required.
+## Custom section example
+For RC 40×40 cm, choose RC Rectangular and enter b=0.40 m, h=0.40 m, then Calculate and Add to Library.
