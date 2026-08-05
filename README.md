@@ -1,14 +1,19 @@
-# SAPUDOM Structure Analysis V1.7.1
+# SAPUDOM Structure Analysis V1.8
 
-V1.7.1 is based on V1.7 and keeps all existing analysis, load, diagram, JSON, CSV and Supabase features.
+V1.8 is based on V1.7.1 and keeps the solver, diagrams, member loads, load cases/combinations, JSON, CSV and Supabase Cloud compatible.
 
-## Improvements
-- Fixed dark-blue Section Library rows that were difficult to read.
-- White rows with dark text; selected row uses blue with white text and gold accent.
-- Added All / RC / Steel filters.
-- Added quick custom RC square presets: 20×20, 30×30, 40×40, 50×50 and 60×60 cm.
-- Users can still type any custom width and depth in metres, calculate A/Ix/Iy/J/rx/ry/weight, and add it to the library.
-- Import/export section library remains compatible.
+## V1.8 — Property Manager & Assign System
+- Shift/Cmd/Ctrl + click to select multiple members.
+- Drag a selection box over empty canvas space to select members by area.
+- Select All, Beams, Columns, Braces, members at a story/elevation, similar properties, or an existing property group.
+- Assign one Material and Section to all selected members at once.
+- Property groups show how many members use each Material/Section pair.
+- The existing Apply button also supports bulk assignment.
+- Delete removes all selected members together.
+- Existing V1.7.1 JSON projects remain compatible.
 
-## Custom section example
-For RC 40×40 cm, choose RC Rectangular and enter b=0.40 m, h=0.40 m, then Calculate and Add to Library.
+## Apartment workflow
+1. Draw or open the building model.
+2. Click **Assign / Multi Select**.
+3. Select Columns, Beams, a Story, Similar members, or a property group.
+4. Choose Material and Section, then click Apply.

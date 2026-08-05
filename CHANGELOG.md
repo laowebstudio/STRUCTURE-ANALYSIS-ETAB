@@ -1,15 +1,8 @@
 # Changelog
 
-## V1.7.1
-- Improved Section Library contrast and selected-row visibility.
-- Added RC/Steel filters.
-- Added quick custom RC section presets including 40×40 and 60×60 cm.
-- Kept manual custom dimensions and all V1.7 functions.
-
-# Changelog
-
-## V1.7
-- Added Section Database & Properties calculator.
-- Added automatic properties for RC and steel shapes.
-- Added section preview, search, JSON import/export.
-- Preserved all V1.6.1 functionality and project compatibility.
+## V1.8
+- Added multi-member selection with modifier-click and box selection.
+- Added selection filters for beams, columns, braces, story/elevation and similar properties.
+- Added Property Manager groups and bulk Material/Section assignment.
+- Added bulk delete and bulk Apply compatibility.
+- Preserved solver, diagrams, JSON, CSV, Supabase, loads and combinations.
