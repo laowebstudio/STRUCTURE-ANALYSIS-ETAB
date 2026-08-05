@@ -1,13 +1,14 @@
-# SAPUDOM Structure Analysis V1.6.1
+# SAPUDOM Structure Analysis V1.7
 
-2D frame analysis web application in Lao. V1.6.1 upgrades Member Load entry without removing the V1.6 solver, JSON, CSV, Supabase Cloud, load combinations or diagrams.
+V1.7 extends V1.6.1 with a Section Database & Properties calculator.
 
-## Member Load workflow
-1. Choose **Member Load** from the left toolbar.
-2. Click a member.
-3. Choose UDL, Point, Trapezoidal or Moment from the dropdown.
-4. Enter direction, magnitude and position, review the preview, then Apply.
-5. Use the table in the same dialog to Edit, Duplicate or Delete loads.
+## New
+- RC rectangular and circular sections
+- Steel I, Channel, Box, Pipe, rectangular and solid round sections
+- Automatic A, Ix, Iy, J, rx, ry and weight per metre
+- Section preview and searchable library
+- Import/export section libraries as JSON
+- Assign calculated sections to members while preserving the V1.6.1 solver, member loads, load cases, combinations, diagrams, JSON, CSV and Supabase Cloud
 
-## Deployment
-Upload all files to the root of a GitHub Pages repository. Keep your existing `.git` folder when replacing an older version. No new Supabase SQL migration is required.
+## Upgrade
+Copy all files into the existing repository without deleting `.git`, then commit and push. No new Supabase SQL is required.
