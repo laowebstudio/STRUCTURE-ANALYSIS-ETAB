@@ -1,22 +1,22 @@
-# SAPUDOM Structure Analysis V1.5.1
+# SAPUDOM Structure Analysis V1.5.2 — Load Combination
 
-พัฒนาต่อจาก V1.5 โดยเพิ่ม Engineering Libraries ตาม Roadmap
+พัฒนาต่อจาก V1.5.1 Stable โดยรักษา Solver, Diagram, Material/Section Library, JSON, CSV และ Supabase Cloud เดิมไว้
 
 ## ฟังก์ชันใหม่
-- Material Library: Concrete, Steel และ Custom Material
-- Section Library: RC Rectangular, Steel I และ Custom Section
-- เลือก Material/Section แล้วนำ E, A, I ไปใช้กับ Member
-- Load Case Manager: DL, LL, Wind, Earthquake และ Other
-- Node Load แยกตาม Active Load Case
-- JSON และ Supabase Cloud เก็บ Material, Section และ Load Cases ภายใน model เดิม
-- ไม่ต้องรัน SQL เพิ่ม เพราะข้อมูลใหม่ถูกเก็บในคอลัมน์ model แบบ JSON
-- ฟังก์ชัน V1.5 Auto Scale, Diagram, Solver, CSV และ Cloud เดิมยังอยู่ครบ
+- Load Combination Manager
+- Combination เริ่มต้น: `1.4DL` และ `1.2DL + 1.6LL`
+- เพิ่ม/ลบ Combination และกำหนด Factor ตาม Load Case
+- เลือกวิเคราะห์ได้ทั้ง Load Case และ Load Combination
+- Displacement, Reaction, Member Force และ Diagram แสดงตามรายการที่เลือก
+- บันทึก Load Cases/Load Combinations ใน JSON และ Supabase model เดิม
+- ไม่ต้องรัน SQL เพิ่ม
 
-## ทดสอบแนะนำ
-1. เปิด Material Library แล้วเพิ่ม Material ใหม่
-2. เปิด Section Library แล้วเพิ่ม Section ใหม่
-3. เลือก Member และกดนำใช้ค่า
-4. เพิ่ม Load Case WL และใส่ Load ใน WL
-5. สลับ DL/WL เพื่อตรวจว่า Load แยกกัน
-6. Analyze แต่ละ Load Case
-7. Save JSON / Cloud แล้วเปิดกลับมาตรวจข้อมูล
+## วิธีทดสอบ
+1. สร้างแรงใน DL
+2. สร้าง/เลือก LL แล้วใส่แรงอีกชุด
+3. กด `+ Combination` และสร้าง `1.2DL + 1.6LL`
+4. เลือก Combination ในช่อง Analyze
+5. กด Analyze และตรวจผล/Diagram
+
+## อัปเดต GitHub
+คัดลอกไฟล์ทั้งหมดไปวางทับใน Repository เดิม โดยไม่ลบ `.git` แล้ว Commit/Push
