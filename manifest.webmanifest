@@ -1,0 +1,15 @@
+{
+  "name": "SAPUDOM Structure Analysis V1.5.1",
+  "short_name": "SAPUDOM V1.5.1",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#071d38",
+  "theme_color": "#071d38",
+  "icons": [
+    {
+      "src": "assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
