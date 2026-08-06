@@ -1,19 +1,21 @@
-# SAPUDOM Structure Analysis V1.11.2 Fix
+# SAPUDOM Structure Analysis V1.12
 
-แก้ปัญหา Internal Hinge ทำให้เกิด `Matrix singular` หลัง Split Member
+พัฒนาต่อจาก V1.11.2 Fix โดยคง Solver และระบบเดิมทั้งหมด
 
-## สิ่งที่แก้
-- สร้าง Node ของ Internal Hinge พร้อมสถานะ `internalHinge`
-- ตรวจหา rotational DOF (Rz) ที่ถูกปล่อยโมเมนต์จาก Member ทุกด้าน
-- นำเฉพาะ Rz ที่ไม่ทำงานออกจากสมการ Global Stiffness ก่อน Solve
-- ไม่ซ่อนกลไกจากการเลื่อนตัว X/Y; หากโครงสร้างไม่เสถียรจริงยังแจ้ง Matrix singular
-- Member Release, Building Center, Story Manager, Floor/Wall Loads, JSON, CSV และ Cloud ยังคงทำงานเหมือนเดิม
-- ไม่ต้องแก้ Supabase SQL
+## ฟังก์ชันใหม่
+- Modeling Tools Center
+- เลือก All / Beam / Column / Brace / Invert
+- Linear Copy ด้วย dx, dy และจำนวนครั้ง
+- Move Selection
+- Rotate รอบจุดศูนย์กลาง Selection
+- Mirror แนวตั้ง/แนวนอน
+- Divide Member เป็นส่วนเท่า ๆ กัน
+- Merge Coincident Nodes ตาม tolerance
+- Layer visibility: Member, Node, Load, Support, Label
+- Undo/Redo สำหรับการแก้โมเดล
 
-## วิธีทดสอบ
-1. เลือก Member ที่ไม่มี Member Load
-2. เปิด Member Release / Hinge
-3. กำหนด Internal Hinge 50%
-4. กด Split Member + Add Hinge
-5. กด Analyze
-6. เปิด Moment Diagram และตรวจว่าโมเมนต์ตรง Hinge ใกล้ 0
+## Compatibility
+JSON, Cloud, CSV, Building Center, Story Manager, Loads, Load Combination, Material/Section, Release, Internal Hinge และ Diagram ยังทำงานร่วมกันได้
+
+## หมายเหตุ
+เพื่อป้องกันการย้ายโหลดผิดตำแหน่ง ระบบจะไม่อนุญาต Divide Member ที่มี Member Load จนกว่าจะลบหรือย้ายโหลดก่อน
