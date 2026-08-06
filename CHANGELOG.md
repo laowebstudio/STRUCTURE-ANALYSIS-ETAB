@@ -1,8 +1,10 @@
 # Changelog
 
-## V1.11.2 Fix
-- Fixed Internal Hinge producing a singular global stiffness matrix.
-- Excluded only intentionally inactive hinge rotational DOFs from the reduced system.
-- Preserved translational stability checks so real mechanisms still report Matrix singular.
-- Added internal hinge metadata and analysis summary count for inactive hinge rotations.
-- Retained backward compatibility with V1.11.1 project JSON and existing Supabase model data.
+## V1.11.1 Fix
+- Fixed Story Manager **Select** button not visibly selecting members.
+- Story selection now persists after the Building Center closes.
+- Automatically switches to Select mode and zooms to the selected story.
+- Added a visible selection banner, status message, and selected-member count.
+- Added geometry-based story detection for older project JSON files.
+- Updated JSON/CSV/app version identifiers.
+- No database migration required.
