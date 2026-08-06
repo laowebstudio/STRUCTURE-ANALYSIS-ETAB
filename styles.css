@@ -116,18 +116,3 @@ footer{flex:0 0 28px;min-height:28px}
 /* V1.11.2 Fix — persistent Story selection feedback */
 .story-selection-notice{position:absolute;left:14px;top:14px;z-index:8;max-width:min(620px,calc(100% - 28px));padding:10px 14px;border:2px solid #f59e0b;border-radius:10px;background:#fff7df;color:#7c2d12;box-shadow:0 8px 24px #0002;font-size:13px}
 .story-selection-notice b{display:block;font-size:15px;margin-bottom:3px}.story-selection-notice span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-
-/* V1.12 Drawing & Modeling Tools */
-.modeling-modal .modeling-card{width:min(1120px,94vw);max-height:90vh;overflow:auto}
-.modeling-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding-top:10px}
-.modeling-grid section{border:1px solid #d7e0ec;border-radius:14px;padding:16px;background:#f8fbff}
-.modeling-grid h3{margin:4px 0 10px;color:#0a356d}
-.modeling-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-.modeling-inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}
-.modeling-inputs label{display:grid;gap:5px;font-weight:700;color:#27364a}
-.modeling-inputs input{width:100%;padding:9px;border:1px solid #b8c5d6;border-radius:8px;background:#fff}
-.layer-list{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:10px;border-radius:10px;background:white;border:1px solid #d7e0ec}
-.layer-list label{display:flex;align-items:center;gap:8px;font-weight:700}
-.modeling-note{margin-top:16px;padding:12px;border-radius:10px;background:#fff6d8;border:1px solid #efcf65;line-height:1.45}
-@media(max-width:800px){.modeling-grid{grid-template-columns:1fr}.modeling-inputs{grid-template-columns:1fr 1fr}.modeling-modal .modeling-card{width:96vw}}
