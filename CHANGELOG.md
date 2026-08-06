@@ -1,8 +1,10 @@
 # Changelog
 
-## V1.10
-- Added functional i/j end Mz releases using static condensation.
-- Added multi-member release assignment dialog.
-- Added internal hinge by splitting a member at a user-defined ratio.
-- Added release symbols and member property display.
-- Preserved V1.9 project compatibility.
+## V1.11
+- New Building Center with 2D grid and story generator.
+- Story Manager and selection by story.
+- Typical Floor copy for properties, releases, and loads.
+- Floor area load to beam UDL using tributary width.
+- Wall load generator for selected beams.
+- Building summary and model checks.
+- Backward compatible with V1.10 JSON and Cloud model data.
