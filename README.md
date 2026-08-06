@@ -1,6 +1,5 @@
-# SAPUDOM Structure Analysis V1.11
+# SAPUDOM Structure Analysis V1.11.1 Fix
 
-Built from V1.10. Adds a practical 2D Building Center with Grid/Story generation, Story Manager, Typical Floor data copy, floor area load conversion, wall load generation, and building summary. Existing solver, release/hinge, load cases/combinations, diagrams, JSON, CSV, and Supabase Cloud remain available.
+Fixes Story Manager selection in V1.11. Clicking **Select** now closes Building Center, switches to Select mode, highlights all members belonging to that story, zooms to the selected story, and shows a visible confirmation banner and selected-member count. A geometry-based fallback also supports older JSON files whose members do not contain a `story` field.
 
-## Important scope
-V1.11 remains a **2D frame** application. Floor area load conversion requires a user-supplied tributary width. Story visibility is stored for forward compatibility; true plan/elevation/3D story display is planned for V2.0.
+All V1.11 features remain available: Building Generator, Typical Floor, Floor/Wall Loads, solver, releases/hinges, diagrams, JSON, CSV, and Supabase Cloud. No Supabase SQL migration is required.

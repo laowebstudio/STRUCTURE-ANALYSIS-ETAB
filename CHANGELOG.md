@@ -1,10 +1,10 @@
 # Changelog
 
-## V1.11
-- New Building Center with 2D grid and story generator.
-- Story Manager and selection by story.
-- Typical Floor copy for properties, releases, and loads.
-- Floor area load to beam UDL using tributary width.
-- Wall load generator for selected beams.
-- Building summary and model checks.
-- Backward compatible with V1.10 JSON and Cloud model data.
+## V1.11.1 Fix
+- Fixed Story Manager **Select** button not visibly selecting members.
+- Story selection now persists after the Building Center closes.
+- Automatically switches to Select mode and zooms to the selected story.
+- Added a visible selection banner, status message, and selected-member count.
+- Added geometry-based story detection for older project JSON files.
+- Updated JSON/CSV/app version identifiers.
+- No database migration required.
