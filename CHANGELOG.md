@@ -1,8 +1,8 @@
-# CHANGELOG
+# Changelog
 
-## V1.9
-- Added Building Generator.
-- Added Story Manager.
-- Added automatic beam/column property assignment.
-- Added building/grid/story metadata persistence.
-- Preserved V1.8.1 Fix backward compatibility.
+## V1.10
+- Added functional i/j end Mz releases using static condensation.
+- Added multi-member release assignment dialog.
+- Added internal hinge by splitting a member at a user-defined ratio.
+- Added release symbols and member property display.
+- Preserved V1.9 project compatibility.
