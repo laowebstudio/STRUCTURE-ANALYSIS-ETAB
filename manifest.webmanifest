@@ -1,6 +1,6 @@
 {
-  "name": "SAPUDOM Structure Analysis V1.15",
-  "short_name": "SAPUDOM V1.15",
+  "name": "SAPUDOM Structure Analysis V1.15 Fix",
+  "short_name": "SAPUDOM V1.15 Fix",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#071d38",

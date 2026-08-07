@@ -1,3 +1,12 @@
+# Changelog
+
+## V1.15 Fix
+- Rebuilt the crowded top header as a professional engineering-software menu bar.
+- Added File, Edit, View, Define, Draw, Select, Assign, Analyze, Display, Tools and Help menus.
+- Added a compact quick-access toolbar for frequent commands.
+- Fixed title/button overlap on MacBook and responsive layouts.
+- Preserved all V1.15 solver, Load Center, Check Model, Building Center, Modeling Tools, JSON, CSV and Cloud behavior.
+
 # CHANGELOG
 
 ## V1.15
