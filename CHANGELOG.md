@@ -1,6 +1,15 @@
+# V1.15.1 Fix
+
+- Fixed Professional Workspace header/menu/quick-toolbar appearing above Building Center and other dialogs.
+- Raised all application modal overlays above the header with a consistent stacking layer.
+- Building Center, Load Center, Modeling Tools, Check Model, Cloud and engineering dialogs now remain fully visible.
+- Added viewport-safe modal sizing and internal scrolling for MacBook/Safari and smaller screens.
+- Kept dialog headers sticky while scrolling.
+- No solver, load, JSON, Cloud, Building Center logic or engineering calculations were changed.
+
 # Changelog
 
-## V1.15 Fix
+## V1.15.1 Fix
 - Rebuilt the crowded top header as a professional engineering-software menu bar.
 - Added File, Edit, View, Define, Draw, Select, Assign, Analyze, Display, Tools and Help menus.
 - Added a compact quick-access toolbar for frequent commands.

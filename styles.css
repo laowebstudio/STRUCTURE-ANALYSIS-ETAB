@@ -233,3 +233,79 @@ body.model-space .results-expand{background:#0d5be1;color:#fff;border-color:#0d5
 .pro-topbar .file-actions{display:none!important}
 @media(max-width:1100px){.app-head{grid-template-columns:190px 1fr 0}.head-status{display:none}.brand.compact strong{font-size:16px}.compact-title h1{font-size:17px}.menu-root{padding-left:7px!important;padding-right:7px!important}.pro-topbar{height:124px!important}}
 @media(max-width:760px){.pro-topbar{height:112px!important;min-height:112px!important;flex-basis:112px!important}.app-head{height:45px;grid-template-columns:1fr}.brand.compact{display:none}.compact-title h1{font-size:15px}.compact-title p{display:none}.menu-strip{overflow-x:auto;height:28px}.quick-toolbar{height:39px}.menu-dropdown{position:fixed;top:73px;left:8px;right:8px;min-width:0}.workspace{min-height:0}}
+
+/* V1.15.1 Fix — modal stacking above Professional Workspace header */
+/* All application dialogs must cover the professional header/menu/quick toolbar. */
+.eng-dialog,
+.cloud-dialog,
+.member-load-modal,
+.modeling-modal,
+.model-check-dialog,
+.load-center-modal {
+  z-index: 30000 !important;
+}
+
+/* Keep modal cards inside the viewport and scroll their content instead of hiding
+   their title/actions behind the professional header. */
+.eng-dialog,
+.cloud-dialog,
+.member-load-modal,
+.modeling-modal,
+.model-check-dialog,
+.load-center-modal {
+  padding: max(14px, env(safe-area-inset-top)) 18px max(14px, env(safe-area-inset-bottom));
+  align-items: center;
+  justify-content: center;
+}
+.eng-card,
+.cloud-card,
+.member-load-card,
+.modeling-card,
+.model-check-card,
+.load-center-card,
+.building-card {
+  max-height: calc(100vh - 28px) !important;
+  overflow: auto !important;
+  overscroll-behavior: contain;
+}
+
+/* Dialog title rows stay visible while scrolling long Building/Load Center forms. */
+.eng-card > .section-db-head,
+.building-card > .section-db-head,
+.load-center-card > .section-db-head,
+.modeling-card > .section-db-head {
+  position: sticky !important;
+  top: 0;
+  z-index: 8 !important;
+  background: #fff;
+}
+
+/* Prevent the page behind a dialog from receiving accidental clicks. */
+body:has(.eng-dialog),
+body:has(.cloud-dialog),
+body:has(.member-load-modal),
+body:has(.model-check-dialog) {
+  overflow: hidden;
+}
+
+@media (max-height: 760px), (max-width: 800px) {
+  .eng-dialog,
+  .cloud-dialog,
+  .member-load-modal,
+  .modeling-modal,
+  .model-check-dialog,
+  .load-center-modal {
+    align-items: flex-start !important;
+    padding: 8px !important;
+  }
+  .eng-card,
+  .cloud-card,
+  .member-load-card,
+  .modeling-card,
+  .model-check-card,
+  .load-center-card,
+  .building-card {
+    width: min(98vw, 1120px) !important;
+    max-height: calc(100vh - 16px) !important;
+  }
+}

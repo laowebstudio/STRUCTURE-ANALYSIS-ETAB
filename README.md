@@ -1,8 +1,8 @@
-# SAPUDOM Structure Analysis V1.15 Fix
+# SAPUDOM Structure Analysis V1.15.1 Fix
 
 V1.15 builds on **V1.14 Fix** and adds an **Automatic Load Generator / Load Center** while keeping the validated 2D frame solver unchanged.
 
-## New in V1.15 Fix
+## New in V1.15.1 Fix
 - Automatic member **Self Weight** from section weight (kN/m), applied in Global Y.
 - Generate for all members or only selected members.
 - Generated self weight is tagged, replaceable and removable without deleting manual loads.
@@ -25,3 +25,6 @@ Combination templates in V1.15 are convenience starting points, not a declaratio
 - Compact quick-access icon toolbar.
 - Existing commands retain their original IDs and logic; the change is UI/navigation only.
 - Fixes top-header overlap on MacBook and narrower screens.
+
+## V1.15.1 Fix
+This maintenance release fixes modal stacking in the Professional Workspace UI. Building Center and other dialogs now render above the menu/toolbar and stay inside the visible viewport. Engineering calculations and project data formats are unchanged.
