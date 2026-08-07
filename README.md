@@ -1,23 +1,20 @@
-# SAPUDOM Structure Analysis V1.16 Fix
+# SAPUDOM Structure Analysis V1.16.1 Fix
 
-Based on V1.15.1.
+2D Frame Analysis • Matrix Stiffness Method
 
-## V1.16 — Result Envelope & Critical Combination
-- Full existing Load Combination Manager retained.
-- New Result Envelope for all defined Load Combinations (falls back to Load Cases when no combinations exist).
-- Max/Min Axial, Shear and Moment for every member.
-- Shows the critical case/combination that governs each extreme.
-- Global maximum absolute displacement with governing analysis.
-- Click an envelope row to select/highlight that member on the model.
-- Export envelope results to CSV.
-- Analysis results are cached per Case/Combination and remain compatible with existing result display.
-- Existing JSON, Cloud, Building Center, Load Center, Modeling Tools, Check Model, Release/Hinge and 2D solver are retained.
+## V1.16.1 Fix — Cloud parity
+Cloud Save/Load now serializes the same complete project snapshot used by JSON Save/Load. Generated Self Weight and other generated/member loads are preserved with the model. Saving with the same project name replaces the latest Cloud copy so the user does not accidentally open an older duplicate. The Cloud list shows saved time, Member count and Self Weight count, and Cloud Open verifies generated-load counts after restore.
 
-No Supabase schema change is required.
+## Self Weight compatibility
+Legacy members that do not contain an embedded `weight` value can resolve weight from the current Section Database by section ID/name or A/I matching. A material-based fallback is retained for older projects.
 
+## V1.16 Result Envelope
+- Max/Min Axial N, Shear V and Moment M across Load Combinations.
+- Critical governing Combination labels.
+- Maximum displacement envelope.
+- Envelope CSV export.
 
-## V1.16 Fix — Self Weight compatibility
-- Fixed Load Center reading `0 kN/m` for legacy Members even when the Section Database contains a valid Weight.
-- Section lookup now supports Section ID, Section name, and legacy A/I matching.
-- If an old project has no stored section weight, the app can derive weight/length from `A × unit weight` (Concrete 24 kN/m³, Steel 78.5 kN/m³).
-- Manual loads are not modified by this compatibility fix.
+## Compatibility
+Preserves JSON, CSV, Supabase Cloud, Building Center, Load Center, Modeling Tools, Check Model, Load Cases/Combinations, Materials, Sections, Member Release/Internal Hinge and the existing 2D solver.
+
+No Supabase SQL migration is required from the existing `structure_projects` setup.
