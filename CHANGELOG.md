@@ -1,10 +1,10 @@
 # Changelog
 
-## V1.12 Fix
-- Fixed overflowing/misaligned Layers controls in Modeling Tools.
-- Added visible selected-state styling to selection filters.
-- Added action pulse feedback on clicks.
-- Added persistent in-dialog “last action” feedback.
-- Added a prominent selected-member counter.
-- Improved responsive layout and modal sizing.
-- Preserved all V1.12 engineering and persistence functionality.
+## V1.13
+- Added collapsible Analysis Results panel.
+- Added clear Show/Hide Results button with visual state.
+- Expanded the model canvas automatically while results are hidden.
+- Added Model Space mode for a larger modeling/diagram workspace.
+- Added keyboard shortcut R for Results and Esc to exit Model Space.
+- Preserved calculated results while the panel is hidden.
+- Kept V1.12 Fix modeling tools and project compatibility.

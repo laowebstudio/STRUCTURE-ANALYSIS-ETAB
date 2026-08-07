@@ -1,15 +1,14 @@
-# SAPUDOM Structure Analysis V1.12 Fix
+# SAPUDOM Structure Analysis V1.13
 
-Based on V1.12. This maintenance release keeps the existing solver and project compatibility while improving the Drawing & Modeling Tools UI.
+Based on V1.12 Fix. V1.13 adds a collapsible Analysis Results workspace while preserving the engineering solver and all existing project features.
 
-## Fixes
-- Rebuilt the Layers layout so labels and checkboxes stay inside the panel.
-- Added clear click feedback for Selection and Modeling commands.
-- Selected filters are visibly highlighted.
-- Member selection count is shown in a prominent status card.
-- Each modeling command reports the last action inside the dialog.
-- Layer cards visibly show ON/OFF state and update immediately.
-- Improved responsive layout for MacBook, Safari, iPad and narrow screens.
+## New in V1.13
+- Show/Hide Analysis Results at any time without re-analyzing.
+- Canvas/model area expands immediately when results are hidden.
+- Results remain in memory and return unchanged when shown again.
+- Model Space button temporarily hides side panels and results for maximum canvas area.
+- Keyboard shortcut `R` toggles the Results panel; `Esc` exits Model Space.
+- Results panel preference is remembered in the browser.
+- JSON, Cloud, Building Center, Modeling Tools, Loads, Load Combinations, Release/Hinge and diagrams are preserved.
 
-## Compatibility
-JSON, Cloud/Supabase, CSV, Building Center, Story Manager, Loads, Load Combinations, Releases, Internal Hinges and the existing Matrix Stiffness solver are preserved. No Supabase SQL update is required.
+No Supabase SQL change is required.
