@@ -1,19 +1,12 @@
-# Changelog
+# CHANGELOG
 
-## V1.14 Fix
-- Fixed Check Model support diagnostics.
-- Added warning `UNSUPPORTED_BASE_NODE` when a connected base-level joint has Support = none while other base supports exist.
-- Added load-independent global stiffness matrix rank check before analysis.
-- Added critical `UNSTABLE_STIFFNESS` diagnostic for insufficient restraints, mechanisms, or incompatible releases/hinges.
-- Upgraded very low restraint count from Warning to Critical.
-- Kept Locate, Analyze Now, JSON, Cloud, Building Center, Modeling Tools, Release/Hinge and solver compatibility.
-- No Supabase SQL changes required.
-
-## V1.13
-- Added collapsible Analysis Results panel.
-- Added clear Show/Hide Results button with visual state.
-- Expanded the model canvas automatically while results are hidden.
-- Added Model Space mode for a larger modeling/diagram workspace.
-- Added keyboard shortcut R for Results and Esc to exit Model Space.
-- Preserved calculated results while the panel is hidden.
-- Kept V1.12 Fix modeling tools and project compatibility.
+## V1.15
+- Added Load Center.
+- Added automatic member self-weight generation from section weight.
+- Added All/Selected scope and replace-existing behavior for generated self weight.
+- Added generated load summary and safe clearing by source tag.
+- Added total member-weight and missing-weight checks.
+- Added quick SDL/WL/EQ load-case creation.
+- Added gravity/service combination templates with an engineering verification warning.
+- Updated Building Center and export version labels to V1.15.
+- Preserved V1.14 Fix model validation, solver, JSON/Cloud and existing analysis features.

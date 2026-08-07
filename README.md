@@ -1,36 +1,20 @@
-# SAPUDOM Structure Analysis V1.14 Fix
+# SAPUDOM Structure Analysis V1.15
 
-V1.14 Fix adds **Structural Model Validation & Diagnostics** on top of V1.13. Use **✓ Check Model** before Analyze to identify model integrity problems and locate them directly on the canvas.
+V1.15 builds on **V1.14 Fix** and adds an **Automatic Load Generator / Load Center** while keeping the validated 2D frame solver unchanged.
 
-## V1.14 Fix diagnostics
+## New in V1.15
+- Automatic member **Self Weight** from section weight (kN/m), applied in Global Y.
+- Generate for all members or only selected members.
+- Generated self weight is tagged, replaceable and removable without deleting manual loads.
+- Generated Load Summary for Self Weight / Floor Load / Wall Load.
+- Total member dead weight estimate and missing-weight diagnostics.
+- Quick creation of SDL, WL and EQ load cases.
+- Load-combination templates as starting points (engineer must verify against the governing code).
+- Direct links to Building Loads, Check Model and Analyze.
+- JSON/Cloud preserve generated loads because they are stored with member load data.
 
-- Duplicate/coincident Nodes
-- Disconnected/orphan Nodes
-- Missing Node references and zero-length/duplicate Members
-- Invalid E, A, I and missing Material/Section references
-- Missing/insufficient Supports
-- **Base Support consistency check:** warns when a connected base-level Node loses its Support while other base supports remain
-- **Global stiffness rank check:** detects rigid-body motion / mechanisms before Analyze using the assembled stiffness matrix
-- Disconnected structural components
-- Release/Internal Hinge review
-- Invalid Member Load positions/types and unknown Load Cases
-- Invalid Load Combination references
-- Critical / Warning / Info classification
-- One-click **Locate** and **Analyze Now** when safe
+## Compatibility
+V1.14 Fix projects remain openable. Building Center, Story Manager, Modeling Tools, Check Model, JSON, CSV, Supabase Cloud, Member Release/Internal Hinge, Load Cases/Combinations and N/V/M/Deformed diagrams remain available. No Supabase SQL change is required.
 
-No Supabase SQL change is required. Existing JSON/Cloud projects remain compatible.
-
-# SAPUDOM Structure Analysis V1.13
-
-Based on V1.12 Fix. V1.13 adds a collapsible Analysis Results workspace while preserving the engineering solver and all existing project features.
-
-## New in V1.13
-- Show/Hide Analysis Results at any time without re-analyzing.
-- Canvas/model area expands immediately when results are hidden.
-- Results remain in memory and return unchanged when shown again.
-- Model Space button temporarily hides side panels and results for maximum canvas area.
-- Keyboard shortcut `R` toggles the Results panel; `Esc` exits Model Space.
-- Results panel preference is remembered in the browser.
-- JSON, Cloud, Building Center, Modeling Tools, Loads, Load Combinations, Release/Hinge and diagrams are preserved.
-
-No Supabase SQL change is required.
+## Important engineering note
+Combination templates in V1.15 are convenience starting points, not a declaration of compliance with any specific building code. Verify factors, load definitions and governing combinations for each project.
