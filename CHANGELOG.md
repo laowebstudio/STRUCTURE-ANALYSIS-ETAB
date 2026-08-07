@@ -1,4 +1,10 @@
-# V1.17
+# V1.17.1 Fix
+
+- Automatically hides Load labels in Axial N, Shear V and Moment M result views to prevent overlap.
+- Restores the user's Load labels preference when returning to Model view.
+- Keeps load arrows visible so load direction remains visually traceable.
+
+# V1.17.1 Fix
 
 - Load Visualization direction fix for GLOBAL_X, GLOBAL_Y and LOCAL_Y.
 - Self Weight arrows on vertical columns now display in Global Y.
@@ -11,16 +17,16 @@
 
 # CHANGELOG
 
-## V1.17
+## V1.17.1 Fix
 - Cloud Save/Load now uses the same full project snapshot schema as JSON Save/Load.
 - Saving to Cloud replaces the latest project with the same name instead of creating confusing stale duplicates.
 - Cloud project list now shows updated time, Member count, and stored Self Weight count.
 - Cloud Open verifies generated-load counts after restore and warns if data changed.
 - Preserves generated Self Weight, manual loads, Load Cases, Load Combinations, Materials, Sections, Releases/Hinges, Building data, layers, and view state.
-- Keeps the V1.17 Fix section-weight compatibility repair: legacy members can resolve section weight from Section Database ID/name or A/I matching, with material-based fallback.
+- Keeps the V1.17.1 Fix Fix section-weight compatibility repair: legacy members can resolve section weight from Section Database ID/name or A/I matching, with material-based fallback.
 - Result Envelope, Check Model, Building Center, Modeling Tools, JSON, CSV, and solver behavior are preserved.
 
-## V1.17
+## V1.17.1 Fix
 - Added Result Envelope engine.
 - Added automatic analysis of all Load Combinations for envelope generation.
 - Added member N/V/M minimum and maximum envelopes.
