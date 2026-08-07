@@ -264,3 +264,7 @@ body.model-space .results-expand{background:#0d5be1;color:#fff;border-color:#0d5
   .file-actions{display:none!important}
   .title h1{font-size:16px;white-space:normal}.title p{font-size:10px}
 }
+
+/* V1.16 Result Envelope */
+.envelope-btn{background:#eef2ff!important;border-color:#a5b4fc!important;color:#3730a3!important;font-weight:800}
+.envelope-modal{z-index:10050}.envelope-card{width:min(1180px,96vw);max-height:90vh;overflow:auto}.envelope-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.envelope-summary>div{border:1px solid #dbe3ee;border-radius:10px;padding:12px;background:#f8fafc;display:flex;flex-direction:column;gap:4px}.envelope-summary b{font-size:18px;color:#0f3b68}.envelope-summary span{font-size:12px;color:#64748b}.envelope-table-wrap{max-height:52vh;overflow:auto;border:1px solid #dbe3ee;border-radius:9px}.envelope-table{width:100%;border-collapse:collapse;font-size:12px}.envelope-table th{position:sticky;top:0;background:#eef4fb;z-index:1}.envelope-table th,.envelope-table td{padding:7px;border-bottom:1px solid #e5e7eb;text-align:right;vertical-align:top}.envelope-table th:first-child,.envelope-table td:first-child{text-align:center}.envelope-table tr[data-env-member]{cursor:pointer}.envelope-table tr[data-env-member]:hover{background:#fff7ed}@media(max-width:800px){.envelope-summary{grid-template-columns:1fr}.envelope-card{width:98vw}}
