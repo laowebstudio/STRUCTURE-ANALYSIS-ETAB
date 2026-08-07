@@ -1,21 +1,15 @@
-# SAPUDOM Structure Analysis V1.12
+# SAPUDOM Structure Analysis V1.12 Fix
 
-พัฒนาต่อจาก V1.11.2 Fix โดยคง Solver และระบบเดิมทั้งหมด
+Based on V1.12. This maintenance release keeps the existing solver and project compatibility while improving the Drawing & Modeling Tools UI.
 
-## ฟังก์ชันใหม่
-- Modeling Tools Center
-- เลือก All / Beam / Column / Brace / Invert
-- Linear Copy ด้วย dx, dy และจำนวนครั้ง
-- Move Selection
-- Rotate รอบจุดศูนย์กลาง Selection
-- Mirror แนวตั้ง/แนวนอน
-- Divide Member เป็นส่วนเท่า ๆ กัน
-- Merge Coincident Nodes ตาม tolerance
-- Layer visibility: Member, Node, Load, Support, Label
-- Undo/Redo สำหรับการแก้โมเดล
+## Fixes
+- Rebuilt the Layers layout so labels and checkboxes stay inside the panel.
+- Added clear click feedback for Selection and Modeling commands.
+- Selected filters are visibly highlighted.
+- Member selection count is shown in a prominent status card.
+- Each modeling command reports the last action inside the dialog.
+- Layer cards visibly show ON/OFF state and update immediately.
+- Improved responsive layout for MacBook, Safari, iPad and narrow screens.
 
 ## Compatibility
-JSON, Cloud, CSV, Building Center, Story Manager, Loads, Load Combination, Material/Section, Release, Internal Hinge และ Diagram ยังทำงานร่วมกันได้
-
-## หมายเหตุ
-เพื่อป้องกันการย้ายโหลดผิดตำแหน่ง ระบบจะไม่อนุญาต Divide Member ที่มี Member Load จนกว่าจะลบหรือย้ายโหลดก่อน
+JSON, Cloud/Supabase, CSV, Building Center, Story Manager, Loads, Load Combinations, Releases, Internal Hinges and the existing Matrix Stiffness solver are preserved. No Supabase SQL update is required.

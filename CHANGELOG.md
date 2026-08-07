@@ -1,10 +1,10 @@
 # Changelog
 
-## V1.12
-- Added Drawing & Modeling Tools Center.
-- Added member selection filters and invert selection.
-- Added linear copy, move, rotate and mirror.
-- Added equal member division.
-- Added coincident-node merge and duplicate-member cleanup.
-- Added model display layers.
-- Preserved V1.11.2 solver, hinge, releases, Building Center and persistence.
+## V1.12 Fix
+- Fixed overflowing/misaligned Layers controls in Modeling Tools.
+- Added visible selected-state styling to selection filters.
+- Added action pulse feedback on clicks.
+- Added persistent in-dialog “last action” feedback.
+- Added a prominent selected-member counter.
+- Improved responsive layout and modal sizing.
+- Preserved all V1.12 engineering and persistence functionality.
