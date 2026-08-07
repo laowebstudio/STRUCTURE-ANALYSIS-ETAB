@@ -1,14 +1,16 @@
-# SAPUDOM Structure Analysis V1.14
+# SAPUDOM Structure Analysis V1.14 Fix
 
-V1.14 adds **Structural Model Validation & Diagnostics** on top of V1.13. Use **✓ Check Model** before Analyze to identify model integrity problems and locate them directly on the canvas.
+V1.14 Fix adds **Structural Model Validation & Diagnostics** on top of V1.13. Use **✓ Check Model** before Analyze to identify model integrity problems and locate them directly on the canvas.
 
-## V1.14 diagnostics
+## V1.14 Fix diagnostics
 
 - Duplicate/coincident Nodes
 - Disconnected/orphan Nodes
 - Missing Node references and zero-length/duplicate Members
 - Invalid E, A, I and missing Material/Section references
 - Missing/insufficient Supports
+- **Base Support consistency check:** warns when a connected base-level Node loses its Support while other base supports remain
+- **Global stiffness rank check:** detects rigid-body motion / mechanisms before Analyze using the assembled stiffness matrix
 - Disconnected structural components
 - Release/Internal Hinge review
 - Invalid Member Load positions/types and unknown Load Cases

@@ -204,7 +204,7 @@ body.model-space .results-expand{background:#0d5be1;color:#fff;border-color:#0d5
 @media(max-height:760px){.results{flex-basis:235px}.results.collapsed{flex-basis:42px!important}}
 @media(max-width:650px){.results-togglebar{gap:6px;padding:5px 7px}.results-toggle,.results-expand{padding:7px 8px;font-size:12px}#resultsPanelStatus{display:none}}
 
-/* V1.14 — Model Validation & Diagnostics */
+/* V1.14 Fix — Model Validation & Diagnostics */
 .check-model-top{border-color:#16a34a!important;background:linear-gradient(180deg,#178b4d,#116b3c)!important;color:#fff!important}
 .check-model-side{border-color:#16a34a!important;background:#0f7b45!important;color:#fff!important}
 .model-check-dialog{position:fixed;inset:0;background:rgba(4,18,36,.55);display:flex;align-items:center;justify-content:center;z-index:10050;padding:22px}

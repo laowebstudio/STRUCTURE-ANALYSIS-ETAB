@@ -1,5 +1,14 @@
 # Changelog
 
+## V1.14 Fix
+- Fixed Check Model support diagnostics.
+- Added warning `UNSUPPORTED_BASE_NODE` when a connected base-level joint has Support = none while other base supports exist.
+- Added load-independent global stiffness matrix rank check before analysis.
+- Added critical `UNSTABLE_STIFFNESS` diagnostic for insufficient restraints, mechanisms, or incompatible releases/hinges.
+- Upgraded very low restraint count from Warning to Critical.
+- Kept Locate, Analyze Now, JSON, Cloud, Building Center, Modeling Tools, Release/Hinge and solver compatibility.
+- No Supabase SQL changes required.
+
 ## V1.13
 - Added collapsible Analysis Results panel.
 - Added clear Show/Hide Results button with visual state.

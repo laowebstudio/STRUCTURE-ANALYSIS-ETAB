@@ -217,6 +217,52 @@ function memberEquivalentLocal(loads,L,c=1,s=0){
  for(const ld of loads||[]){if(ld.type==='TRAP'){const a=Math.max(0,Math.min(L,Number(ld.a??0))),b=Math.max(a,Math.min(L,Number(ld.b??L))),w1=Number(ld.w1)||0,w2=Number(ld.w2)||0;if(b<=a)continue;for(const [g,wt] of gauss){const x=(a+b)/2+g*(b-a)/2,t=(x-a)/(b-a),w=w1+(w2-w1)*t,[ax,tr]=localComponents(w,ld.direction||'LOCAL_Y'),z=x/L,N1=1-z,N2=z,H1=1-3*z*z+2*z*z*z,H2=L*(z-2*z*z+z*z*z),H3=3*z*z-2*z*z*z,H4=L*(-z*z+z*z*z),J=(b-a)/2*wt;p[0]+=N1*ax*J;p[3]+=N2*ax*J;p[1]+=H1*tr*J;p[2]+=H2*tr*J;p[4]+=H3*tr*J;p[5]+=H4*tr*J}}else if(ld.type==='POINT'){const x=Number(ld.x??((Number(ld.r)||0)*L)),[ax,tr]=localComponents(Number(ld.P)||0,ld.direction||'LOCAL_Y');addPoint(x,ax,tr)}else if(ld.type==='MOMENT'){const M=Number(ld.M)||0,x=Math.max(0,Math.min(1,Number(ld.x??((Number(ld.r)||0)*L))/L));p[1]+=M*(-6*x+6*x*x)/L;p[2]+=M*(1-4*x+3*x*x);p[4]+=M*(6*x-6*x*x)/L;p[5]+=M*(-2*x+3*x*x)}}return p}
 function restraints(n){if(n.support==='fixed')return[1,1,1];if(n.support==='pin')return[1,1,0];if(n.support==='roller')return[0,1,0];return[0,0,0]}
 
+// V1.14 Fix — load-independent global stiffness stability check.
+// This mirrors the analysis stiffness assembly, including end releases and
+// inactive rotational hinge DOFs, but does not need any applied loads.
+function stiffnessStabilityCheckV114Fix(){
+ if(!state.nodes.length||!state.members.length)return{ok:false,rank:0,free:0,deficiency:0,reason:'EMPTY_MODEL'};
+ try{
+  const index=new Map(state.nodes.map((n,i)=>[n.id,i]));
+  const nd=state.nodes.length*3,K=zeros(nd,nd);
+  for(const m of state.members){
+   const e=elementData(m),ii=index.get(m.i)*3,jj=index.get(m.j)*3,dofs=[ii,ii+1,ii+2,jj,jj+1,jj+2];
+   const rel=applyEndReleases(e.kFull,Array(6).fill(0),e.released);
+   const kg=matMul(transpose(e.T),matMul(rel.kEff,e.T));
+   for(let a=0;a<6;a++)for(let b=0;b<6;b++)K[dofs[a]][dofs[b]]+=kg[a][b];
+  }
+  const fixed=[];
+  for(const n of state.nodes){const q=index.get(n.id)*3;restraints(n).forEach((v,i)=>{if(v)fixed.push(q+i)})}
+  const inactive=[];
+  for(const n of state.nodes){
+   const inc=state.members.filter(m=>m.i===n.id||m.j===n.id);
+   if(!inc.length)continue;
+   const allReleased=inc.every(m=>m.i===n.id?!!m.releases?.i?.mz:!!m.releases?.j?.mz);
+   if(allReleased){const rz=index.get(n.id)*3+2;if(!fixed.includes(rz))inactive.push(rz)}
+  }
+  const fixedSet=new Set(fixed),inactiveSet=new Set(inactive);
+  const free=Array.from({length:nd},(_,i)=>i).filter(i=>!fixedSet.has(i)&&!inactiveSet.has(i));
+  if(!free.length)return{ok:false,rank:0,free:0,deficiency:0,reason:'NO_FREE_DOF'};
+  const A=free.map(i=>free.map(j=>K[i][j]));
+  let maxAbs=0;for(const r of A)for(const v of r)maxAbs=Math.max(maxAbs,Math.abs(v));
+  if(!(maxAbs>0))return{ok:false,rank:0,free:free.length,deficiency:free.length,reason:'ZERO_STIFFNESS'};
+  const tol=Math.max(1e-10,maxAbs*1e-10),M=A.map(r=>r.slice());
+  let rank=0;
+  for(let col=0,row=0;col<M.length&&row<M.length;col++){
+   let piv=row;for(let r=row+1;r<M.length;r++)if(Math.abs(M[r][col])>Math.abs(M[piv][col]))piv=r;
+   if(Math.abs(M[piv][col])<=tol)continue;
+   [M[row],M[piv]]=[M[piv],M[row]];
+   const d=M[row][col];
+   for(let r=row+1;r<M.length;r++){
+    const f=M[r][col]/d;if(Math.abs(f)<1e-20)continue;
+    for(let c=col;c<M.length;c++)M[r][c]-=f*M[row][c];
+   }
+   rank++;row++;
+  }
+  return{ok:rank===free.length,rank,free:free.length,deficiency:free.length-rank,reason:rank===free.length?'STABLE':'RANK_DEFICIENT'};
+ }catch(err){return{ok:false,rank:0,free:0,deficiency:0,reason:'CHECK_ERROR',error:String(err?.message||err)}}
+}
+
 function combinationText(c){return Object.entries(c.factors||{}).filter(([,v])=>Math.abs(Number(v)||0)>1e-12).map(([id,v])=>`${Number(v)}${id}`).join(' + ').replace(/\+ -/g,'- ')||'0'}
 function loadCombinationDialog(){
  const wrap=document.createElement('div');wrap.className='eng-dialog';wrap.innerHTML=`<div class="eng-card"><h2>Load Combination Manager</h2><div id="combBody"></div><div class="eng-actions"><button class="secondary" id="combClose">ປິດ</button></div></div>`;document.body.appendChild(wrap);wrap.querySelector('#combClose').onclick=()=>wrap.remove();wrap.onclick=e=>{if(e.target===wrap)wrap.remove()};const body=wrap.querySelector('#combBody');
@@ -246,7 +292,7 @@ function validateModel(){
 }
 
 
-// V1.14 — Structural Model Validation & Diagnostics
+// V1.14 Fix — Structural Model Validation & Diagnostics
 function modelDiagnostics(){
  const issues=[];const add=(severity,code,title,detail,target=null)=>issues.push({severity,code,title,detail,target});
  const nodeById=new Map(state.nodes.map(n=>[n.id,n]));
@@ -287,13 +333,30 @@ function modelDiagnostics(){
  }
  // Node load case references.
  for(const n of state.nodes)for(const caseId of Object.keys(n.loads||{}))if(!state.loadCases.some(c=>c.id===caseId))add('warning','UNKNOWN_NODE_CASE',`Node ${n.id} has load data in unknown case “${caseId}”`,'The load case is not present in the current Load Case library.',{type:'node',id:n.id});
- // Supports / restraint sufficiency heuristic.
+ // Supports / restraint sufficiency and actual stiffness stability.
  const supported=state.nodes.filter(n=>n.support&&n.support!=='none');
  if(!supported.length)add('critical','NO_SUPPORT','No Supports are assigned','The global model has rigid-body DOFs and cannot be analyzed.');
  else{
   const restraintCount=supported.reduce((sum,n)=>sum+restraints(n).reduce((a,b)=>a+b,0),0);
-  if(restraintCount<3)add('warning','LOW_RESTRAINT','Very few restrained DOFs',`Only ${restraintCount} restrained DOF(s) were found. Review supports before analysis.`);
+  if(restraintCount<3)add('critical','LOW_RESTRAINT','Insufficient restrained DOFs',`Only ${restraintCount} restrained DOF(s) were found. A 2D frame must restrain the global rigid-body motions before analysis.`);
  }
+ // Building-frame base check: a generated/base-line joint that lost its support
+ // is reported even when the remaining supports still keep the entire frame stable.
+ if(state.nodes.length&&state.members.length){
+  const minY=Math.min(...state.nodes.map(n=>Number(n.y)||0)),baseTol=1e-6;
+  const baseNodes=state.nodes.filter(n=>Math.abs((Number(n.y)||0)-minY)<=baseTol&&(incident.get(n.id)||[]).length);
+  const baseSupported=baseNodes.filter(n=>n.support&&n.support!=='none');
+  const looksLikeBuilding=(state.building?.stories||0)>0||baseNodes.length>=2;
+  if(looksLikeBuilding&&baseSupported.length){
+   for(const n of baseNodes.filter(n=>!n.support||n.support==='none')){
+    add('warning','UNSUPPORTED_BASE_NODE',`Base Node ${n.id} has no Support`,'This base-level joint is connected to the structure but its Support is set to none. If this is intentional you may ignore the warning; otherwise restore the intended support.',{type:'node',id:n.id});
+   }
+  }
+ }
+ const stability=stiffnessStabilityCheckV114Fix();
+ if(stability.reason==='NO_FREE_DOF')add('warning','NO_FREE_DOF','No free DOFs remain','All active DOFs are restrained. Review supports if this was not intended.');
+ else if(!stability.ok&&stability.reason!=='EMPTY_MODEL'&&stability.reason!=='CHECK_ERROR')add('critical','UNSTABLE_STIFFNESS','Global stiffness matrix is unstable',`Rank ${stability.rank} / ${stability.free} free DOFs (deficiency ${stability.deficiency}). The model has insufficient restraints, a disconnected mechanism, or incompatible Member Releases/Hinges.`);
+ else if(stability.reason==='CHECK_ERROR')add('warning','STABILITY_CHECK_ERROR','Stability check could not be completed',stability.error||'Review the model and try Analyze.');
  // Graph components: isolated structural submodels.
  const adj=new Map(state.nodes.map(n=>[n.id,new Set()]));
  for(const m of state.members)if(adj.has(m.i)&&adj.has(m.j)){adj.get(m.i).add(m.j);adj.get(m.j).add(m.i)}
@@ -313,7 +376,7 @@ function modelCheckDialog(){
  const report=modelDiagnostics();const wrap=document.createElement('div');wrap.className='model-check-dialog';
  const statusClass=report.critical?'blocked':report.warning?'caution':'ready';const statusText=report.critical?`NOT READY — ${report.critical} critical issue${report.critical===1?'':'s'} must be fixed before analysis.`:report.warning?`READY WITH CAUTION — no critical errors, but ${report.warning} warning${report.warning===1?'':'s'} should be reviewed.`:'MODEL READY FOR ANALYSIS — no critical problems or warnings detected.';
  const rows=report.issues.map((x,i)=>`<div class="model-check-issue ${x.severity}"><span class="model-check-badge">${x.severity}</span><div class="model-check-text"><b>${x.title}</b><small>${x.detail}</small></div>${x.target?`<button class="model-check-locate" data-locate="${i}">⌖ Locate</button>`:''}</div>`).join('');
- wrap.innerHTML=`<div class="model-check-card"><div class="model-check-head"><div><h2>✓ Check Model — V1.14</h2><p>Structural Model Validation & Diagnostics before analysis</p></div><button class="model-check-close" id="modelCheckClose">×</button></div><div class="model-check-summary"><div class="model-check-metric"><b>${report.nodes}</b><span>Nodes</span></div><div class="model-check-metric"><b>${report.members}</b><span>Members</span></div><div class="model-check-metric critical"><b>${report.critical}</b><span>Critical</span></div><div class="model-check-metric warning"><b>${report.warning}</b><span>Warnings</span></div></div><div class="model-check-status ${statusClass}">${statusText}</div><div class="model-check-list">${rows||'<div class="model-check-empty">✓ No model integrity issues detected.</div>'}</div><div class="model-check-actions"><button id="modelCheckAgain">↻ Check Again</button><button id="modelCheckAnalyze" class="primary" ${report.critical?'disabled':''}>▶ Analyze Now</button></div></div>`;
+ wrap.innerHTML=`<div class="model-check-card"><div class="model-check-head"><div><h2>✓ Check Model — V1.14 Fix</h2><p>Structural Model Validation & Diagnostics before analysis</p></div><button class="model-check-close" id="modelCheckClose">×</button></div><div class="model-check-summary"><div class="model-check-metric"><b>${report.nodes}</b><span>Nodes</span></div><div class="model-check-metric"><b>${report.members}</b><span>Members</span></div><div class="model-check-metric critical"><b>${report.critical}</b><span>Critical</span></div><div class="model-check-metric warning"><b>${report.warning}</b><span>Warnings</span></div></div><div class="model-check-status ${statusClass}">${statusText}</div><div class="model-check-list">${rows||'<div class="model-check-empty">✓ No model integrity issues detected.</div>'}</div><div class="model-check-actions"><button id="modelCheckAgain">↻ Check Again</button><button id="modelCheckAnalyze" class="primary" ${report.critical?'disabled':''}>▶ Analyze Now</button></div></div>`;
  document.body.appendChild(wrap);const close=()=>wrap.remove();wrap.querySelector('#modelCheckClose').onclick=close;wrap.onclick=e=>{if(e.target===wrap)close()};
  wrap.querySelectorAll('[data-locate]').forEach(b=>b.onclick=()=>{const issue=report.issues[Number(b.dataset.locate)];close();locateDiagnosticTarget(issue?.target);toast('Located: '+(issue?.title||'model issue'))});
  wrap.querySelector('#modelCheckAgain').onclick=()=>{close();modelCheckDialog()};wrap.querySelector('#modelCheckAnalyze').onclick=()=>{if(report.critical)return;close();analyze()};
@@ -528,7 +591,7 @@ function save(){const data={version:'1.11.1',projectName:$('projectName').value,
 function openFile(file){const fr=new FileReader();fr.onload=()=>{try{const d=JSON.parse(fr.result);pushHistory();restore(d);$('projectName').value=d.projectName||'Opened Project';$('units').value=d.units||'kN - m';refreshLayoutAfterLoad();toast('ເປີດໂຄງການແລ້ວ')}catch{alert('ໄຟລ໌ JSON ບໍ່ຖືກຕ້ອງ')}};fr.readAsText(file)}
 
 function csvEscape(v){const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
-function exportCSV(){if(!state.results){toast('ກະລຸນາວິເຄາະກ່ອນ');return}const r=state.results,rows=[['SAPUDOM Structure Analysis V1.13'],['Project',$('projectName').value],[],['JOINT DISPLACEMENTS'],['Node','Ux_mm','Uy_mm','Rz_rad']];for(const n of state.nodes){const q=r.index.get(n.id)*3;rows.push([n.id,r.D[q]*1000,r.D[q+1]*1000,r.D[q+2]])}rows.push([],['SUPPORT REACTIONS'],['Node','Rx_kN','Ry_kN','Mz_kNm']);for(const n of state.nodes.filter(n=>n.support!=='none')){const q=r.index.get(n.id)*3;rows.push([n.id,r.R[q],r.R[q+1],r.R[q+2]])}rows.push([],['MEMBER END FORCES'],['Member','Ni_kN','Vi_kN','Mi_kNm','Nj_kN','Vj_kN','Mj_kNm']);for(const f of r.memberForces)rows.push([f.id,...f.local]);const blob=new Blob([rows.map(row=>row.map(csvEscape).join(',')).join('\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=($('projectName').value||'sapudom-results').replace(/[^a-z0-9_-]+/gi,'-')+'-results.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('ສົ່ງອອກ CSV ແລ້ວ')}
+function exportCSV(){if(!state.results){toast('ກະລຸນາວິເຄາະກ່ອນ');return}const r=state.results,rows=[['SAPUDOM Structure Analysis V1.14 Fix'],['Project',$('projectName').value],[],['JOINT DISPLACEMENTS'],['Node','Ux_mm','Uy_mm','Rz_rad']];for(const n of state.nodes){const q=r.index.get(n.id)*3;rows.push([n.id,r.D[q]*1000,r.D[q+1]*1000,r.D[q+2]])}rows.push([],['SUPPORT REACTIONS'],['Node','Rx_kN','Ry_kN','Mz_kNm']);for(const n of state.nodes.filter(n=>n.support!=='none')){const q=r.index.get(n.id)*3;rows.push([n.id,r.R[q],r.R[q+1],r.R[q+2]])}rows.push([],['MEMBER END FORCES'],['Member','Ni_kN','Vi_kN','Mi_kNm','Nj_kN','Vj_kN','Mj_kNm']);for(const f of r.memberForces)rows.push([f.id,...f.local]);const blob=new Blob([rows.map(row=>row.map(csvEscape).join(',')).join('\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=($('projectName').value||'sapudom-results').replace(/[^a-z0-9_-]+/gi,'-')+'-results.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('ສົ່ງອອກ CSV ແລ້ວ')}
 
 function toast(t){const el=$('toast');el.textContent=t;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),1800)}
 
@@ -545,7 +608,7 @@ function rotateSelectedV112(angleDeg){const ids=selectedModelNodeIds();if(!ids.l
 function mirrorSelectedV112(axis){const ids=selectedModelNodeIds();if(!ids.length)return alert('Select Members or a Node first.');const ns=ids.map(id=>state.nodes.find(n=>n.id===id)).filter(Boolean),cx=ns.reduce((a,n)=>a+n.x,0)/ns.length,cy=ns.reduce((a,n)=>a+n.y,0)/ns.length;pushHistory();for(const n of ns){if(axis==='VERTICAL')n.x=2*cx-n.x;else n.y=2*cy-n.y}finalizeModelingV112(selectedMemberIds(),`Mirrored ${axis.toLowerCase()}`)}
 function divideSelectedV112(parts){const ms=selectedModelMembers();if(!ms.length)return alert('Select one or more Members first.');if(parts<2||parts>50)return alert('Parts must be 2–50.');if(ms.some(m=>Object.values(m.loads||{}).some(a=>Array.isArray(a)&&a.length)))return alert('Remove or reassign Member Loads before dividing.');pushHistory();const selected=new Set(ms.map(m=>m.id)),kept=state.members.filter(m=>!selected.has(m.id)),created=[];for(const m of ms){const a=state.nodes.find(n=>n.id===m.i),b=state.nodes.find(n=>n.id===m.j);if(!a||!b)continue;const chain=[m.i];for(let k=1;k<parts;k++)chain.push(findOrCreateNodeV112(a.x+(b.x-a.x)*k/parts,a.y+(b.y-a.y)*k/parts).id);chain.push(m.j);for(let k=0;k<parts;k++){const nm=JSON.parse(JSON.stringify(m));nm.id=(k===0?m.id:state.nextMember++);nm.i=chain[k];nm.j=chain[k+1];nm.releases={i:{mz:k===0?!!m.releases?.i?.mz:false},j:{mz:k===parts-1?!!m.releases?.j?.mz:false}};kept.push(nm);created.push(nm.id)}}state.members=kept;finalizeModelingV112(created,`Divided into ${parts} parts`)}
 function mergeNodesV112(tol){if(!(tol>0))return alert('Tolerance must be greater than zero.');pushHistory();const sorted=[...state.nodes].sort((a,b)=>a.id-b.id),remap=new Map(),keep=[];for(const n of sorted){const hit=keep.find(k=>Math.hypot(k.x-n.x,k.y-n.y)<=tol);if(hit){remap.set(n.id,hit.id);if(hit.support==='none'&&n.support!=='none')hit.support=n.support}else{keep.push(n);remap.set(n.id,n.id)}}for(const m of state.members){m.i=remap.get(m.i)||m.i;m.j=remap.get(m.j)||m.j}state.nodes=keep;const unique=[],keys=new Set();for(const m of state.members){if(m.i===m.j)continue;const key=[m.i,m.j].sort((a,b)=>a-b).join('-');if(keys.has(key))continue;keys.add(key);unique.push(m)}state.members=unique;finalizeModelingV112([],`Merged nodes within ${tol} m`)}
-function modelingToolsV112(){const wrap=document.createElement('div');wrap.className='eng-dialog modeling-modal';wrap.innerHTML=`<div class="eng-card modeling-card"><div class="section-db-head"><div><h2>Drawing & Modeling Tools — V1.13</h2><small>Transform, copy and clean the selected structural model.</small></div><button class="ml-close" id="mtClose">×</button></div><div id="mtFeedback" class="modeling-feedback"><span class="feedback-dot"></span><div><b>Ready</b><small>Choose a selection or modeling command. Your last action will appear here.</small></div></div><div class="modeling-grid">
+function modelingToolsV112(){const wrap=document.createElement('div');wrap.className='eng-dialog modeling-modal';wrap.innerHTML=`<div class="eng-card modeling-card"><div class="section-db-head"><div><h2>Drawing & Modeling Tools — V1.14 Fix</h2><small>Transform, copy and clean the selected structural model.</small></div><button class="ml-close" id="mtClose">×</button></div><div id="mtFeedback" class="modeling-feedback"><span class="feedback-dot"></span><div><b>Ready</b><small>Choose a selection or modeling command. Your last action will appear here.</small></div></div><div class="modeling-grid">
 <section><h3>Selection</h3><div class="modeling-actions selection-actions"><button data-sel="ALL">All Members</button><button data-sel="BEAM">Beams</button><button data-sel="COLUMN">Columns</button><button data-sel="BRACE">Braces</button><button data-sel="INVERT">Invert</button><button data-sel="CLEAR">Clear</button></div><div id="mtSelected" class="selection-summary"><strong>${selectedMemberIds().length}</strong><span>Members selected</span></div><h3>Linear Copy</h3><div class="modeling-inputs"><label>dx (m)<input id="mtDx" type="number" step="any" value="6"></label><label>dy (m)<input id="mtDy" type="number" step="any" value="0"></label><label>Repeat<input id="mtRepeat" type="number" min="1" max="50" value="1"></label></div><button id="mtCopy" class="primary action-button">Copy Selected</button><h3>Move / Rotate / Mirror</h3><div class="modeling-inputs"><label>Move dx<input id="mtMoveX" type="number" step="any" value="0"></label><label>Move dy<input id="mtMoveY" type="number" step="any" value="0"></label><label>Angle °<input id="mtAngle" type="number" step="any" value="90"></label></div><div class="modeling-actions"><button id="mtMove" class="action-button">Move</button><button id="mtRotate" class="action-button">Rotate</button><button id="mtMirrorV" class="action-button">Mirror Vertical</button><button id="mtMirrorH" class="action-button">Mirror Horizontal</button></div></section>
 <section><h3>Divide & Clean</h3><div class="modeling-inputs modeling-inputs-two"><label>Divide parts<input id="mtParts" type="number" min="2" max="50" value="2"></label><label>Merge tolerance (m)<input id="mtTol" type="number" min="0.000001" step="0.0001" value="0.001"></label></div><div class="modeling-actions"><button id="mtDivide" class="action-button">Divide Selected</button><button id="mtMerge" class="action-button">Merge Coincident Nodes</button></div><h3>Layers</h3><div class="layer-list"><label class="layer-item"><input data-layer="members" type="checkbox" ${state.layers.members!==false?'checked':''}><span>Members</span></label><label class="layer-item"><input data-layer="nodes" type="checkbox" ${state.layers.nodes!==false?'checked':''}><span>Nodes</span></label><label class="layer-item"><input data-layer="loads" type="checkbox" ${state.layers.loads!==false?'checked':''}><span>Loads</span></label><label class="layer-item"><input data-layer="supports" type="checkbox" ${state.layers.supports!==false?'checked':''}><span>Supports</span></label><label class="layer-item"><input data-layer="labels" type="checkbox" ${state.layers.labels!==false?'checked':''}><span>Labels</span></label></div><div class="modeling-note"><b>Compatibility:</b> These tools preserve Material, Section, Releases, Load Cases and JSON/Cloud data. Divide is blocked when a selected Member contains Member Loads.</div></section></div></div>`;document.body.appendChild(wrap);const close=()=>wrap.remove();wrap.querySelector('#mtClose').onclick=close;wrap.onclick=e=>{if(e.target===wrap)close()};const feedback=(title,detail='',kind='ok')=>{const el=wrap.querySelector('#mtFeedback');if(!el)return;el.className=`modeling-feedback ${kind}`;el.querySelector('b').textContent=title;el.querySelector('small').textContent=detail};const pulse=(btn)=>{if(!btn)return;btn.classList.remove('clicked');void btn.offsetWidth;btn.classList.add('clicked');setTimeout(()=>btn.classList.remove('clicked'),500)};const refresh=()=>{const n=selectedMemberIds().length;wrap.querySelector('#mtSelected').innerHTML=`<strong>${n}</strong><span>${n===1?'Member selected':'Members selected'}</span>`};const syncLayers=()=>wrap.querySelectorAll('.layer-item').forEach(l=>{const x=l.querySelector('[data-layer]');l.classList.toggle('is-on',!!x?.checked)});syncLayers();
 wrap.querySelectorAll('[data-sel]').forEach(b=>b.onclick=()=>{const k=b.dataset.sel;if(k==='CLEAR')clearMemberSelection();else if(k==='INVERT'){const cur=new Set(selectedMemberIds());selectMembers(state.members.filter(m=>!cur.has(m.id)).map(m=>m.id))}else if(k==='ALL')selectMembers(state.members.map(m=>m.id));else selectMembers(state.members.filter(m=>memberOrientation(m)===k.toLowerCase()).map(m=>m.id));updateUI();render();refresh();pulse(b);wrap.querySelectorAll('[data-sel]').forEach(x=>x.classList.toggle('selected-filter',x===b&&k!=='CLEAR'&&k!=='INVERT'));const n=selectedMemberIds().length;feedback(`${b.textContent.trim()} selected`,`${n} member${n===1?'':'s'} highlighted in orange on the model.`)});
@@ -556,7 +619,7 @@ $('deleteBtn').onclick=deleteSelected;$('undoBtn').onclick=undo;$('redoBtn').onc
 $('releaseBtn').onclick=memberReleaseDialog;
 
 
-// V1.13 — Collapsible Analysis Results and expanded Model Space
+// V1.14 Fix — Collapsible Analysis Results and expanded Model Space
 function syncResultsPanelUI(){
  const panel=$('resultsPanel'),btn=$('toggleResultsBtn'),status=$('resultsPanelStatus'),center=document.querySelector('.center');
  if(!panel||!btn)return;
@@ -660,5 +723,5 @@ function sectionDatabaseDialog(){
  };render();
 }
 
-updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.13 — Collapsible Analysis Results ready');
+updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.14 Fix — Collapsible Analysis Results ready');
 })();
