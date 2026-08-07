@@ -245,6 +245,81 @@ function validateModel(){
  if(!state.nodes.some(n=>n.support!=='none'))throw new Error('ກະລຸນາກຳນົດ Support');
 }
 
+
+// V1.14 — Structural Model Validation & Diagnostics
+function modelDiagnostics(){
+ const issues=[];const add=(severity,code,title,detail,target=null)=>issues.push({severity,code,title,detail,target});
+ const nodeById=new Map(state.nodes.map(n=>[n.id,n]));
+ const memberById=new Map(state.members.map(m=>[m.id,m]));
+ const incident=new Map(state.nodes.map(n=>[n.id,[]]));
+ for(const m of state.members){if(incident.has(m.i))incident.get(m.i).push(m);if(incident.has(m.j))incident.get(m.j).push(m)}
+ if(!state.nodes.length)add('critical','NO_NODES','No nodes','The model does not contain any Nodes.');
+ if(!state.members.length)add('critical','NO_MEMBERS','No members','The model does not contain any structural Members.');
+ // Duplicate / near-coincident nodes.
+ const dupTol=0.001;
+ for(let a=0;a<state.nodes.length;a++)for(let b=a+1;b<state.nodes.length;b++){
+  const n1=state.nodes[a],n2=state.nodes[b],d=Math.hypot(n1.x-n2.x,n1.y-n2.y);
+  if(d<=dupTol)add('warning','DUP_NODE',`Nodes ${n1.id} and ${n2.id} are coincident`,`Distance = ${d.toExponential(2)} m (tolerance ${dupTol} m). Merge them if they represent the same joint.`,{type:'nodes',ids:[n1.id,n2.id]});
+ }
+ // Node connectivity.
+ for(const n of state.nodes){const inc=incident.get(n.id)||[];if(!inc.length)add('warning','ORPHAN_NODE',`Node ${n.id} is disconnected`,'This Node is not connected to any Member.',{type:'node',id:n.id});}
+ // Member integrity and properties.
+ const pairSeen=new Map();
+ for(const m of state.members){
+  const ni=nodeById.get(m.i),nj=nodeById.get(m.j);
+  if(!ni||!nj){add('critical','BAD_MEMBER_REF',`Member M${m.id} references a missing Node`,`i=${m.i}, j=${m.j}. The member cannot be assembled into the stiffness matrix.`,{type:'member',id:m.id});continue}
+  const L=Math.hypot(nj.x-ni.x,nj.y-ni.y);
+  if(L<=1e-8)add('critical','ZERO_LENGTH',`Member M${m.id} has zero length`,`Length = ${L.toExponential(2)} m.`,{type:'member',id:m.id});
+  const key=[m.i,m.j].sort((x,y)=>x-y).join('-');if(pairSeen.has(key))add('warning','DUP_MEMBER',`Members M${pairSeen.get(key)} and M${m.id} overlap`,'Both members connect the same two Nodes.',{type:'members',ids:[pairSeen.get(key),m.id]});else pairSeen.set(key,m.id);
+  if(!(Number(m.E)>0))add('critical','BAD_E',`Member M${m.id} has invalid E`,`E = ${m.E}. Assign a valid Material.`,{type:'member',id:m.id});
+  if(!(Number(m.A)>0))add('critical','BAD_A',`Member M${m.id} has invalid A`,`A = ${m.A}. Assign a valid Section.`,{type:'member',id:m.id});
+  if(!(Number(m.I)>0))add('critical','BAD_I',`Member M${m.id} has invalid I`,`I = ${m.I}. Assign a valid Section.`,{type:'member',id:m.id});
+  if(!m.materialId||!state.materials.some(x=>x.id===m.materialId))add('warning','MISSING_MAT',`Member M${m.id} has no valid Material`,'The numerical E value may still exist, but the Material Library reference is missing.',{type:'member',id:m.id});
+  if(!m.sectionId||!state.sections.some(x=>x.id===m.sectionId))add('warning','MISSING_SEC',`Member M${m.id} has no valid Section`,'The numerical A/I values may still exist, but the Section Library reference is missing.',{type:'member',id:m.id});
+  const both=!!m.releases?.i?.mz&&!!m.releases?.j?.mz;if(both)add('info','DOUBLE_RELEASE',`Member M${m.id} is pinned at both ends`,'This is valid for some systems, but review connectivity if an unexpected mechanism occurs.',{type:'member',id:m.id});
+  for(const [caseId,arr] of Object.entries(m.loads||{})){
+   if(!state.loadCases.some(c=>c.id===caseId))add('warning','UNKNOWN_MEMBER_CASE',`M${m.id} has loads in unknown case “${caseId}”`,'The load case is not present in the current Load Case library.',{type:'member',id:m.id});
+   for(const ld of (Array.isArray(arr)?arr:[])){
+    if(!['TRAP','POINT','MOMENT'].includes(ld.type))add('warning','BAD_MEMBER_LOAD',`M${m.id} contains an unsupported Member Load`,`Type = ${String(ld.type)}.`,{type:'member',id:m.id});
+    if((ld.type==='POINT'||ld.type==='MOMENT')&&!(Number(ld.r)>=0&&Number(ld.r)<=1))add('warning','LOAD_POSITION',`M${m.id} has a load outside the member`,`Relative position r = ${ld.r}; expected 0–1.`,{type:'member',id:m.id});
+   }
+  }
+ }
+ // Node load case references.
+ for(const n of state.nodes)for(const caseId of Object.keys(n.loads||{}))if(!state.loadCases.some(c=>c.id===caseId))add('warning','UNKNOWN_NODE_CASE',`Node ${n.id} has load data in unknown case “${caseId}”`,'The load case is not present in the current Load Case library.',{type:'node',id:n.id});
+ // Supports / restraint sufficiency heuristic.
+ const supported=state.nodes.filter(n=>n.support&&n.support!=='none');
+ if(!supported.length)add('critical','NO_SUPPORT','No Supports are assigned','The global model has rigid-body DOFs and cannot be analyzed.');
+ else{
+  const restraintCount=supported.reduce((sum,n)=>sum+restraints(n).reduce((a,b)=>a+b,0),0);
+  if(restraintCount<3)add('warning','LOW_RESTRAINT','Very few restrained DOFs',`Only ${restraintCount} restrained DOF(s) were found. Review supports before analysis.`);
+ }
+ // Graph components: isolated structural submodels.
+ const adj=new Map(state.nodes.map(n=>[n.id,new Set()]));
+ for(const m of state.members)if(adj.has(m.i)&&adj.has(m.j)){adj.get(m.i).add(m.j);adj.get(m.j).add(m.i)}
+ const activeNodes=state.nodes.filter(n=>(incident.get(n.id)||[]).length).map(n=>n.id),seen=new Set(),components=[];
+ for(const start of activeNodes){if(seen.has(start))continue;const stack=[start],nodes=[];seen.add(start);while(stack.length){const u=stack.pop();nodes.push(u);for(const v of adj.get(u)||[])if(!seen.has(v)){seen.add(v);stack.push(v)}}components.push(nodes)}
+ if(components.length>1){components.sort((a,b)=>b.length-a.length);for(let i=1;i<components.length;i++){const cset=new Set(components[i]);const mids=state.members.filter(m=>cset.has(m.i)&&cset.has(m.j)).map(m=>m.id);add('warning','DISCONNECTED_COMPONENT',`Disconnected structural component ${i+1}`,`${components[i].length} Nodes and ${mids.length} Members are disconnected from the main structural component.`,{type:'members',ids:mids});}}
+ // Release / hinge nodes where every connected member end releases rotation.
+ for(const n of state.nodes){const inc=incident.get(n.id)||[];if(inc.length&&inc.every(m=>m.i===n.id?!!m.releases?.i?.mz:!!m.releases?.j?.mz))add('info','HINGE_NODE',`Node ${n.id} is a rotational hinge`,`All ${inc.length} incident Member end(s) release Mz. The solver will remove the inactive rotational DOF.`,{type:'node',id:n.id});}
+ // Load combinations referencing missing cases.
+ for(const c of state.loadCombinations)for(const caseId of Object.keys(c.factors||{}))if(!state.loadCases.some(x=>x.id===caseId))add('critical','BAD_COMB_CASE',`Combination ${c.id} references missing Load Case “${caseId}”`,'Edit or remove the invalid factor before analyzing this combination.');
+ const critical=issues.filter(x=>x.severity==='critical').length,warning=issues.filter(x=>x.severity==='warning').length,info=issues.filter(x=>x.severity==='info').length;
+ return {issues,critical,warning,info,ready:critical===0,nodes:state.nodes.length,members:state.members.length,supports:supported.length};
+}
+function focusNodeV114(id){const n=state.nodes.find(x=>x.id===Number(id));if(!n)return;state.selected={type:'node',id:n.id};state.multiSelectedMemberIds=new Set();const r=canvas.getBoundingClientRect();state.view.ox=r.width/2-n.x*state.view.scale;state.view.oy=r.height/2+n.y*state.view.scale;updateUI();render();}
+function locateDiagnosticTarget(target){if(!target)return;if(target.type==='node'){focusNodeV114(target.id);return}if(target.type==='nodes'){const ids=target.ids||[],mids=state.members.filter(m=>ids.includes(m.i)||ids.includes(m.j)).map(m=>m.id);if(mids.length){selectMembers(mids);focusMembers(mids)}else focusNodeV114(ids[0]);return}if(target.type==='member'){setSingleMemberSelection(Number(target.id));focusMembers([Number(target.id)]);updateUI();render();return}if(target.type==='members'){const ids=(target.ids||[]).filter(id=>state.members.some(m=>m.id===Number(id))).map(Number);selectMembers(ids);focusMembers(ids);return}}
+function modelCheckDialog(){
+ const report=modelDiagnostics();const wrap=document.createElement('div');wrap.className='model-check-dialog';
+ const statusClass=report.critical?'blocked':report.warning?'caution':'ready';const statusText=report.critical?`NOT READY — ${report.critical} critical issue${report.critical===1?'':'s'} must be fixed before analysis.`:report.warning?`READY WITH CAUTION — no critical errors, but ${report.warning} warning${report.warning===1?'':'s'} should be reviewed.`:'MODEL READY FOR ANALYSIS — no critical problems or warnings detected.';
+ const rows=report.issues.map((x,i)=>`<div class="model-check-issue ${x.severity}"><span class="model-check-badge">${x.severity}</span><div class="model-check-text"><b>${x.title}</b><small>${x.detail}</small></div>${x.target?`<button class="model-check-locate" data-locate="${i}">⌖ Locate</button>`:''}</div>`).join('');
+ wrap.innerHTML=`<div class="model-check-card"><div class="model-check-head"><div><h2>✓ Check Model — V1.14</h2><p>Structural Model Validation & Diagnostics before analysis</p></div><button class="model-check-close" id="modelCheckClose">×</button></div><div class="model-check-summary"><div class="model-check-metric"><b>${report.nodes}</b><span>Nodes</span></div><div class="model-check-metric"><b>${report.members}</b><span>Members</span></div><div class="model-check-metric critical"><b>${report.critical}</b><span>Critical</span></div><div class="model-check-metric warning"><b>${report.warning}</b><span>Warnings</span></div></div><div class="model-check-status ${statusClass}">${statusText}</div><div class="model-check-list">${rows||'<div class="model-check-empty">✓ No model integrity issues detected.</div>'}</div><div class="model-check-actions"><button id="modelCheckAgain">↻ Check Again</button><button id="modelCheckAnalyze" class="primary" ${report.critical?'disabled':''}>▶ Analyze Now</button></div></div>`;
+ document.body.appendChild(wrap);const close=()=>wrap.remove();wrap.querySelector('#modelCheckClose').onclick=close;wrap.onclick=e=>{if(e.target===wrap)close()};
+ wrap.querySelectorAll('[data-locate]').forEach(b=>b.onclick=()=>{const issue=report.issues[Number(b.dataset.locate)];close();locateDiagnosticTarget(issue?.target);toast('Located: '+(issue?.title||'model issue'))});
+ wrap.querySelector('#modelCheckAgain').onclick=()=>{close();modelCheckDialog()};wrap.querySelector('#modelCheckAnalyze').onclick=()=>{if(report.critical)return;close();analyze()};
+ $('statusText').textContent=report.critical?`Model Check: ${report.critical} critical, ${report.warning} warning`:`Model Check passed • ${report.warning} warning(s)`;
+}
+
 function showCachedAnalysis(spec,notify=true){
  const cached=state.resultsByAnalysis.get(spec);
  state.results=cached||null;
@@ -527,7 +602,7 @@ const canvasShell=canvas.closest('.canvas-shell');
 if(window.ResizeObserver&&canvasShell){let resizeFrame=0;const canvasObserver=new ResizeObserver(()=>{cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(resize)});canvasObserver.observe(canvasShell);}
 window.addEventListener('load',()=>{requestAnimationFrame(()=>requestAnimationFrame(resize))});window.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return;const k=e.key.toLowerCase();if(k==='v')setTool('select');if(k==='h')setTool('pan');if(k==='n')setTool('node');if(k==='m')setTool('member');if(k==='l')setTool('memberLoad');if(e.key==='Delete'||e.key==='Backspace')deleteSelected();if((e.ctrlKey||e.metaKey)&&k==='z'){e.preventDefault();e.shiftKey?redo():undo()}const views={1:'model',2:'deformed',3:'axial',4:'shear',5:'moment'};if(views[e.key])setResultView(views[e.key])});
 
-$('analyzeBtn').onclick=analyze;$('csvBtn').onclick=exportCSV;$('clearResultsBtn').onclick=clearResults;$('cloudBtn').onclick=cloudDialog;$('viewResult').onchange=e=>setResultView(e.target.value);$('autoScaleToggle').onchange=e=>{state.autoDiagramScale=e.target.checked;syncScaleUI();updateDiagramLegend($('viewResult').value);render()};$('diagramScale').oninput=e=>{state.diagramScale=Math.max(.2,Math.min(10,Number(e.target.value)||1));updateDiagramLegend($('viewResult').value);render()};$('scaleDownBtn').onclick=()=>{state.autoDiagramScale=false;state.diagramScale=Math.max(.2,state.diagramScale-.5);syncScaleUI();updateDiagramLegend($('viewResult').value);render()};$('scaleResetBtn').onclick=()=>{state.autoDiagramScale=false;state.diagramScale=1;syncScaleUI();updateDiagramLegend($('viewResult').value);render()};$('scaleUpBtn').onclick=()=>{state.autoDiagramScale=false;state.diagramScale=Math.min(10,state.diagramScale+.5);syncScaleUI();updateDiagramLegend($('viewResult').value);render()};$('labelToggle').onchange=e=>{state.showLabels=e.target.checked;updateDiagramLegend($('viewResult').value);render()};document.querySelectorAll('.result-mode').forEach(b=>b.onclick=()=>setResultView(b.dataset.view));document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.resultTab=b.dataset.tab;renderResults()});
+$('checkModelBtn').onclick=modelCheckDialog;$('checkModelSideBtn').onclick=modelCheckDialog;$('analyzeBtn').onclick=analyze;$('csvBtn').onclick=exportCSV;$('clearResultsBtn').onclick=clearResults;$('cloudBtn').onclick=cloudDialog;$('viewResult').onchange=e=>setResultView(e.target.value);$('autoScaleToggle').onchange=e=>{state.autoDiagramScale=e.target.checked;syncScaleUI();updateDiagramLegend($('viewResult').value);render()};$('diagramScale').oninput=e=>{state.diagramScale=Math.max(.2,Math.min(10,Number(e.target.value)||1));updateDiagramLegend($('viewResult').value);render()};$('scaleDownBtn').onclick=()=>{state.autoDiagramScale=false;state.diagramScale=Math.max(.2,state.diagramScale-.5);syncScaleUI();updateDiagramLegend($('viewResult').value);render()};$('scaleResetBtn').onclick=()=>{state.autoDiagramScale=false;state.diagramScale=1;syncScaleUI();updateDiagramLegend($('viewResult').value);render()};$('scaleUpBtn').onclick=()=>{state.autoDiagramScale=false;state.diagramScale=Math.min(10,state.diagramScale+.5);syncScaleUI();updateDiagramLegend($('viewResult').value);render()};$('labelToggle').onchange=e=>{state.showLabels=e.target.checked;updateDiagramLegend($('viewResult').value);render()};document.querySelectorAll('.result-mode').forEach(b=>b.onclick=()=>setResultView(b.dataset.view));document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.resultTab=b.dataset.tab;renderResults()});
 
 
 function sectionProps(type,d){

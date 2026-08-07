@@ -1,3 +1,23 @@
+# SAPUDOM Structure Analysis V1.14
+
+V1.14 adds **Structural Model Validation & Diagnostics** on top of V1.13. Use **✓ Check Model** before Analyze to identify model integrity problems and locate them directly on the canvas.
+
+## V1.14 diagnostics
+
+- Duplicate/coincident Nodes
+- Disconnected/orphan Nodes
+- Missing Node references and zero-length/duplicate Members
+- Invalid E, A, I and missing Material/Section references
+- Missing/insufficient Supports
+- Disconnected structural components
+- Release/Internal Hinge review
+- Invalid Member Load positions/types and unknown Load Cases
+- Invalid Load Combination references
+- Critical / Warning / Info classification
+- One-click **Locate** and **Analyze Now** when safe
+
+No Supabase SQL change is required. Existing JSON/Cloud projects remain compatible.
+
 # SAPUDOM Structure Analysis V1.13
 
 Based on V1.12 Fix. V1.13 adds a collapsible Analysis Results workspace while preserving the engineering solver and all existing project features.
