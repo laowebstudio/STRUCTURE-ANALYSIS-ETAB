@@ -1,4 +1,12 @@
-# V1.15.1 Fix
+# V1.15.2 Fix
+
+- Removed the duplicate quick-icon toolbar from the top header.
+- Moved New/Open/Save/Cloud/CSV/Sample, Building Center, Load Center, Modeling Tools, Check Model, Analyze, Zoom/Fit, Results, Model Space, Undo/Redo into the left command workspace.
+- Kept the File/Edit/View/Define/Draw/Select/Assign/Analyze/Display/Tools/Help menu strip as the categorized professional menu.
+- Reduced top header height to give more vertical space to the structural model.
+- No solver, JSON, Cloud, load, release/hinge, or analysis behavior changes.
+
+# V1.15.2 Fix
 
 - Fixed Professional Workspace header/menu/quick-toolbar appearing above Building Center and other dialogs.
 - Raised all application modal overlays above the header with a consistent stacking layer.
@@ -9,7 +17,7 @@
 
 # Changelog
 
-## V1.15.1 Fix
+## V1.15.2 Fix
 - Rebuilt the crowded top header as a professional engineering-software menu bar.
 - Added File, Edit, View, Define, Draw, Select, Assign, Analyze, Display, Tools and Help menus.
 - Added a compact quick-access toolbar for frequent commands.
