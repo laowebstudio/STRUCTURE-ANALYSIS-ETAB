@@ -1,3 +1,10 @@
+# V1.18 Fix
+
+- Fixed Load Assignment Manager **Locate** action.
+- Locate now closes the manager, highlights the requested object, and pans/zooms the canvas to it.
+- Supports both Node and Member rows.
+- Solver and load calculation logic unchanged.
+
 # V1.18
 - Added Load Assignment Manager with filters, locate/delete, multi-member UDL/Point/Moment assignment, copy-to-selected, select-loaded-members, clear-by-filter, and load summary.
 - Preserves V1.17.1 solver, diagram accuracy, JSON/Cloud, self weight and envelope behavior.

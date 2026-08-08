@@ -1,4 +1,10 @@
-# SAPUDOM Structure Analysis V1.18
+# SAPUDOM Structure Analysis V1.18 Fix
+
+## Fix — Load Manager Locate
+- Locate now closes Load Manager, selects the target Node/Member, highlights it, and centers the model view on it.
+- Works for both Node Loads and Member Loads.
+- No changes to solver, Self Weight, JSON/Cloud, Result Envelope, or load calculations.
+
 
 2D Frame Analysis • Matrix Stiffness Method
 
