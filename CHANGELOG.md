@@ -1,6 +1,7 @@
-# V1.21
+# V1.21 Fix
 
-- Added Steel Design Phase 1 based on AISC 360-22 LRFD.
-- Added KL/r, Fcr, phiPn and axial demand/capacity ratio.
-- Added flexure yield screening and governing combination display.
-- Preserved V1.20.1 Design Foundation and V1.19 analysis solver.
+- Fixed Steel Design Phase 1 status logic.
+- FAIL when Axial D/C > 1.0.
+- FAIL when Flexure Screen > 1.0.
+- Keeps flexure explicitly labeled as screening only; LTB/local buckling are still pending.
+- No changes to the structural analysis solver.
