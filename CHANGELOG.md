@@ -1,4 +1,9 @@
-# V1.18.1 Fix
+## V1.18.2 Fix
+- Fix JSON round-trip persistence for Load Manager MANUAL member loads.
+- Preserve case/type/direction/magnitude/position/source fields.
+- Add saved/restored member-load count verification.
+
+# V1.18.2 Fix
 
 - Fixed Load Assignment Manager **Locate** action.
 - Locate now closes the manager, highlights the requested object, and pans/zooms the canvas to it.

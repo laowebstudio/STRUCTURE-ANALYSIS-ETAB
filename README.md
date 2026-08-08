@@ -1,4 +1,4 @@
-# SAPUDOM Structure Analysis V1.18.1 Fix
+# SAPUDOM Structure Analysis V1.18.2 Fix
 
 ## Fix — Load Manager Locate
 - Locate now closes Load Manager, selects the target Node/Member, highlights it, and centers the model view on it.
@@ -35,6 +35,6 @@ No Supabase SQL migration is required from the existing `structure_projects` set
 - Point loads create Shear jumps and Moment slope changes; applied moments create Moment jumps.
 - Result Min/Max and Result Envelope now include internal member extrema, not only end forces.
 - JSON/Cloud/Self Weight/Load Combination compatibility is preserved from V1.16.1 Fix.
-## V1.18.1 Fix
+## V1.18.2 Fix
 
 Load Manager search now understands object labels such as `M7` and `Node 5`. The clear-by-filter action is protected when no rows match, reducing the risk of clearing the wrong load set.
