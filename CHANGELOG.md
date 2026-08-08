@@ -1,3 +1,9 @@
+## V1.20.1 Fix — Design Material Persistence
+- Fixed Design Material reverting to Steel after Assign.
+- Design Center now reloads stored properties from the selected Member(s).
+- Added visible assignment confirmation for selected Members.
+- Preserves V1.19 analysis solver and V1.20 Design Foundation behavior.
+
 ## V1.19 — Analysis Verification & Validation
 - Added Verification Center with three classic closed-form solver benchmarks.
 - Added current-model global equilibrium and residual diagnostics.

@@ -1026,7 +1026,7 @@ function sectionDatabaseDialog(){
 }
 
 
-// ===== V1.20 Design Foundation =====
+// ===== V1.20.1 Fix Design Foundation =====
 function designDefaultsV120(m){
  const mat=state.materials.find(x=>x.id===m.materialId)||{};
  return Object.assign({memberType:'Beam',designMaterial:mat.type||'Steel',fy:Number(mat.fy||250000),fu:400000,K:1,unbracedLength:0,fc:Number(mat.fc||25),rebarFy:420,cover:40,status:'NOT_DESIGNED'},m.design||{});
@@ -1039,18 +1039,41 @@ function designDemandV120(m){
  return best;
 }
 function designCenterV120(){
- const wrap=document.createElement('div');wrap.className='eng-dialog design-modal-v120';wrap.innerHTML=`<div class="eng-card design-card-v120"><div class="section-db-head"><div><h2>◆ Design Center — V1.20</h2><small>Analysis → Design foundation • AISC / ACI setup • Member design assignment</small></div><button class="ml-close" id="d120Close">×</button></div><div id="d120Body"></div></div>`;document.body.appendChild(wrap);wrap.querySelector('#d120Close').onclick=()=>wrap.remove();wrap.onclick=e=>{if(e.target===wrap)wrap.remove()};const body=wrap.querySelector('#d120Body');
+ const wrap=document.createElement('div');wrap.className='eng-dialog design-modal-v120';wrap.innerHTML=`<div class="eng-card design-card-v120"><div class="section-db-head"><div><h2>◆ Design Center — V1.20.1 Fix</h2><small>Analysis → Design foundation • AISC / ACI setup • Member design assignment</small></div><button class="ml-close" id="d120Close">×</button></div><div id="d120Body"></div></div>`;document.body.appendChild(wrap);wrap.querySelector('#d120Close').onclick=()=>wrap.remove();wrap.onclick=e=>{if(e.target===wrap)wrap.remove()};const body=wrap.querySelector('#d120Body');
  const combos=['ENVELOPE',...state.loadCombinations.map(x=>x.id)];
  const render=()=>{const ids=selectedModelMembers().map(m=>m.id),rows=state.members.map(m=>{const d=designDefaultsV120(m),q=designDemandV120(m);return `<tr><td>M${m.id}</td><td>${d.memberType}</td><td>${d.designMaterial}</td><td>${q.N.toFixed(2)}</td><td>${q.V.toFixed(2)}</td><td>${q.M.toFixed(2)}</td><td>${q.analysis}</td><td><span class="design-status ${d.status==='PASS'?'pass':d.status==='FAIL'?'fail':''}">${d.status.replace('_',' ')}</span></td></tr>`}).join('');body.innerHTML=`
  <div class="design-grid-v120"><section><h3>Design Standard</h3><label>Steel Code<select id="dSteelCode"><option>AISC 360</option></select></label><label>Steel Method<select id="dSteelMethod"><option>LRFD</option><option>ASD</option></select></label><label>RC Code<select id="dRcCode"><option>ACI 318</option></select></label><label>RC Method<select id="dRcMethod"><option>Strength Design</option></select></label><label>Design Combination<select id="dCombo">${combos.map(x=>`<option>${x}</option>`).join('')}</select><button id="dSaveSetup" class="primary">Save Design Setup</button></section>
- <section><h3>Assign Design Properties</h3><div class="design-selected">Selected Members: <b>${ids.length?ids.map(x=>'M'+x).join(', '):'None'}</b></div><label>Member Type<select id="dType"><option>Beam</option><option>Column</option><option>Brace</option><option>Other</option></select></label><label>Design Material<select id="dMat"><option>Steel</option><option>Concrete</option></select></label><div class="design-mini-grid"><label>Fy (MPa)<input id="dFy" type="number" value="250"></label><label>Fu (MPa)<input id="dFu" type="number" value="400"></label><label>K-factor<input id="dK" type="number" step="0.1" value="1"></label><label>Lb (m)<input id="dLb" type="number" step="0.1" value="0"></label><label>f'c (MPa)<input id="dFc" type="number" value="25"></label><label>Rebar fy (MPa)<input id="dRfy" type="number" value="420"></label><label>Cover (mm)<input id="dCover" type="number" value="40"></label></div><button id="dAssign" class="primary">Assign to Selected Members (${ids.length})</button></section></div>
+ <section><h3>Assign Design Properties</h3><div class="design-selected">Selected Members: <b>${ids.length?ids.map(x=>'M'+x).join(', '):'None'}</b></div><label>Member Type<select id="dType"><option>Beam</option><option>Column</option><option>Brace</option><option>Other</option></select></label><label>Design Material<select id="dMat"><option>Steel</option><option>Concrete</option></select></label><div class="design-mini-grid"><label>Fy (MPa)<input id="dFy" type="number" value="250"></label><label>Fu (MPa)<input id="dFu" type="number" value="400"></label><label>K-factor<input id="dK" type="number" step="0.1" value="1"></label><label>Lb (m)<input id="dLb" type="number" step="0.1" value="0"></label><label>f'c (MPa)<input id="dFc" type="number" value="25"></label><label>Rebar fy (MPa)<input id="dRfy" type="number" value="420"></label><label>Cover (mm)<input id="dCover" type="number" value="40"></label></div><button id="dAssign" class="primary">Assign to Selected Members (${ids.length})</button><div id="dAssignStatus" class="design-assign-status">${state.designLastMessage||''}</div></section></div>
  <section class="design-results-v120"><div class="section-db-head"><div><h3>Design Results Interface</h3><small>Demand is read from analyzed results. Capacity/ratio checks begin in Steel/RC Design phases.</small></div><button id="dCsv">Export Design Setup CSV</button></div><div class="design-table-wrap"><table><thead><tr><th>Member</th><th>Type</th><th>Material</th><th>|N| kN</th><th>|V| kN</th><th>|M| kN·m</th><th>Governing</th><th>Status</th></tr></thead><tbody>${rows||'<tr><td colspan="8">No members</td></tr>'}</tbody></table></div></section>`;
  const ds=state.designSetup||{};body.querySelector('#dSteelCode').value=ds.steelCode||'AISC 360';body.querySelector('#dSteelMethod').value=ds.steelMethod||'LRFD';body.querySelector('#dRcCode').value=ds.rcCode||'ACI 318';body.querySelector('#dRcMethod').value=ds.rcMethod||'Strength Design';body.querySelector('#dCombo').value=ds.designCombination||'ENVELOPE';
+ // V1.20.1 Fix: when Members are selected, populate the form from their stored design properties.
+ // This prevents render() after Assign from falling back to the hard-coded Steel defaults.
+ const selectedForForm=selectedModelMembers();
+ if(selectedForForm.length){
+   const d=designDefaultsV120(selectedForForm[0]);
+   body.querySelector('#dType').value=d.memberType||'Beam';
+   body.querySelector('#dMat').value=d.designMaterial||'Steel';
+   body.querySelector('#dFy').value=(Number(d.fy)||250000)/1000;
+   body.querySelector('#dFu').value=(Number(d.fu)||400000)/1000;
+   body.querySelector('#dK').value=Number(d.K)||1;
+   body.querySelector('#dLb').value=Number(d.unbracedLength)||0;
+   body.querySelector('#dFc').value=Number(d.fc)||25;
+   body.querySelector('#dRfy').value=Number(d.rebarFy)||420;
+   body.querySelector('#dCover').value=Number(d.cover)||40;
+ }
  body.querySelector('#dSaveSetup').onclick=()=>{state.designSetup={steelCode:body.querySelector('#dSteelCode').value,steelMethod:body.querySelector('#dSteelMethod').value,rcCode:body.querySelector('#dRcCode').value,rcMethod:body.querySelector('#dRcMethod').value,designCombination:body.querySelector('#dCombo').value};toast('Design setup saved • JSON/Cloud ready')};
- body.querySelector('#dAssign').onclick=()=>{const ms=selectedModelMembers();if(!ms.length)return alert('Select one or more Members first.');for(const m of ms)m.design={memberType:body.querySelector('#dType').value,designMaterial:body.querySelector('#dMat').value,fy:Number(body.querySelector('#dFy').value)*1000,fu:Number(body.querySelector('#dFu').value)*1000,K:Number(body.querySelector('#dK').value)||1,unbracedLength:Number(body.querySelector('#dLb').value)||0,fc:Number(body.querySelector('#dFc').value)||25,rebarFy:Number(body.querySelector('#dRfy').value)||420,cover:Number(body.querySelector('#dCover').value)||40,status:'NOT_DESIGNED'};toast(`Design properties assigned to ${ms.length} Member(s)`);render()};
- body.querySelector('#dCsv').onclick=()=>{const out=[['Member','Type','Material','Fy_MPa','Fu_MPa','K','Lb_m','fc_MPa','RebarFy_MPa','Cover_mm','Status'],...state.members.map(m=>{const d=designDefaultsV120(m);return [m.id,d.memberType,d.designMaterial,d.fy/1000,d.fu/1000,d.K,d.unbracedLength,d.fc,d.rebarFy,d.cover,d.status]})];const blob=new Blob([out.map(r=>r.join(',')).join('\n')],{type:'text/csv'}),x=document.createElement('a');x.href=URL.createObjectURL(blob);x.download='sapudom-v1.20-design-setup.csv';x.click();setTimeout(()=>URL.revokeObjectURL(x.href),500)};
+ body.querySelector('#dAssign').onclick=()=>{
+   const ms=selectedModelMembers();if(!ms.length)return alert('Select one or more Members first.');
+   const assigned={memberType:body.querySelector('#dType').value,designMaterial:body.querySelector('#dMat').value,fy:Number(body.querySelector('#dFy').value)*1000,fu:Number(body.querySelector('#dFu').value)*1000,K:Number(body.querySelector('#dK').value)||1,unbracedLength:Number(body.querySelector('#dLb').value)||0,fc:Number(body.querySelector('#dFc').value)||25,rebarFy:Number(body.querySelector('#dRfy').value)||420,cover:Number(body.querySelector('#dCover').value)||40,status:'NOT_DESIGNED'};
+   for(const m of ms)m.design={...assigned};
+   state.designLastMessage=`✓ Assigned ${assigned.designMaterial} / ${assigned.memberType} to ${ms.map(m=>'M'+m.id).join(', ')}`;
+   render();
+   const msg=body.querySelector('#dAssignStatus');if(msg){msg.textContent=state.designLastMessage;msg.classList.add('show')}
+   toast(state.designLastMessage);
+ };
+ body.querySelector('#dCsv').onclick=()=>{const out=[['Member','Type','Material','Fy_MPa','Fu_MPa','K','Lb_m','fc_MPa','RebarFy_MPa','Cover_mm','Status'],...state.members.map(m=>{const d=designDefaultsV120(m);return [m.id,d.memberType,d.designMaterial,d.fy/1000,d.fu/1000,d.K,d.unbracedLength,d.fc,d.rebarFy,d.cover,d.status]})];const blob=new Blob([out.map(r=>r.join(',')).join('\n')],{type:'text/csv'}),x=document.createElement('a');x.href=URL.createObjectURL(blob);x.download='sapudom-v1.20.1-fix-design-setup.csv';x.click();setTimeout(()=>URL.revokeObjectURL(x.href),500)};
  };render();
 }
 
-updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.20 — Design Foundation ready');
+updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.20.1 Fix — Design Material persistence ready');
 })();
