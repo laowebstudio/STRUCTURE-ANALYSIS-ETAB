@@ -284,3 +284,13 @@ body.model-space .results-expand{background:#0d5be1;color:#fff;border-color:#0d5
 .design-assign-status{margin-top:10px;padding:9px 12px;border-radius:8px;background:#e8f7ed;color:#176b37;font-weight:700;min-height:18px}.design-assign-status:empty{display:none}
 
 .design-actions-v121{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.design-actions-v121 .primary{background:#1769d2;color:#fff}.design-results-v120 table{min-width:1120px}
+
+/* V1.22 Steel Design Phase 2 */
+.design-member-link{border:0;background:transparent;color:#0b63ce;font-weight:800;cursor:pointer;padding:2px 4px;text-decoration:underline;text-underline-offset:2px}
+.steel-detail-v122{width:min(980px,94vw);max-height:88vh;overflow:auto}
+.steel-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+.steel-detail-grid>div{border:1px solid #d9e2ec;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;background:#fff}
+.steel-detail-grid b{font-size:15px;color:#102a43;margin-bottom:3px}
+.steel-detail-grid span{font-size:13px;color:#334e68}
+.engineering-note{margin-top:14px;padding:11px 12px;border-radius:10px;background:#fff7d6;border:1px solid #eedc9a;font-size:12px;line-height:1.45;color:#5b4a11}
+@media(max-width:850px){.steel-detail-grid{grid-template-columns:1fr}.design-table-wrap{overflow:auto}}

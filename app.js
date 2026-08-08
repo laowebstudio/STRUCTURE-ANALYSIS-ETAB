@@ -1027,7 +1027,11 @@ function sectionDatabaseDialog(){
 
 
 
-// ===== V1.21 Steel Design Phase 1 — AISC 360-22 LRFD =====
+// ===== V1.22 Steel Design Phase 2 — AISC 360-22 LRFD =====
+// Scope: doubly-symmetric Steel I sections for strong-axis flexure, LTB (Cb input),
+// flange/web compactness screening, axial strength, and 2D axial+flexure interaction.
+// Web noncompact/slender and slender flange cases are flagged WARNING rather than
+// being treated as a complete AISC Chapter F implementation.
 function designDemandV121(m){
  const setup=state.designSetup||{};
  let specs=[];
@@ -1041,11 +1045,44 @@ function designDemandV121(m){
   const N=Math.max(Math.abs(f.local?.[0]||0),Math.abs(f.local?.[3]||0));
   const V=Math.max(Math.abs(f.local?.[1]||0),Math.abs(f.local?.[4]||0));
   const M=Math.max(Math.abs(f.local?.[2]||0),Math.abs(f.local?.[5]||0));
-  best={N:Math.max(best.N,N),V:Math.max(best.V,V),M:Math.max(best.M,M),analysis:spec};
+  if(N>best.N||V>best.V||M>best.M) best={N:Math.max(best.N,N),V:Math.max(best.V,V),M:Math.max(best.M,M),analysis:spec};
  }
  return best;
 }
-function steelDesignV121(m){
+function steelFlexureV122(m,d,sec,q){
+ const E=Number(m.E||state.materials.find(x=>x.id===m.materialId)?.E||200000000),Fy=Number(d.fy||250000);
+ const dim=sec.dimensions||{},h=Number(dim.h||0),bf=Number(dim.bf||0),tw=Number(dim.tw||0),tf=Number(dim.tf||0);
+ const Ix=Number(sec.I||m.I||0),Iy=Number(sec.Iy||m.Iy||0),J=Number(sec.J||0),A=Number(sec.A||m.A||0);
+ if(sec.type!=='Steel I'||!(h>0&&bf>0&&tw>0&&tf>0&&Ix>0&&Iy>0&&A>0&&Fy>0&&E>0))
+  return {supported:false,status:'WARNING',note:'Phase 2 flexure currently requires a Steel I section with h, bf, tw, tf, Ix and Iy.'};
+ const hw=h-2*tf;if(!(hw>0))return{supported:false,status:'WARNING',note:'Invalid Steel I geometry.'};
+ const Sx=Ix/(h/2);
+ const Zx=2*(bf*tf*(h/2-tf/2)+(tw*hw/2)*(hw/4));
+ const Mp=Fy*Zx,My07=0.7*Fy*Sx;
+ const root=Math.sqrt(E/Fy),lambdaF=(bf-tw)/(2*tf),lambdaW=hw/tw;
+ const lpF=0.38*root,lrF=1.0*root,lpW=3.76*root,lrW=5.70*root;
+ const flangeClass=lambdaF<=lpF?'Compact':lambdaF<=lrF?'Noncompact':'Slender';
+ const webClass=lambdaW<=lpW?'Compact':lambdaW<=lrW?'Noncompact':'Slender';
+ const ry=Number(sec.ry||(Iy/A>0?Math.sqrt(Iy/A):0)),ho=h-tf;
+ const Cw=Iy*ho*ho/4;
+ const rts=(Sx>0&&Cw>0)?Math.sqrt(Math.sqrt(Iy*Cw)/Sx):0;
+ const Cb=Math.max(0.1,Number(d.Cb||1));
+ const LbInput=Number(d.unbracedLength||0),Lb=LbInput>0?LbInput:memberLength(m);
+ const Lp=ry>0?1.76*ry*Math.sqrt(E/Fy):0;
+ let Lr=0;
+ if(rts>0&&Sx>0&&ho>0){const t=J/(Sx*ho);Lr=1.95*rts*E/(0.7*Fy)*Math.sqrt(t+Math.sqrt(t*t+6.76*Math.pow(0.7*Fy/E,2)))}
+ let MnLTB=Mp,ltbMode='Yielding';
+ if(Lb>Lp&&Lr>Lp&&Lb<=Lr){MnLTB=Cb*(Mp-(Mp-My07)*(Lb-Lp)/(Lr-Lp));MnLTB=Math.min(Mp,MnLTB);ltbMode='Inelastic LTB'}
+ else if(Lb>Lr&&rts>0){const rr=Lb/rts;const Fcr=Cb*Math.PI*Math.PI*E/(rr*rr)*Math.sqrt(1+0.078*(J/(Sx*ho))*rr*rr);MnLTB=Math.min(Mp,Fcr*Sx);ltbMode='Elastic LTB'}
+ let MnLocal=Mp,localMode='Compact';
+ if(webClass!=='Compact')return{supported:false,status:'WARNING',note:`${webClass} web: Phase 2 does not yet implement AISC F4/F5 web-local-buckling strength.`,Sx,Zx,Mp,lambdaF,lambdaW,lpF,lrF,lpW,lrW,flangeClass,webClass,Lb,Lp,Lr,Cb,ltbMode};
+ if(flangeClass==='Noncompact'){MnLocal=Mp-(Mp-My07)*(lambdaF-lpF)/(lrF-lpF);localMode='Noncompact flange local buckling'}
+ if(flangeClass==='Slender')return{supported:false,status:'WARNING',note:'Slender flange: Phase 2 flags this case for a later full Chapter F slender-element implementation.',Sx,Zx,Mp,lambdaF,lambdaW,lpF,lrF,lpW,lrW,flangeClass,webClass,Lb,Lp,Lr,Cb,ltbMode};
+ const Mn=Math.min(Mp,MnLTB,MnLocal),phiMn=0.90*Mn,flexRatio=phiMn>0?q.M/phiMn:Infinity;
+ const governing=Mn===MnLTB&&MnLTB<Mp?'LTB':Mn===MnLocal&&MnLocal<Mp?'Local Buckling':'Yielding';
+ return{supported:true,status:flexRatio<=1?'PASS':'FAIL',Sx,Zx,Mp,MnLTB,MnLocal,Mn,phiMn,flexRatio,lambdaF,lambdaW,lpF,lrF,lpW,lrW,flangeClass,webClass,Lb,Lp,Lr,Cb,ltbMode,localMode,governing,note:`Strong-axis Steel I flexure; Cb=${Cb.toFixed(2)}.`};
+}
+function steelDesignV122(m){
  const d=designDefaultsV120(m),q=designDemandV121(m),sec=state.sections.find(x=>x.id===m.sectionId)||{};
  if(String(d.designMaterial).toLowerCase()!=='steel')return{applicable:false,q,status:'N/A',note:'Member is not assigned as Steel'};
  const A=Number(sec.A||m.A||0),I=Number(sec.I||m.I||0),Iy=Number(sec.Iy||m.Iy||0),E=Number(m.E||state.materials.find(x=>x.id===m.materialId)?.E||200000000);
@@ -1057,19 +1094,32 @@ function steelDesignV121(m){
  const Fcr=fyFe<=2.25?Math.pow(0.658,fyFe)*Fy:0.877*Fe;
  const phiT=0.90*Fy*A,phiC=0.90*Fcr*A,phiAxial=Math.min(phiT,phiC);
  const axialRatio=phiAxial>0?q.N/phiAxial:Infinity;
- let phiMy=null,flexRatio=null;const h=Number(sec.dimensions?.h||0);
- if(h>0&&I>0){const S=I/(h/2);phiMy=0.90*Fy*S;flexRatio=phiMy>0?q.M/phiMy:null}
- const axialPass=axialRatio<=1;
- const flexScreenPass=flexRatio==null||flexRatio<=1;
- const status=axialPass&&flexScreenPass?'PASS':'FAIL';
- const failReason=!axialPass&&!flexScreenPass?'Axial + flexure screening exceed 1.0':!axialPass?'Axial D/C exceeds 1.0':!flexScreenPass?'Flexure yield screen exceeds 1.0':'';
- return{applicable:true,q,status,A,L,rmin,slender,Fe,Fcr,phiT,phiC,phiAxial,axialRatio,phiMy,flexRatio,axialPass,flexScreenPass,failReason,note:flexRatio==null?'Axial LRFD check':'Axial LRFD + flexure yield screening'};
+ const flex=steelFlexureV122(m,d,sec,q);
+ if(!flex.supported){const status=axialRatio>1?'FAIL':'WARNING';return{applicable:true,q,status,A,L,rmin,slender,Fe,Fcr,phiT,phiC,phiAxial,axialRatio,flex,interactionRatio:null,failReason:axialRatio>1?'Axial D/C exceeds 1.0':flex.note,note:flex.note}}
+ const flexRatio=flex.flexRatio;
+ const interactionRatio=axialRatio>=0.2?axialRatio+(8/9)*flexRatio:axialRatio/2+flexRatio;
+ const status=(axialRatio<=1&&flexRatio<=1&&interactionRatio<=1)?'PASS':'FAIL';
+ const reasons=[];if(axialRatio>1)reasons.push('Axial D/C > 1.0');if(flexRatio>1)reasons.push('Flexural D/C > 1.0');if(interactionRatio>1)reasons.push('Axial+flexure interaction > 1.0');
+ return{applicable:true,q,status,A,L,rmin,slender,Fe,Fcr,phiT,phiC,phiAxial,axialRatio,flex,flexRatio,interactionRatio,failReason:reasons.join(' • '),note:'AISC 360-22 Phase 2: axial + strong-axis Steel I flexure/LTB + 2D interaction.'};
 }
-
+function steelDesignV121(m){return steelDesignV122(m)}
+function steelDetailV122(m){
+ const r=steelDesignV122(m),d=designDefaultsV120(m),sec=state.sections.find(x=>x.id===m.sectionId)||{};
+ const f=r.flex||{};const val=(x,n=3)=>Number.isFinite(Number(x))?Number(x).toFixed(n):'—';
+ const wrap=document.createElement('div');wrap.className='eng-dialog';wrap.innerHTML=`<div class="eng-card steel-detail-v122"><div class="section-db-head"><div><h2>Steel Design Detail — M${m.id}</h2><small>${sec.name||m.sectionId||'Section'} • ${d.memberType} • AISC 360-22 LRFD Phase 2</small></div><button class="ml-close">×</button></div><div class="steel-detail-grid">
+ <div><b>Demand</b><span>Pu = ${val(r.q?.N,2)} kN</span><span>Mu = ${val(r.q?.M,2)} kN·m</span><span>Governing = ${r.q?.analysis||'—'}</span></div>
+ <div><b>Axial</b><span>φPn = ${val(r.phiAxial,2)} kN</span><span>Axial D/C = ${val(r.axialRatio)}</span><span>KL/r = ${val(r.slender,1)}</span></div>
+ <div><b>Flexure</b><span>φMn = ${val(f.phiMn,2)} kN·m</span><span>Flexural D/C = ${val(r.flexRatio)}</span><span>Limit state = ${f.governing||'—'}</span></div>
+ <div><b>LTB</b><span>Lb = ${val(f.Lb,3)} m</span><span>Lp = ${val(f.Lp,3)} m</span><span>Lr = ${val(f.Lr,3)} m</span><span>Cb = ${val(f.Cb,2)}</span></div>
+ <div><b>Local Buckling</b><span>Flange λ = ${val(f.lambdaF,2)} • ${f.flangeClass||'—'}</span><span>Web λ = ${val(f.lambdaW,2)} • ${f.webClass||'—'}</span></div>
+ <div><b>Interaction</b><span>D/C = ${val(r.interactionRatio)}</span><span class="design-status ${r.status==='PASS'?'pass':r.status==='FAIL'?'fail':''}">${r.status}</span><span>${r.failReason||r.note||''}</span></div>
+ </div><div class="engineering-note">V1.22 scope: doubly-symmetric Steel I strong-axis flexure. Cb is user-entered (default 1.0). Noncompact/slender web and slender flange cases are flagged WARNING for later full Chapter F treatment.</div></div>`;
+ document.body.appendChild(wrap);wrap.querySelector('.ml-close').onclick=()=>wrap.remove();wrap.onclick=e=>{if(e.target===wrap)wrap.remove()};
+}
 // ===== V1.20.1 Fix Design Foundation =====
 function designDefaultsV120(m){
  const mat=state.materials.find(x=>x.id===m.materialId)||{};
- return Object.assign({memberType:'Beam',designMaterial:mat.type||'Steel',fy:Number(mat.fy||250000),fu:400000,K:1,unbracedLength:0,fc:Number(mat.fc||25),rebarFy:420,cover:40,status:'NOT_DESIGNED'},m.design||{});
+ return Object.assign({memberType:'Beam',designMaterial:mat.type||'Steel',fy:Number(mat.fy||250000),fu:400000,K:1,Cb:1,unbracedLength:0,fc:Number(mat.fc||25),rebarFy:420,cover:40,status:'NOT_DESIGNED'},m.design||{});
 }
 function designDemandV120(m){
  let best={N:0,V:0,M:0,analysis:'—'};
@@ -1079,42 +1129,21 @@ function designDemandV120(m){
  return best;
 }
 function designCenterV120(){
- const wrap=document.createElement('div');wrap.className='eng-dialog design-modal-v120';wrap.innerHTML=`<div class="eng-card design-card-v120"><div class="section-db-head"><div><h2>◆ Design Center — V1.21 Fix</h2><small>Analysis → Steel Design Phase 1 • AISC 360-22 LRFD • Axial strength + flexure screening</small></div><button class="ml-close" id="d120Close">×</button></div><div id="d120Body"></div></div>`;document.body.appendChild(wrap);wrap.querySelector('#d120Close').onclick=()=>wrap.remove();wrap.onclick=e=>{if(e.target===wrap)wrap.remove()};const body=wrap.querySelector('#d120Body');
+ const wrap=document.createElement('div');wrap.className='eng-dialog design-modal-v120';wrap.innerHTML=`<div class="eng-card design-card-v120"><div class="section-db-head"><div><h2>◆ Design Center — V1.22</h2><small>Steel Design Phase 2 • AISC 360-22 LRFD • Axial + strong-axis flexure/LTB + local compactness + interaction</small></div><button class="ml-close" id="d120Close">×</button></div><div id="d120Body"></div></div>`;document.body.appendChild(wrap);wrap.querySelector('#d120Close').onclick=()=>wrap.remove();wrap.onclick=e=>{if(e.target===wrap)wrap.remove()};const body=wrap.querySelector('#d120Body');
  const combos=['ENVELOPE',...state.loadCombinations.map(x=>x.id)];
- const render=()=>{const ids=selectedModelMembers().map(m=>m.id),rows=state.members.map(m=>{const d=designDefaultsV120(m),r=steelDesignV121(m),q=r.q||designDemandV121(m);const ar=r.applicable&&Number.isFinite(r.axialRatio)?r.axialRatio.toFixed(3):'—',fr=r.applicable&&r.flexRatio!=null&&Number.isFinite(r.flexRatio)?r.flexRatio.toFixed(3):'—',cap=r.applicable&&r.phiAxial?Number(r.phiAxial).toFixed(2):'—',cls=r.status==='PASS'?'pass':r.status==='FAIL'?'fail':'';return `<tr><td>M${m.id}</td><td>${d.memberType}</td><td>${d.designMaterial}</td><td>${q.N.toFixed(2)}</td><td>${cap}</td><td>${ar}</td><td>${q.M.toFixed(2)}</td><td>${fr}</td><td>${r.slender?Number(r.slender).toFixed(1):'—'}</td><td>${q.analysis}</td><td><span class="design-status ${cls}">${r.status}</span></td></tr>`}).join('');body.innerHTML=`
- <div class="design-grid-v120"><section><h3>Design Standard</h3><label>Steel Code<select id="dSteelCode"><option>AISC 360-22</option></select></label><label>Steel Method<select id="dSteelMethod"><option>LRFD</option><option>ASD</option></select></label><label>RC Code<select id="dRcCode"><option>ACI 318</option></select></label><label>RC Method<select id="dRcMethod"><option>Strength Design</option></select></label><label>Design Combination<select id="dCombo">${combos.map(x=>`<option>${x}</option>`).join('')}</select><button id="dSaveSetup" class="primary">Save Design Setup</button></section>
- <section><h3>Assign Design Properties</h3><div class="design-selected">Selected Members: <b>${ids.length?ids.map(x=>'M'+x).join(', '):'None'}</b></div><label>Member Type<select id="dType"><option>Beam</option><option>Column</option><option>Brace</option><option>Other</option></select></label><label>Design Material<select id="dMat"><option>Steel</option><option>Concrete</option></select></label><div class="design-mini-grid"><label>Fy (MPa)<input id="dFy" type="number" value="250"></label><label>Fu (MPa)<input id="dFu" type="number" value="400"></label><label>K-factor<input id="dK" type="number" step="0.1" value="1"></label><label>Lb (m)<input id="dLb" type="number" step="0.1" value="0"></label><label>f'c (MPa)<input id="dFc" type="number" value="25"></label><label>Rebar fy (MPa)<input id="dRfy" type="number" value="420"></label><label>Cover (mm)<input id="dCover" type="number" value="40"></label></div><button id="dAssign" class="primary">Assign to Selected Members (${ids.length})</button><div id="dAssignStatus" class="design-assign-status">${state.designLastMessage||''}</div></section></div>
- <section class="design-results-v120"><div class="section-db-head"><div><h3>Design Results Interface</h3><small>Steel LRFD Phase 1: axial tension/compression strength check + yield-moment screening. Overall Phase 1 Status = FAIL if Axial D/C > 1.0 or Flexure Screen > 1.0. LTB/local buckling are not yet checked.</small></div><div class="design-actions-v121"><button id="dRunSteel" class="primary">▶ Run Steel Design</button><button id="dCsv">Export Steel Design CSV</button></div></div><div class="design-table-wrap"><table><thead><tr><th>Member</th><th>Type</th><th>Material</th><th>Pu |N| kN</th><th>φPn kN</th><th>Axial D/C</th><th>Mu kN·m</th><th>Flexure Screen</th><th>KL/r</th><th>Governing</th><th>Status</th></tr></thead><tbody>${rows||'<tr><td colspan="11">No members</td></tr>'}</tbody></table></div></section>`;
- const ds=state.designSetup||{};body.querySelector('#dSteelCode').value=ds.steelCode||'AISC 360-22';body.querySelector('#dSteelMethod').value=ds.steelMethod||'LRFD';body.querySelector('#dRcCode').value=ds.rcCode||'ACI 318';body.querySelector('#dRcMethod').value=ds.rcMethod||'Strength Design';body.querySelector('#dCombo').value=ds.designCombination||'ENVELOPE';
- // V1.20.1 Fix: when Members are selected, populate the form from their stored design properties.
- // This prevents render() after Assign from falling back to the hard-coded Steel defaults.
- const selectedForForm=selectedModelMembers();
- if(selectedForForm.length){
-   const d=designDefaultsV120(selectedForForm[0]);
-   body.querySelector('#dType').value=d.memberType||'Beam';
-   body.querySelector('#dMat').value=d.designMaterial||'Steel';
-   body.querySelector('#dFy').value=(Number(d.fy)||250000)/1000;
-   body.querySelector('#dFu').value=(Number(d.fu)||400000)/1000;
-   body.querySelector('#dK').value=Number(d.K)||1;
-   body.querySelector('#dLb').value=Number(d.unbracedLength)||0;
-   body.querySelector('#dFc').value=Number(d.fc)||25;
-   body.querySelector('#dRfy').value=Number(d.rebarFy)||420;
-   body.querySelector('#dCover').value=Number(d.cover)||40;
- }
- body.querySelector('#dSaveSetup').onclick=()=>{state.designSetup={steelCode:body.querySelector('#dSteelCode').value,steelMethod:body.querySelector('#dSteelMethod').value,rcCode:body.querySelector('#dRcCode').value,rcMethod:body.querySelector('#dRcMethod').value,designCombination:body.querySelector('#dCombo').value};toast('Design setup saved • JSON/Cloud ready')};
- body.querySelector('#dAssign').onclick=()=>{
-   const ms=selectedModelMembers();if(!ms.length)return alert('Select one or more Members first.');
-   const assigned={memberType:body.querySelector('#dType').value,designMaterial:body.querySelector('#dMat').value,fy:Number(body.querySelector('#dFy').value)*1000,fu:Number(body.querySelector('#dFu').value)*1000,K:Number(body.querySelector('#dK').value)||1,unbracedLength:Number(body.querySelector('#dLb').value)||0,fc:Number(body.querySelector('#dFc').value)||25,rebarFy:Number(body.querySelector('#dRfy').value)||420,cover:Number(body.querySelector('#dCover').value)||40,status:'NOT_DESIGNED'};
-   for(const m of ms)m.design={...assigned};
-   state.designLastMessage=`✓ Assigned ${assigned.designMaterial} / ${assigned.memberType} to ${ms.map(m=>'M'+m.id).join(', ')}`;
-   render();
-   const msg=body.querySelector('#dAssignStatus');if(msg){msg.textContent=state.designLastMessage;msg.classList.add('show')}
-   toast(state.designLastMessage);
- };
- body.querySelector('#dRunSteel').onclick=()=>{for(const m of state.members){const r=steelDesignV121(m);m.design={...designDefaultsV120(m),status:r.applicable?r.status:'NOT_DESIGNED',steelResult:r.applicable?{axialRatio:r.axialRatio,phiAxial:r.phiAxial,slender:r.slender,flexRatio:r.flexRatio,governing:r.q?.analysis}:null}};state.designLastMessage='✓ Steel Design Phase 1 complete • AISC 360-22 LRFD axial + flexure screening checks';render();toast(state.designLastMessage)};
- body.querySelector('#dCsv').onclick=()=>{const out=[['Member','Type','Material','Pu_kN','PhiPn_kN','Axial_DC','Mu_kNm','Flexure_Screen','KL_over_r','Governing','Status'],...state.members.map(m=>{const d=designDefaultsV120(m),r=steelDesignV121(m),q=r.q||designDemandV121(m);return [m.id,d.memberType,d.designMaterial,q.N,r.phiAxial??'',Number.isFinite(r.axialRatio)?r.axialRatio:'',q.M,r.flexRatio??'',r.slender??'',q.analysis,r.status]})];const blob=new Blob([out.map(r=>r.join(',')).join('\n')],{type:'text/csv'}),x=document.createElement('a');x.href=URL.createObjectURL(blob);x.download='sapudom-v1.21-steel-design.csv';x.click();setTimeout(()=>URL.revokeObjectURL(x.href),500)};
+ const render=()=>{const ids=selectedModelMembers().map(m=>m.id),rows=state.members.map(m=>{const d=designDefaultsV120(m),r=steelDesignV122(m),q=r.q||designDemandV121(m),f=r.flex||{};const ar=r.applicable&&Number.isFinite(r.axialRatio)?r.axialRatio.toFixed(3):'—',fr=r.applicable&&Number.isFinite(r.flexRatio)?r.flexRatio.toFixed(3):'—',ir=r.applicable&&Number.isFinite(r.interactionRatio)?r.interactionRatio.toFixed(3):'—',cap=r.applicable&&r.phiAxial?Number(r.phiAxial).toFixed(2):'—',mcap=f.phiMn?Number(f.phiMn).toFixed(2):'—',cls=r.status==='PASS'?'pass':r.status==='FAIL'?'fail':'';return `<tr><td><button class="design-member-link" data-detail="${m.id}">M${m.id}</button></td><td>${d.memberType}</td><td>${d.designMaterial}</td><td>${q.N.toFixed(2)}</td><td>${cap}</td><td>${ar}</td><td>${q.M.toFixed(2)}</td><td>${mcap}</td><td>${fr}</td><td>${ir}</td><td>${f.governing||'—'}</td><td>${q.analysis}</td><td><span class="design-status ${cls}">${r.status}</span></td></tr>`}).join('');body.innerHTML=`
+ <div class="design-grid-v120"><section><h3>Design Standard</h3><label>Steel Code<select id="dSteelCode"><option>AISC 360-22</option></select></label><label>Steel Method<select id="dSteelMethod"><option>LRFD</option></select></label><label>RC Code<select id="dRcCode"><option>ACI 318</option></select></label><label>RC Method<select id="dRcMethod"><option>Strength Design</option></select></label><label>Design Combination<select id="dCombo">${combos.map(x=>`<option>${x}</option>`).join('')}</select><button id="dSaveSetup" class="primary">Save Design Setup</button></section>
+ <section><h3>Assign Design Properties</h3><div class="design-selected">Selected Members: <b>${ids.length?ids.map(x=>'M'+x).join(', '):'None'}</b></div><label>Member Type<select id="dType"><option>Beam</option><option>Column</option><option>Brace</option><option>Other</option></select></label><label>Design Material<select id="dMat"><option>Steel</option><option>Concrete</option></select></label><div class="design-mini-grid"><label>Fy (MPa)<input id="dFy" type="number" value="250"></label><label>Fu (MPa)<input id="dFu" type="number" value="400"></label><label>K-factor<input id="dK" type="number" step="0.1" value="1"></label><label>Lb (m) <small>0 = member length</small><input id="dLb" type="number" step="0.1" value="0"></label><label>Cb<input id="dCb" type="number" step="0.1" value="1"></label><label>f'c (MPa)<input id="dFc" type="number" value="25"></label><label>Rebar fy (MPa)<input id="dRfy" type="number" value="420"></label><label>Cover (mm)<input id="dCover" type="number" value="40"></label></div><button id="dAssign" class="primary">Assign to Selected Members (${ids.length})</button><div id="dAssignStatus" class="design-assign-status">${state.designLastMessage||''}</div></section></div>
+ <section class="design-results-v120"><div class="section-db-head"><div><h3>Steel Design Results — Phase 2</h3><small>Steel I strong-axis flexure: yielding/LTB + compactness screening; 2D axial-flexure interaction. Click a Member ID for details. Unsupported slender/noncompact-web cases show WARNING.</small></div><div class="design-actions-v121"><button id="dRunSteel" class="primary">▶ Run Steel Design</button><button id="dCsv">Export Steel Design CSV</button></div></div><div class="design-table-wrap"><table><thead><tr><th>Member</th><th>Type</th><th>Material</th><th>Pu kN</th><th>φPn kN</th><th>Axial D/C</th><th>Mu kN·m</th><th>φMn kN·m</th><th>Flex D/C</th><th>Interaction</th><th>Governing</th><th>Combination</th><th>Status</th></tr></thead><tbody>${rows||'<tr><td colspan="13">No members</td></tr>'}</tbody></table></div></section>`;
+ const ds=state.designSetup||{};body.querySelector('#dSteelCode').value=ds.steelCode||'AISC 360-22';body.querySelector('#dSteelMethod').value='LRFD';body.querySelector('#dRcCode').value=ds.rcCode||'ACI 318';body.querySelector('#dRcMethod').value=ds.rcMethod||'Strength Design';body.querySelector('#dCombo').value=ds.designCombination||'ENVELOPE';
+ const selectedForForm=selectedModelMembers();if(selectedForForm.length){const d=designDefaultsV120(selectedForForm[0]);body.querySelector('#dType').value=d.memberType||'Beam';body.querySelector('#dMat').value=d.designMaterial||'Steel';body.querySelector('#dFy').value=(Number(d.fy)||250000)/1000;body.querySelector('#dFu').value=(Number(d.fu)||400000)/1000;body.querySelector('#dK').value=Number(d.K)||1;body.querySelector('#dLb').value=Number(d.unbracedLength)||0;body.querySelector('#dCb').value=Number(d.Cb)||1;body.querySelector('#dFc').value=Number(d.fc)||25;body.querySelector('#dRfy').value=Number(d.rebarFy)||420;body.querySelector('#dCover').value=Number(d.cover)||40}
+ body.querySelector('#dSaveSetup').onclick=()=>{state.designSetup={steelCode:body.querySelector('#dSteelCode').value,steelMethod:'LRFD',rcCode:body.querySelector('#dRcCode').value,rcMethod:body.querySelector('#dRcMethod').value,designCombination:body.querySelector('#dCombo').value};toast('Design setup saved • JSON/Cloud ready')};
+ body.querySelector('#dAssign').onclick=()=>{const ms=selectedModelMembers();if(!ms.length)return alert('Select one or more Members first.');const assigned={memberType:body.querySelector('#dType').value,designMaterial:body.querySelector('#dMat').value,fy:Number(body.querySelector('#dFy').value)*1000,fu:Number(body.querySelector('#dFu').value)*1000,K:Number(body.querySelector('#dK').value)||1,Cb:Number(body.querySelector('#dCb').value)||1,unbracedLength:Number(body.querySelector('#dLb').value)||0,fc:Number(body.querySelector('#dFc').value)||25,rebarFy:Number(body.querySelector('#dRfy').value)||420,cover:Number(body.querySelector('#dCover').value)||40,status:'NOT_DESIGNED'};for(const m of ms)m.design={...assigned};state.designLastMessage=`✓ Assigned ${assigned.designMaterial} / ${assigned.memberType} to ${ms.map(m=>'M'+m.id).join(', ')}`;render();toast(state.designLastMessage)};
+ body.querySelector('#dRunSteel').onclick=()=>{for(const m of state.members){const r=steelDesignV122(m);m.design={...designDefaultsV120(m),status:r.applicable?r.status:'NOT_DESIGNED',steelResult:r.applicable?{axialRatio:r.axialRatio,phiAxial:r.phiAxial,slender:r.slender,phiMn:r.flex?.phiMn,flexRatio:r.flexRatio,interactionRatio:r.interactionRatio,flangeClass:r.flex?.flangeClass,webClass:r.flex?.webClass,Lb:r.flex?.Lb,Lp:r.flex?.Lp,Lr:r.flex?.Lr,limitState:r.flex?.governing,governing:r.q?.analysis}:null}};state.designLastMessage='✓ Steel Design Phase 2 complete • axial + flexure/LTB + interaction';render();toast(state.designLastMessage)};
+ body.querySelector('#dCsv').onclick=()=>{const out=[['Member','Type','Material','Pu_kN','PhiPn_kN','Axial_DC','Mu_kNm','PhiMn_kNm','Flexure_DC','Interaction_DC','Flange_Class','Web_Class','Lb_m','Lp_m','Lr_m','Limit_State','Combination','Status'],...state.members.map(m=>{const d=designDefaultsV120(m),r=steelDesignV122(m),q=r.q||designDemandV121(m),f=r.flex||{};return [m.id,d.memberType,d.designMaterial,q.N,r.phiAxial??'',Number.isFinite(r.axialRatio)?r.axialRatio:'',q.M,f.phiMn??'',Number.isFinite(r.flexRatio)?r.flexRatio:'',Number.isFinite(r.interactionRatio)?r.interactionRatio:'',f.flangeClass??'',f.webClass??'',f.Lb??'',f.Lp??'',f.Lr??'',f.governing??'',q.analysis,r.status]})];const blob=new Blob([out.map(r=>r.join(',')).join('\n')],{type:'text/csv'}),x=document.createElement('a');x.href=URL.createObjectURL(blob);x.download='sapudom-v1.22-steel-design.csv';x.click();setTimeout(()=>URL.revokeObjectURL(x.href),500)};
+ body.querySelectorAll('[data-detail]').forEach(b=>b.onclick=()=>{const m=state.members.find(x=>String(x.id)===String(b.dataset.detail));if(m)steelDetailV122(m)});
  };render();
 }
 
-updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.21 Fix — Steel Design Phase 1 ready');
+updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.22 — Steel Design Phase 2 ready');
 })();
