@@ -1,15 +1,16 @@
-# SAPUDOM Structure Analysis V1.22 — Steel Design Phase 2
+# SAPUDOM Structure Analysis V1.23 — Steel Design Phase 3
 
-Built from the tested V1.21 Fix baseline.
+Built from the tested V1.22 baseline.
 
-## V1.22 additions
-- AISC 360-22 LRFD Steel I strong-axis flexure capacity
-- Yielding / lateral-torsional buckling (LTB) using Lb, Lp, Lr and user Cb
-- Flange/web width-thickness compactness screening
-- Axial + flexural demand/capacity interaction for the 2D frame workflow
-- Detailed member design dialog (click Member ID)
-- Expanded Steel Design CSV export
-- Design properties and results continue to travel with JSON/Cloud model data
+## V1.23 additions
+- Traceable Steel Design calculation details per member.
+- Explicit governing labels: Yielding, Inelastic LTB, Elastic LTB, Flange Local Buckling.
+- Shows Sx, Zx, Mp, flange/web slenderness limits, Lb/Lp/Lr/Cb, Mn branches, φMn and D/C path.
+- Keeps unsupported slender-flange and noncompact/slender-web cases as WARNING rather than inventing capacity.
+- CSV filename/version updated to V1.23.
 
-## Scope / engineering limitation
-V1.22 Phase 2 supports doubly-symmetric Steel I sections for strong-axis flexure. Noncompact/slender web cases and slender-flange cases are flagged WARNING rather than being treated as fully implemented Chapter F cases. Cb defaults to 1.0 and must be set by the engineer when a different value is justified. This software remains a verification/design aid and does not replace independent engineering review.
+## Preserved
+V1.22 analysis solver, diagrams, load combinations, JSON/Cloud workflow, section/material assignment and design persistence are preserved.
+
+## Engineering scope
+This remains a verification/design aid. Supported Phase 3 flexure scope is doubly-symmetric Steel I strong-axis behavior covered by the implemented paths. Unsupported Chapter F cases are intentionally reported as WARNING and require independent engineering review.

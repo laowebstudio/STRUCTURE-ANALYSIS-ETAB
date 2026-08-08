@@ -294,3 +294,5 @@ body.model-space .results-expand{background:#0d5be1;color:#fff;border-color:#0d5
 .steel-detail-grid span{font-size:13px;color:#334e68}
 .engineering-note{margin-top:14px;padding:11px 12px;border-radius:10px;background:#fff7d6;border:1px solid #eedc9a;font-size:12px;line-height:1.45;color:#5b4a11}
 @media(max-width:850px){.steel-detail-grid{grid-template-columns:1fr}.design-table-wrap{overflow:auto}}
+/* V1.23 calculation trace */
+.calc-details-v123{margin-top:16px;border:1px solid #d8e1ec;border-radius:12px;padding:12px;background:#f8fbff}.calc-details-v123 .section-db-head{margin-bottom:8px}.calc-details-v123 small{display:block;color:#60758a}.calc-toggle-v123{padding:7px 12px}.calc-body-v123 table{width:100%;border-collapse:collapse;background:white}.calc-body-v123 th,.calc-body-v123 td{padding:8px 10px;border-bottom:1px solid #e6edf5;text-align:left;vertical-align:top}.calc-body-v123 th{width:190px;color:#20364d}
