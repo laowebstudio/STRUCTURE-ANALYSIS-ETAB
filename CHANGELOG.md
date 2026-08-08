@@ -1,4 +1,4 @@
-# V1.18 Fix
+# V1.18.1 Fix
 
 - Fixed Load Assignment Manager **Locate** action.
 - Locate now closes the manager, highlights the requested object, and pans/zooms the canvas to it.
