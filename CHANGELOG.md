@@ -56,3 +56,13 @@
 - Added global maximum displacement envelope.
 - Added envelope CSV export.
 - Added click-to-highlight member from envelope table.
+
+## V1.20 — Design Foundation
+- Added Design Center.
+- Added AISC/ACI design setup and design method selectors.
+- Added Beam/Column/Brace/Other member design classification.
+- Added Steel/Concrete design properties and multi-member assignment.
+- Added design demand/result interface sourced from analysis results.
+- Added JSON/Cloud persistence for design setup and member design properties.
+- Added Design Setup CSV export.
+- V1.19 solver and verification logic preserved.
