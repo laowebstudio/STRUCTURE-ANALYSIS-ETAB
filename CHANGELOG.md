@@ -1,3 +1,7 @@
+# V1.18
+- Added Load Assignment Manager with filters, locate/delete, multi-member UDL/Point/Moment assignment, copy-to-selected, select-loaded-members, clear-by-filter, and load summary.
+- Preserves V1.17.1 solver, diagram accuracy, JSON/Cloud, self weight and envelope behavior.
+
 # V1.17.1 Fix
 
 - Automatically hides Load labels in Axial N, Shear V and Moment M result views to prevent overlap.
