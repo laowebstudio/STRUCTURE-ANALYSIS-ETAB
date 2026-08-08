@@ -1,6 +1,9 @@
-# V1.23
-- Added Steel Design Phase 3 calculation trace.
-- Added explicit Yielding / Inelastic LTB / Elastic LTB / Flange Local Buckling governing labels.
-- Added visible compactness limits and strength branch values in member detail.
-- Preserved WARNING behavior for unsupported slender-flange and noncompact/slender-web cases.
-- Preserved V1.22 solver and regression-tested workflows as the baseline.
+# Changelog
+
+## V1.24
+- Added Steel Column + Beam-Column Design phase.
+- Added KL/rx and KL/ry calculation and governing buckling axis.
+- Added Fex/Fey trace and governing compression strength context.
+- Added explicit H1 interaction branch description in Calculation Details.
+- Updated Design Center/result labels and CSV filename.
+- Preserved V1.23 Steel Phase 3 flexure/LTB/local-buckling logic and stable analysis core.
