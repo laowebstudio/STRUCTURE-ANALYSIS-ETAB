@@ -282,3 +282,5 @@ body.model-space .results-expand{background:#0d5be1;color:#fff;border-color:#0d5
 
 /* V1.20.1 Fix */
 .design-assign-status{margin-top:10px;padding:9px 12px;border-radius:8px;background:#e8f7ed;color:#176b37;font-weight:700;min-height:18px}.design-assign-status:empty{display:none}
+
+.design-actions-v121{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.design-actions-v121 .primary{background:#1769d2;color:#fff}.design-results-v120 table{min-width:1120px}
