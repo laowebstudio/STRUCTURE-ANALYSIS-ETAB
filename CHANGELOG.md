@@ -1,17 +1,12 @@
-# V1.28
+# V1.28.1 Fix — 3D Workspace Auto Refresh
 
-## Integrated 3D Workspace
-- 3D viewport/results now use the same center-workspace visual hierarchy as 2D.
-- 3D/2D toggle reuses the top 3D Frame button.
-- 3D Model Data launches the stable V1.27.1 editor for nodes, members, supports and nodal loads.
+## Fixed
+- Main integrated 3D viewport no longer requires switching 3D → 2D → 3D after editing model data.
+- Added a live refresh bridge from the 3D Model Data editor to the main 3D workspace.
+- `Load 3D Sample`, `Add Node`, `Add Member`, and `Apply Node Data` now redraw the integrated viewport immediately.
+- Closing 3D Model Data performs a final redraw and Fit.
 
-## Phase 2 Solver
-- 12x12 local 3D space-frame stiffness matrix.
-- Local-to-global coordinate transformation and global matrix assembly.
-- 6 DOF/node boundary conditions.
-- Fx/Fy/Fz/Mx/My/Mz nodal loads.
-- Displacements, support reactions and local member end forces.
-- Deformed shape preview and numerical N/V2/V3/T/M2/M3 ranges.
-
-## Safety
-- 2D engine is not modified by the V1.28 3D solver.
+## Preserved
+- V1.28 integrated 3D workspace and Phase 2 solver.
+- V1.27.1 3D model-data workflow.
+- Verified 2D engine, Deformed/Axial/Shear/Moment, RC Design, Steel Design, JSON/Cloud logic.
