@@ -1,9 +1,11 @@
-# SAPUDOM Structure Analysis V1.29
+# V1.29.1 Fix — 3D Diagram Readability + Member Local Axes
 
-## 3D Force & Moment Diagrams
-- Added full visual diagrams for Axial N, Shear V2, Shear V3, Torsion T, Moment M2 and Moment M3.
-- Diagrams rotate and zoom together with the 3D model.
-- Added Diagram Scale control (0.2–3.0).
-- Added Values toggle to show/hide end values on diagrams.
-- Preserved V1.28.5 3D solver and 2D calculation engine.
-- Preserved Interactive Results Viewer, locate/highlight, fullscreen, JSON persistence and 2D/3D switching.
+- Added Selected Member / Whole Model diagram scope.
+- Default after Analyze 3D is Selected Member mode with the first member selected.
+- Clicking a member in the 3D viewport selects/highlights it and shows only its diagram.
+- Clicking a member from Analysis Results also switches diagram scope to Selected Member.
+- Added optional Local 1-2-3 member axes display.
+- Diagram legend Min/Max follows the selected member when Selected Member mode is active.
+- Retained V1.29 diagram scale and value-label controls.
+- 3D solver logic unchanged.
+- 2D calculation engine unchanged.

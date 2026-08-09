@@ -684,3 +684,11 @@ body:has(#integrated3dV128.v128-fullscreen-model){overflow:hidden!important}
 .v129-diagram-control input{width:64px;padding:6px 7px;border:1px solid #cbd5e1;border-radius:7px;background:#fff}
 .v129-values-control input{width:auto;margin:0}
 .v128-fullscreen-model .v129-diagram-control,.v128-fullscreen-model .v129-values-control{display:inline-flex}
+
+/* V1.29.1 Fix — 3D Diagram Readability + Member Local Axes */
+.v129-scope-control,.v129-axis-control{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#334155;white-space:nowrap}
+.v129-scope-control select{height:32px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:0 8px;color:#0f172a;font-weight:700}
+.v129-axis-control input{accent-color:#2563eb}
+#integrated3dV128 .v128-locatebar{flex-wrap:wrap}
+#integrated3dV128 .v128-view canvas{cursor:crosshair}
+@media (max-width:1100px){.v129-scope-control,.v129-axis-control{font-size:11px}.v129-scope-control select{max-width:145px}}
