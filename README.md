@@ -1,10 +1,5 @@
-# SAPUDOM Structure Analysis V1.28.5
+# SAPUDOM Structure Analysis V1.29 — 3D Force & Moment Diagrams
 
-Interactive 3D Results Viewer.
+Built directly from V1.28.5 Stable. This release adds 3D result diagrams for Axial N, Shear V2/V3, Torsion T and Moment M2/M3 without changing the verified 3D solver or 2D calculation engine.
 
-- Analyze 3D keeps the model workspace clear and exposes a **Show Analysis Results** button.
-- Results open in a large overlay with Summary, Displacement, Reactions and Member End Forces.
-- Tables scroll vertically and horizontally with sticky headers.
-- Click a Node or Member row to close the results overlay, center/zoom to that object and highlight it in the 3D model.
-- Use **Back to Results** to reopen the same results without running Analyze again.
-- V1.28.4 force-direction visualization, fullscreen model, 3D solver and the protected 2D calculation engine are preserved.
+Use Analyze 3D, then select a result mode. Diagram Scale changes diagram amplitude and Values toggles numerical labels. Fullscreen, interactive result tables, Node/Member locate, JSON Save/Open, and 2D ↔ 3D switching remain available.

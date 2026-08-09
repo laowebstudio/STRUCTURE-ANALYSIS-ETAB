@@ -679,3 +679,8 @@ body:has(#integrated3dV128.v128-fullscreen-model){overflow:hidden!important}
   #integrated3dV128 .v128-results-dialog .v128-summary{grid-template-columns:repeat(2,minmax(150px,1fr))}
   #integrated3dV128 .v128-results-launch{align-items:stretch;flex-direction:column}
 }
+/* V1.29 — 3D Force & Moment Diagrams */
+.v129-diagram-control,.v129-values-control{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#334155;white-space:nowrap}
+.v129-diagram-control input{width:64px;padding:6px 7px;border:1px solid #cbd5e1;border-radius:7px;background:#fff}
+.v129-values-control input{width:auto;margin:0}
+.v128-fullscreen-model .v129-diagram-control,.v128-fullscreen-model .v129-values-control{display:inline-flex}
