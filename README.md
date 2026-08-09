@@ -1,4 +1,9 @@
-# SAPUDOM Structure Analysis V1.25
+# SAPUDOM Structure Analysis V1.25.1 Fix
+
+## Critical RC Beam demand-transfer fix
+
+RC Beam Mu is now taken from the maximum absolute internal moment along the member (using the same member diagram sampling used by the analysis diagrams), so simply supported beams with zero end moments correctly pass their midspan moment into RC Design.
+
 
 ## V1.25 — RC Beam Design Phase 1
 

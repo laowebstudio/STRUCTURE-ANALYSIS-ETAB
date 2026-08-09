@@ -1,3 +1,9 @@
+# V1.25.1 Fix
+
+- Fixed RC Beam design demand transfer: Mu now uses the maximum absolute internal bending moment sampled along each member, including UDL/point/member-load effects, instead of only member end moments.
+- Preserved V1.24 Steel Design behavior and V1.25 RC Beam Phase 1 calculations.
+- Updated demand helper consistency for sampled N/V/M values.
+
 # Changelog
 
 ## V1.25
