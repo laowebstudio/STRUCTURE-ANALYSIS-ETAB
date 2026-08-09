@@ -32,3 +32,11 @@
 - V1.26 Section Orientation / Rotate Section 90°.
 - V1.25.2 RC Beam Design Phase 1 and V1.24 Steel Design.
 - JSON / Cloud / Load Manager / combinations.
+
+## V1.27 — 3D Frame Phase 1
+- Added isolated 3D Frame Center without changing the verified 2D solver.
+- 3D Nodes use X/Y/Z coordinates and 6 DOF per node (Ux, Uy, Uz, Rx, Ry, Rz).
+- Added 3D member connectivity, member length, support/restraint assignment and Fx/Fy/Fz/Mx/My/Mz nodal load data.
+- Added interactive 3D viewport (orbit, zoom, fit), sample 3D frame and model validation.
+- 3D model is included in JSON Save/Open persistence.
+- Full 12x12 3D space-frame stiffness solver and 3D result diagrams are intentionally reserved for Phase 2.
