@@ -1,4 +1,14 @@
-# SAPUDOM Structure Analysis — V1.26.2 Fix
+# SAPUDOM Structure Analysis — V1.26.3 Fix
+
+## Member-specific Result Min/Max
+- Axial N, Shear V and Moment M legends now show Min/Max for the single selected Member.
+- Clicking M1, M2, etc. updates the diagram legend scope immediately.
+- With no single Member selected, diagrams continue to show Whole Model Min/Max.
+- Diagram scaling remains based on the whole model to avoid misleading visual scale jumps between selections.
+- V1.26.2 member-specific Deformed Max Displacement is preserved.
+- Section Orientation 0°/90°, RC Beam Design, Steel Design, JSON/Cloud and existing analysis features are preserved.
+
+# SAPUDOM Structure Analysis — V1.26.3 Fix
 
 ## Fixed
 - Deformed Shape Max displacement / Location is now Member-specific when exactly one Member is selected.
@@ -11,7 +21,7 @@
 - V1.25.2 RC Beam demand + JSON load visualization fixes
 - Steel / Beam-Column Design V1.24 behavior
 
-# SAPUDOM Structure Analysis — V1.26.2 Fix
+# SAPUDOM Structure Analysis — V1.26.3 Fix
 
 ## Fixed
 - Deformed Shape legend now shows **Max displacement (mm)** and its location.
