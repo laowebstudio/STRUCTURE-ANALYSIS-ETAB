@@ -10,3 +10,9 @@
 - V1.28 integrated 3D workspace and Phase 2 solver.
 - V1.27.1 3D model-data workflow.
 - Verified 2D engine, Deformed/Axial/Shear/Moment, RC Design, Steel Design, JSON/Cloud logic.
+
+
+## V1.28.2 Fix
+- Fixed selected Node resetting to N1 after Apply Node Data.
+- Added 3D nodal load visualization to Model Data and integrated Workspace.
+- No changes to the verified 2D calculation engine.
