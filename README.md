@@ -1,4 +1,11 @@
-# SAPUDOM Structure Analysis V1.28.1 Fix
+# SAPUDOM Structure Analysis V1.28.3 — 3D Analysis Results UI
+
+## V1.28.3 — 3D Analysis Results UI
+- Enlarged 3D Analysis Results panel for easier reading.
+- Larger Summary / Displacement / Reactions / Member End Forces tabs.
+- Sticky table headers and scrollable results for larger models.
+- Larger result text and row spacing.
+- Preserves V1.28.2 3D solver logic and the validated 2D calculation engine.
 
 ## 3D Workspace Auto Refresh
 

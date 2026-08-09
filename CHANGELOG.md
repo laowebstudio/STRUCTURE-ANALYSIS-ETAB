@@ -1,4 +1,9 @@
-# V1.28.1 Fix — 3D Workspace Auto Refresh
+# Changelog
+
+## V1.28.3 — 3D Analysis Results UI
+- UI/CSS-only enlargement of the 3D Analysis Results area.
+- Added sticky result tabs/header, larger tables, improved scrolling and readability.
+- No changes to 2D calculation engine or V1.28.2 3D solver calculations.
 
 ## Fixed
 - Main integrated 3D viewport no longer requires switching 3D → 2D → 3D after editing model data.
