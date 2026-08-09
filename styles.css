@@ -692,3 +692,22 @@ body:has(#integrated3dV128.v128-fullscreen-model){overflow:hidden!important}
 #integrated3dV128 .v128-locatebar{flex-wrap:wrap}
 #integrated3dV128 .v128-view canvas{cursor:crosshair}
 @media (max-width:1100px){.v129-scope-control,.v129-axis-control{font-size:11px}.v129-scope-control select{max-width:145px}}
+
+/* ===== V1.30 — Independent 3D Workspace + 3D Building Generator ===== */
+.workspace.v130-3d-workspace{grid-template-columns:minmax(0,1fr)!important;gap:0!important;padding:8px!important}
+.workspace.v130-3d-workspace>.left-panel,.workspace.v130-3d-workspace>.right-panel{display:none!important}
+.workspace.v130-3d-workspace>.center{grid-column:1!important;border-radius:10px!important;min-width:0!important}
+.v130-building-btn{background:#6d28d9!important;color:#fff!important;border-color:#5b21b6!important}
+.v130-building-modal{z-index:10150}
+.v130-building-card{width:min(1120px,96vw)!important;max-height:92vh;overflow:auto}
+.v130-building-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+.v130-building-grid>section{border:1px solid #d8e2ef;border-radius:12px;padding:14px;background:#f8fbff}
+.v130-building-grid h3{margin:0 0 10px;color:#0b3e75}
+.v130-building-grid label{display:grid;gap:5px;margin:8px 0;font-size:13px;font-weight:600}
+.v130-building-grid input{width:100%;padding:8px;border:1px solid #c7d3e2;border-radius:7px;background:#fff}
+.v130-building-grid .v130-check{display:flex;align-items:center;gap:8px;font-weight:500}.v130-building-grid .v130-check input{width:auto}
+.v130-mini{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.v130-building-preview{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 14px;border:1px solid #f0cf72;background:#fff9db;border-radius:10px;margin:10px 0}.v130-building-preview b{color:#704d00}.v130-building-preview span{color:#5d6673}
+.v130-building-actions{display:flex;gap:8px;justify-content:flex-end;margin:12px 0}
+.v130-building-actions button{padding:9px 14px;border-radius:8px;border:1px solid #c4cfdd;background:#fff;cursor:pointer}.v130-building-actions button.primary{background:#6d28d9!important;color:white!important;border-color:#6d28d9!important}
+@media(max-width:800px){.v130-building-grid{grid-template-columns:1fr}.v130-mini{grid-template-columns:1fr 1fr}.v130-building-preview{align-items:flex-start;flex-direction:column}}

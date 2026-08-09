@@ -1,15 +1,9 @@
-# SAPUDOM Structure Analysis V1.29.1 Fix
+# SAPUDOM Structure Analysis V1.30
 
-## 3D Diagram Readability + Member Local Axes
+V1.30 adds an independent 3D building workflow while protecting the tested 2D system.
 
-Built directly from V1.29. The 2D calculation engine and V1.29 3D solver are kept unchanged.
+## 3D workflow
+Open **3D Frame** → **3D Building** → define X/Y bays and widths, stories and heights → generate the building → assign 3D loads in **3D Model Data** → **Analyze 3D** → review N, V2, V3, T, M2, M3 diagrams and interactive results.
 
-New UI behavior:
-- Diagram scope: Selected Member / Whole Model
-- Click a member directly in the 3D viewport to select it and show only that member's diagram
-- Results-table member locate automatically switches to Selected Member diagram mode
-- Optional Local 1-2-3 axes display for members
-- Selected-member Min/Max legend
-- Keeps Diagram Scale, Values, Fullscreen, Results Viewer, node/member locate, and 2D↔3D workflow
-
-M2 and M3 remain separate because a 3D frame member bends about its two local transverse axes (local 2 and local 3). T is torsion about local 1.
+## 2D protection
+The V1.30 3D Building Generator writes only to the separate `model3d` data structure. It does not generate, replace, or edit the existing 2D model.
