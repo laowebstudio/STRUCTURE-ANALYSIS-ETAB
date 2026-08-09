@@ -1,23 +1,8 @@
-# Changelog
+# V1.28.4 Fix — 3D Force Direction + Scrollable Results + Fullscreen Model
 
-## V1.28.3 — 3D Analysis Results UI
-- UI/CSS-only enlargement of the 3D Analysis Results area.
-- Added sticky result tabs/header, larger tables, improved scrolling and readability.
-- No changes to 2D calculation engine or V1.28.2 3D solver calculations.
-
-## Fixed
-- Main integrated 3D viewport no longer requires switching 3D → 2D → 3D after editing model data.
-- Added a live refresh bridge from the 3D Model Data editor to the main 3D workspace.
-- `Load 3D Sample`, `Add Node`, `Add Member`, and `Apply Node Data` now redraw the integrated viewport immediately.
-- Closing 3D Model Data performs a final redraw and Fit.
-
-## Preserved
-- V1.28 integrated 3D workspace and Phase 2 solver.
-- V1.27.1 3D model-data workflow.
-- Verified 2D engine, Deformed/Axial/Shear/Moment, RC Design, Steel Design, JSON/Cloud logic.
-
-
-## V1.28.2 Fix
-- Fixed selected Node resetting to N1 after Apply Node Data.
-- Added 3D nodal load visualization to Model Data and integrated Workspace.
-- No changes to the verified 2D calculation engine.
+- Fixed 3D nodal force arrows so Fx/Fy/Fz follow the projected **global X/Y/Z axes** and preserve positive/negative sign while rotating the view.
+- Applied the same global-axis force rendering in 3D Model Data and the integrated 3D Workspace.
+- Added a projected X/Y/Z axis indicator in the integrated 3D viewport.
+- Fixed 3D Analysis Results scrolling with an independent scroll region, sticky tabs/header behavior, and horizontal scrolling for wide Member End Forces tables.
+- Added **Fullscreen Model** / **Exit Fullscreen** mode. Fullscreen hides side/result clutter while keeping 3D controls and result-mode buttons available.
+- 2D analysis/design logic and the V1.28.x 3D numerical solver were not changed.

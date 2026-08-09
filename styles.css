@@ -464,7 +464,7 @@ body.model-space .results-expand{background:#0d5be1;color:#fff;border-color:#0d5
 .v128-hide2d{display:none!important}.frame3d-top.active3d{background:linear-gradient(180deg,#0f766e,#0b5d57)!important}#integrated3dV128{height:100%;display:flex;flex-direction:column;background:#fff}.v128-toolbar{min-height:54px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:7px 10px;background:#f8fbff;border-bottom:1px solid #d5dde8}.v128-toolbar b{color:#0a356d;margin-right:7px}.v128-toolbar button{border:1px solid #b9c8dc;background:#fff;color:#17365d;border-radius:7px;padding:7px 10px;font-weight:700;cursor:pointer}.v128-toolbar button.primary{background:#0d5be1;color:#fff;border-color:#0d5be1}.v128-toolbar span{margin-left:auto;font-size:12px;color:#607286}.v128-view{position:relative;flex:1;min-height:320px;background:#fff}.v128-view canvas{width:100%;height:100%;display:block;touch-action:none}.v128-results{height:265px;min-height:180px;border-top:1px solid #d5dde8}.v128-results .results-body{height:calc(100% - 42px);overflow:auto}.v128-results .result-content{overflow:auto}.v128-results table{width:100%;border-collapse:collapse;font-size:12px}.v128-results th,.v128-results td{padding:6px 8px;border-bottom:1px solid #e0e7ef;text-align:right;white-space:nowrap}.v128-results th:first-child,.v128-results td:first-child{text-align:left}.v128-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px}.v128-summary>div{border:1px solid #dbe3ef;border-radius:10px;padding:12px;background:#f8fafc}.v128-summary b{display:block;color:#5b6f85;font-size:12px}.v128-summary strong{display:block;margin-top:5px;color:#0a356d;font-size:18px}@media(max-width:950px){.v128-results{height:230px}.v128-view{min-height:270px}.v128-summary{grid-template-columns:repeat(2,1fr)}}
 
 
-/* V1.28.3 — 3D Analysis Results UI
+/* V1.28.4 Fix — 3D Force Direction + Scrollable Results + Fullscreen Model
    UI/CSS only. 2D engine + V1.28.x 3D solver logic are untouched. */
 #integrated3dV128 .v128-results{
   height:clamp(360px,43vh,520px);
@@ -583,3 +583,56 @@ body.model-space .results-expand{background:#0d5be1;color:#fff;border-color:#0d5
   #integrated3dV128 .v128-summary{grid-template-columns:repeat(2,minmax(150px,1fr))}
   #integrated3dV128 .v128-results .tabs{overflow-x:auto}
 }
+
+
+/* V1.28.4 Fix — force direction, scrollable results, fullscreen model. UI/rendering only. */
+#integrated3dV128 .v128-results .results-body{
+  overflow:hidden !important;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+}
+#integrated3dV128 .v128-results .tabs{
+  flex:0 0 auto;
+}
+#integrated3dV128 .v128-results .result-content{
+  flex:1 1 auto;
+  min-height:0 !important;
+  max-height:none !important;
+  overflow:auto !important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding:0 10px 14px;
+}
+#integrated3dV128 .v128-results table{
+  min-width:1100px;
+}
+#integrated3dV128.v128-fullscreen-model{
+  position:fixed !important;
+  inset:0 !important;
+  width:100vw !important;
+  height:100vh !important;
+  z-index:99999 !important;
+  background:#fff !important;
+  padding:0 !important;
+}
+#integrated3dV128.v128-fullscreen-model .v128-view{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+}
+#integrated3dV128.v128-fullscreen-model .v128-results,
+#integrated3dV128.v128-fullscreen-model .statusbar{
+  display:none !important;
+}
+#integrated3dV128.v128-fullscreen-model .v128-toolbar{
+  flex:0 0 auto;
+  position:relative;
+  z-index:2;
+}
+#integrated3dV128.v128-fullscreen-model .result-modes{
+  flex:0 0 auto;
+  position:relative;
+  z-index:2;
+  background:#fff;
+}
+body:has(#integrated3dV128.v128-fullscreen-model){overflow:hidden!important}
