@@ -40,3 +40,12 @@
 - Added interactive 3D viewport (orbit, zoom, fit), sample 3D frame and model validation.
 - 3D model is included in JSON Save/Open persistence.
 - Full 12x12 3D space-frame stiffness solver and 3D result diagrams are intentionally reserved for Phase 2.
+
+## V1.27.1 Fix — 3D UI Layout
+- UI/CSS-only regression-safe fix based on V1.27 Phase 1.
+- Top toolbar actions redistributed so the + New button and neighboring actions are not clipped.
+- 3D Frame Center widened and rebalanced for desktop screens.
+- 6-DOF restraint controls (Ux/Uy/Uz/Rx/Ry/Rz) now use stable 3-column cards and no longer clip or drift.
+- Node/member/load inputs receive consistent spacing and readable widths.
+- 3D viewport/control proportions improved with responsive breakpoints.
+- Verified 2D calculation engine from V1.26.3 Fix intentionally untouched.

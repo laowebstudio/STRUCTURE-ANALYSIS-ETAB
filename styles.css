@@ -298,3 +298,164 @@ body.model-space .results-expand{background:#0d5be1;color:#fff;border-color:#0d5
 .calc-details-v123{margin-top:16px;border:1px solid #d8e1ec;border-radius:12px;padding:12px;background:#f8fbff}.calc-details-v123 .section-db-head{margin-bottom:8px}.calc-details-v123 small{display:block;color:#60758a}.calc-toggle-v123{padding:7px 12px}.calc-body-v123 table{width:100%;border-collapse:collapse;background:white}.calc-body-v123 th,.calc-body-v123 td{padding:8px 10px;border-bottom:1px solid #e6edf5;text-align:left;vertical-align:top}.calc-body-v123 th{width:190px;color:#20364d}
 /* V1.27 3D Frame Phase 1 */
 .frame3d-top{background:linear-gradient(180deg,#4f46e5,#3730a3)!important;color:#fff!important}.frame3d-card-v127{width:min(1180px,96vw)!important;max-height:94vh;overflow:auto}.frame3d-layout-v127{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(330px,.75fr);gap:16px}.frame3d-view-v127,.frame3d-data-v127{border:1px solid #dbe3ef;border-radius:14px;padding:12px;background:#f8fafc}.frame3d-view-v127 canvas{width:100%;height:480px;display:block;background:#fff;border:1px solid #dbe3ef;border-radius:10px;touch-action:none}.frame3d-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.frame3d-tables-v127{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.frame3d-tables-v127>div{overflow:auto}.f3-checks{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 12px}.f3-checks label{display:flex!important;gap:5px;align-items:center}@media(max-width:850px){.frame3d-layout-v127,.frame3d-tables-v127{grid-template-columns:1fr}.frame3d-view-v127 canvas{height:360px}}
+
+/* V1.27.1 Fix — 3D UI Layout only. Verified 2D calculation engine intentionally untouched. */
+/* Top toolbar: distribute all actions across the available width so +New is never clipped. */
+.topbar{
+  grid-template-columns:minmax(190px,220px) minmax(255px,315px) minmax(0,1fr);
+  min-height:96px;
+  height:96px;
+  gap:8px;
+  padding:7px 10px;
+  overflow:visible;
+}
+.file-actions{
+  min-width:0;
+  width:100%;
+  display:flex;
+  align-items:stretch;
+  justify-content:stretch;
+  gap:4px;
+  overflow:visible;
+}
+.file-actions button,
+.file-actions #buildingBtn,
+.file-actions #frame3dBtn,
+.file-actions #loadCenterBtn,
+.file-actions #loadManagerBtn,
+.file-actions #modelingBtn,
+.file-actions #checkModelBtn,
+.file-actions #verifyBtn,
+.file-actions #designCenterBtn{
+  flex:1 1 0;
+  min-width:0;
+  max-width:none;
+  min-height:62px;
+  padding:6px 3px!important;
+  font-size:9.5px;
+  line-height:1.08;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.file-actions #newBtn{flex:0.82 1 0}
+.file-actions #sampleBtn,.file-actions #saveBtn,.file-actions #openBtn,.file-actions #csvBtn,.file-actions #cloudBtn{flex:.9 1 0}
+.file-actions #buildingBtn,.file-actions #frame3dBtn,.file-actions #loadCenterBtn,.file-actions #loadManagerBtn,.file-actions #modelingBtn,.file-actions #checkModelBtn,.file-actions #verifyBtn,.file-actions #designCenterBtn{flex:1.15 1 0}
+
+/* 3D Frame Center: desktop-first engineering layout with readable 6-DOF controls. */
+.frame3d-card-v127{
+  width:min(1320px,96vw)!important;
+  max-height:92vh;
+  overflow:auto;
+  padding:18px 20px 20px;
+}
+.frame3d-card-v127 .section-db-head{
+  position:sticky;
+  top:-18px;
+  z-index:8;
+  margin:-18px -20px 16px;
+  padding:18px 20px 12px;
+  background:#fff;
+  border-bottom:1px solid #d7e2ee;
+}
+.frame3d-card-v127 .section-db-head h2{font-size:24px;margin:0 0 4px}
+.frame3d-card-v127 .section-db-head small{font-size:12px;line-height:1.45;color:#5e6f82}
+.frame3d-layout-v127{
+  display:grid;
+  grid-template-columns:minmax(560px,1.55fr) minmax(410px,.9fr);
+  gap:18px;
+  align-items:start;
+}
+.frame3d-view-v127,.frame3d-data-v127{
+  border:1px solid #d7e1ec;
+  border-radius:14px;
+  padding:14px;
+  background:#f8fafc;
+  min-width:0;
+}
+.frame3d-view-v127 canvas{
+  width:100%;
+  height:500px;
+  display:block;
+  background:#fff;
+  border:1px solid #ccd8e6;
+  border-radius:11px;
+  touch-action:none;
+}
+.frame3d-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+.frame3d-toolbar button{min-width:42px}
+.frame3d-data-v127 h3{margin:8px 0 8px;color:#17324f;font-size:17px}
+.frame3d-data-v127 h3:not(:first-child){margin-top:18px;padding-top:14px;border-top:1px solid #dde5ef}
+.frame3d-data-v127 label{
+  display:grid;
+  gap:5px;
+  min-width:0;
+  font-size:12px;
+  font-weight:700;
+  color:#213a57;
+}
+.frame3d-data-v127 input[type=number],.frame3d-data-v127 select{
+  width:100%;
+  min-width:0;
+  padding:8px 9px;
+  border:1px solid #bdcad9;
+  border-radius:7px;
+  background:#fff;
+  color:#172b44;
+}
+.frame3d-data-v127>.design-mini-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+}
+.frame3d-data-v127 button{margin-top:8px}
+.f3-checks{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  margin:9px 0 12px;
+}
+.f3-checks label{
+  display:flex!important;
+  align-items:center;
+  justify-content:flex-start;
+  gap:7px;
+  min-height:38px;
+  padding:7px 10px;
+  border:1px solid #d4deea;
+  border-radius:8px;
+  background:#fff;
+  white-space:nowrap;
+  font-weight:700;
+}
+.f3-checks input[type=checkbox]{
+  flex:0 0 auto;
+  width:16px!important;
+  height:16px;
+  margin:0;
+}
+.frame3d-data-v127 #f3ApplyNode,.frame3d-data-v127 #f3Validate{display:inline-flex;align-items:center;justify-content:center;margin-right:7px}
+.frame3d-tables-v127{grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.frame3d-tables-v127>div{min-width:0;overflow:auto;border:1px solid #e0e7ef;border-radius:10px;padding:10px;background:#fff}
+.frame3d-tables-v127 table{width:100%;border-collapse:collapse;font-size:12px}
+.frame3d-tables-v127 th,.frame3d-tables-v127 td{padding:7px 8px;border-bottom:1px solid #e7edf4;text-align:left;white-space:nowrap}
+
+@media(max-width:1380px){
+  .topbar{grid-template-columns:minmax(180px,205px) minmax(225px,275px) minmax(0,1fr);height:102px}
+  .brand img{width:46px;height:46px}.brand strong{font-size:17px}.title h1{font-size:17px}.title p{font-size:10px}
+  .file-actions{gap:3px}.file-actions button,.file-actions #buildingBtn,.file-actions #frame3dBtn,.file-actions #loadCenterBtn,.file-actions #loadManagerBtn,.file-actions #modelingBtn,.file-actions #checkModelBtn,.file-actions #verifyBtn,.file-actions #designCenterBtn{font-size:8.7px;padding:5px 2px!important;min-height:58px}
+  .frame3d-card-v127{width:min(1240px,97vw)!important}
+  .frame3d-layout-v127{grid-template-columns:minmax(500px,1.45fr) minmax(380px,.9fr)}
+  .frame3d-view-v127 canvas{height:450px}
+}
+@media(max-width:1080px){
+  .topbar{height:78px;grid-template-columns:190px minmax(0,1fr)}
+  .file-actions{display:none!important}
+  .frame3d-layout-v127{grid-template-columns:1fr}
+  .frame3d-view-v127 canvas{height:400px}
+  .frame3d-data-v127>.design-mini-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:720px){
+  .frame3d-card-v127{width:98vw!important;padding:14px}
+  .frame3d-card-v127 .section-db-head{top:-14px;margin:-14px -14px 12px;padding:14px}
+  .frame3d-view-v127 canvas{height:320px}
+  .frame3d-data-v127>.design-mini-grid,.f3-checks,.frame3d-tables-v127{grid-template-columns:1fr 1fr}
+}
