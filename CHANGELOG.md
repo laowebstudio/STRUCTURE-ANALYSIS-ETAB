@@ -14,3 +14,10 @@
 - Fixed base restraint persistence for generated buildings: base nodes store Ux/Uy/Uz/Rx/Ry/Rz = Fixed.
 - Added compatibility repair for V1.30 generated 3D building models with Fixed Base metadata.
 - Scope limited to state.model3d; verified 2D workspace/engine is untouched.
+
+
+## V1.30.2 Fix — 3D Model Validation Feedback
+- Added visible validation status inside 3D Model Data.
+- Success shows Nodes, Members, restrained Nodes, restrained DOF, and Ready to Analyze.
+- Warnings/errors are shown in the same panel instead of relying on a hidden workspace toast.
+- No changes to the 2D engine, 3D solver, 3D Building Generator calculations, or support persistence logic.

@@ -10,3 +10,7 @@ The V1.30 3D Building Generator writes only to the separate `model3d` data struc
 
 ### V1.30.1 Fix
 3D Building Base Support Persistence: generated Fixed Base nodes persist all 6 restraints and display them immediately in 3D Model Data. The fix is isolated to the independent 3D data model and does not modify the 2D engine.
+
+
+### V1.30.2 Fix
+3D Model Validation Feedback: Validate 3D Model now displays a visible in-dialog success/warning/error status, including Node count, Member count, restrained Nodes, restrained DOF, and Ready to Analyze state. This is a UI feedback-only fix; 2D engine, 3D solver, Building Generator, and base-support persistence are unchanged.
