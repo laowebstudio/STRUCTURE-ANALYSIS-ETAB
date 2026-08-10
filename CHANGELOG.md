@@ -7,3 +7,10 @@
 - Supports separate bay widths in X/Y, story heights, fixed base supports, and beam/column 3D section properties.
 - Generated data writes only to `state.model3d`; it does not modify 2D `state.nodes`, `state.members`, 2D loads, results, RC/Steel design, or the existing 2D Building Center.
 - Existing V1.29.1 3D solver, diagrams, local axes, fullscreen and interactive results remain unchanged.
+
+## V1.30.1 Fix — 3D Building Base Support Persistence
+- Fixed 3D Building Generator base supports not appearing in 3D Model Data.
+- Fixed selected Node support/load controls not hydrating on initial Model Data open/refresh.
+- Fixed base restraint persistence for generated buildings: base nodes store Ux/Uy/Uz/Rx/Ry/Rz = Fixed.
+- Added compatibility repair for V1.30 generated 3D building models with Fixed Base metadata.
+- Scope limited to state.model3d; verified 2D workspace/engine is untouched.

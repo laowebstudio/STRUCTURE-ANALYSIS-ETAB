@@ -7,3 +7,6 @@ Open **3D Frame** → **3D Building** → define X/Y bays and widths, stories an
 
 ## 2D protection
 The V1.30 3D Building Generator writes only to the separate `model3d` data structure. It does not generate, replace, or edit the existing 2D model.
+
+### V1.30.1 Fix
+3D Building Base Support Persistence: generated Fixed Base nodes persist all 6 restraints and display them immediately in 3D Model Data. The fix is isolated to the independent 3D data model and does not modify the 2D engine.
