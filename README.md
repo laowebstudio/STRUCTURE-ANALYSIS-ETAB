@@ -1,16 +1,25 @@
-# SAPUDOM Structure Analysis V1.30
+# SAPUDOM Structure Analysis V1.31 — 3D Building Load System
 
-V1.30 adds an independent 3D building workflow while protecting the tested 2D system.
+Built directly from V1.30.2 Fix Stable. The verified 2D workspace and 2D analysis/design engines are not modified.
 
-## 3D workflow
-Open **3D Frame** → **3D Building** → define X/Y bays and widths, stories and heights → generate the building → assign 3D loads in **3D Model Data** → **Analyze 3D** → review N, V2, V3, T, M2, M3 diagrams and interactive results.
+## V1.31
+- Independent **3D Loads** center in the 3D workspace.
+- Load Patterns: DL, LL, RL, WX, WY plus user-created custom patterns.
+- Story filter: All Stories or individual story/roof.
+- Beam filters: All Beams, Beam-X, Beam-Y.
+- Uniform distributed load (UDL) assignment in Global X/Y/Z.
+- Load visualization directly on the 3D model.
+- Load Summary with assigned member count and Σ(wL).
+- Active 3D Load Pattern selector in the workspace.
+- Analyze 3D solves the active pattern using solver-consistent equivalent nodal loading and includes fixed-end effects in member end forces.
+- JSON persistence uses the existing model3d snapshot path.
 
-## 2D protection
-The V1.30 3D Building Generator writes only to the separate `model3d` data structure. It does not generate, replace, or edit the existing 2D model.
+## Protected systems
+- 2D workspace / 2D solver
+- RC Beam Design
+- Steel Design
+- Existing V1.30.2 Building Generator / Base Support / Validation
+- Existing 3D diagrams, fullscreen and Interactive Results Viewer
 
-### V1.30.1 Fix
-3D Building Base Support Persistence: generated Fixed Base nodes persist all 6 restraints and display them immediately in 3D Model Data. The fix is isolated to the independent 3D data model and does not modify the 2D engine.
-
-
-### V1.30.2 Fix
-3D Model Validation Feedback: Validate 3D Model now displays a visible in-dialog success/warning/error status, including Node count, Member count, restrained Nodes, restrained DOF, and Ready to Analyze state. This is a UI feedback-only fix; 2D engine, 3D solver, Building Generator, and base-support persistence are unchanged.
+## V1.31 scope boundary
+V1.31 focuses on story-based UDL workflow. 3D member Point, Trapezoidal and Member Moment load assignment are reserved for the next load-system phase.

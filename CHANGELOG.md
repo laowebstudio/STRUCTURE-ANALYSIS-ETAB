@@ -1,3 +1,14 @@
+# V1.31 — 3D Building Load System
+
+- Based directly on V1.30.2 Fix Stable.
+- Added independent 3D Load Patterns and Story Load Assignment.
+- Added Beam-X / Beam-Y filters and Global X/Y/Z UDL directions.
+- Added 3D load visualization and Load Summary.
+- Added active load-pattern selector in the 3D workspace.
+- Added consistent equivalent member-load vectors to the existing 3D solver without changing the 2D engine.
+- Member end forces subtract the element equivalent load vector so UDL fixed-end effects are represented.
+- Existing 3D Building Generator, support persistence, validation, diagrams and results viewer retained.
+
 # V1.30 — Independent 3D Building Workspace
 
 - Based directly on V1.29.1 Fix stable 3D diagram build.
