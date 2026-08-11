@@ -1,0 +1,28 @@
+SAPUDOM Structure Analysis V1.35 — Rigid Floor Diaphragm
+
+NEW
+- Rigid Floor Diaphragm manager in the 3D Workspace.
+- Assign diaphragm by Story (D1, D2, D3, ...).
+- Exact transformation constraint for in-plane Ux, Uy and Rz.
+- Rigid-body floor kinematics include rotation about the floor centroid.
+- Uz, Rx and Ry remain independent.
+- Analysis Summary reports whether diaphragm constraints are ON/OFF and active stories.
+
+PROTECTED
+- V1.34 Story Forces & Story Shear.
+- V1.33.1 Story Response / Drift / Governing Node Locate.
+- V1.32 global stiffness/equilibrium framework.
+- 2D engine remains untouched.
+
+IMPORTANT
+- Diaphragm is OFF by default so opening V1.35 reproduces V1.34 numerical results until the user enables it.
+
+TEST PLAN
+T1: Open V1.35 and Analyze 3D with Diaphragm OFF; V1.34 results remain unchanged.
+T2: Open Diaphragm, enable Story 1-3, Apply, Analyze 3D successfully.
+T3: For each diaphragm floor, verify rigid-plane Ux/Uy/Rz kinematics.
+T4: Story Response/Drift still displays and Story rows Locate correctly.
+T5: Story Forces WX/WY cumulative shear still correct.
+T6: Global Equilibrium remains PASS.
+T7: Reactions and Member End Forces remain available.
+T8: Save JSON, reopen, and confirm diaphragm settings persist.

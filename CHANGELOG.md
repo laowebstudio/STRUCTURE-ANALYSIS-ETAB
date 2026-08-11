@@ -1,3 +1,8 @@
+# V1.35 — Rigid Floor Diaphragm
+- Added story-based rigid diaphragm constraints for 3D analysis.
+- Uses transformation method for Ux/Uy/Rz rigid-floor kinematics.
+- Diaphragm OFF by default for V1.34 regression compatibility.
+
 # SAPUDOM Structure Analysis V1.32
 
 ## Added — 3D Global Equilibrium & Analysis Summary
