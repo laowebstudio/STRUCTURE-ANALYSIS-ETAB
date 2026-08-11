@@ -1,0 +1,29 @@
+SAPUDOM Structure Analysis V1.36 — 3D Load Combinations
+
+NEW
+- 3D Load Combinations manager.
+- Default linear combinations:
+  1.4DL
+  1.2DL + 1.6LL
+  1.2DL + 1.0LL + 1.0WX
+  1.2DL + 1.0LL + 1.0WY
+- User can add/delete combinations and terms.
+- Pattern/Combination analysis mode in 3D Workspace.
+- Linear superposition of solved pattern results:
+  displacement vector, global load vector, reactions and member end forces.
+- Story Response and Story Forces rebuilt for combination results.
+- Existing V1.35.1 Rigid Diaphragm behavior retained.
+
+IMPORTANT
+V1.36 is a Linear Add combination layer. It does not yet implement nonlinear combinations,
+response spectrum, modal combination, P-Delta, envelope, or code-specific automatic generators.
+
+TEST PLAN
+T1  Regression: Pattern mode WY with Diaphragm OFF/ON still matches V1.35.1.
+T2  Open Σ 3D Combos and save default combinations.
+T3  Solve 1.4DL; compare displacement/reactions/member forces to 1.4 × DL.
+T4  Solve 1.2DL+1.6LL and verify combined reactions.
+T5  Solve lateral combo with WX.
+T6  Solve lateral combo with WY.
+T7  Story Response / Story Forces available for combination.
+T8  Save JSON -> reload -> combinations persist.
