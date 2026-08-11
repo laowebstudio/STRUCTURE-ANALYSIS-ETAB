@@ -1,0 +1,22 @@
+SAPUDOM Structure Analysis V1.34 — Story Forces & Story Shear
+
+NEW
+- Story Forces tab in 3D Analysis Results.
+- Fx, Fy, Fz for each story from the SAME assembled global load vector F used by the 3D solver.
+- Story Shear X/Y = cumulative lateral story force from roof down to the selected story.
+- Governing Story, Direction and Max Story Shear summary.
+- Story rows remain clickable through the existing 3D locate mechanism.
+
+PROTECTED
+- V1.32 3D matrix stiffness solver.
+- V1.33.1 Story Response / Drift / Governing Node Locate.
+
+TEST PLAN
+T1: Open V1.34 and Analyze 3D successfully.
+T2: Story Response regression — values and Locate still correct.
+T3: Story Forces tab opens and lists all stories.
+T4: Check cumulative Story Shear arithmetic.
+T5: WX pattern -> X story shear.
+T6: WY pattern -> Y story shear.
+T7: Click Story row -> 3D locate works.
+T8: Reactions and Member End Forces unchanged.
