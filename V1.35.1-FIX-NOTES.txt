@@ -1,0 +1,19 @@
+SAPUDOM Structure Analysis V1.35.1 Fix
+Diaphragm Apply Feedback / UX
+
+FIXED
+- Apply Diaphragm now gives visible confirmation inside the dialog.
+- Apply button changes to "✓ Applied" after saving.
+- Dialog stays open so the user can see the confirmation.
+- Workspace button shows Diaphragm ON/OFF and selected story count.
+- Workspace status shows active diaphragm groups and reminds the user to re-analyze.
+- Existing V1.35 diaphragm constraint mathematics are unchanged.
+- V1.34 Story Forces / V1.33.1 Story Response remain protected.
+
+Recommended test
+T1 Open Diaphragm -> Enable D1/D2/D3 -> Apply.
+Expected:
+  ✓ Applied
+  green confirmation box
+  workspace status = Diaphragm ON
+Then Analyze 3D and confirm results still solve.
