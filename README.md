@@ -1,25 +1,7 @@
-# SAPUDOM Structure Analysis V1.31 — 3D Building Load System
+# SAPUDOM Structure Analysis V1.31.1 Fix
 
-Built directly from V1.30.2 Fix Stable. The verified 2D workspace and 2D analysis/design engines are not modified.
+This release is a focused visualization fix based on V1.31. The 2D workspace and verified 3D solver/building-load workflow are protected.
 
-## V1.31
-- Independent **3D Loads** center in the 3D workspace.
-- Load Patterns: DL, LL, RL, WX, WY plus user-created custom patterns.
-- Story filter: All Stories or individual story/roof.
-- Beam filters: All Beams, Beam-X, Beam-Y.
-- Uniform distributed load (UDL) assignment in Global X/Y/Z.
-- Load visualization directly on the 3D model.
-- Load Summary with assigned member count and Σ(wL).
-- Active 3D Load Pattern selector in the workspace.
-- Analyze 3D solves the active pattern using solver-consistent equivalent nodal loading and includes fixed-end effects in member end forces.
-- JSON persistence uses the existing model3d snapshot path.
+The key change is true curved 3D bending-moment diagrams for members carrying constant UDL. M2 and M3 are evaluated at 31 stations, preserving solved i/j end moments while adding the physically required quadratic UDL term. This makes UDL moment diagrams parabolic rather than straight-sided polygons.
 
-## Protected systems
-- 2D workspace / 2D solver
-- RC Beam Design
-- Steel Design
-- Existing V1.30.2 Building Generator / Base Support / Validation
-- Existing 3D diagrams, fullscreen and Interactive Results Viewer
-
-## V1.31 scope boundary
-V1.31 focuses on story-based UDL workflow. 3D member Point, Trapezoidal and Member Moment load assignment are reserved for the next load-system phase.
+Suggested verification: Analyze a simple member with a constant UDL, switch to Selected Member, then inspect M2/M3. The applicable bending diagram should be curved, endpoint values should match Member End Forces, and the legend should report an interior extremum when it governs.
