@@ -1,7 +1,21 @@
-# SAPUDOM Structure Analysis V1.31.1 Fix
+# SAPUDOM Structure Analysis V1.32
 
-This release is a focused visualization fix based on V1.31. The 2D workspace and verified 3D solver/building-load workflow are protected.
+## 3D Global Equilibrium & Analysis Summary
 
-The key change is true curved 3D bending-moment diagrams for members carrying constant UDL. M2 and M3 are evaluated at 31 stations, preserving solved i/j end moments while adding the physically required quadratic UDL term. This makes UDL moment diagrams parabolic rather than straight-sided polygons.
+V1.32 is built directly from the verified V1.31.1 Fix base. It adds a read-only global equilibrium verification layer to the independent 3D workspace without changing the verified 2D engine or the V1.31.1 3D stiffness-solver path.
 
-Suggested verification: Analyze a simple member with a constant UDL, switch to Selected Member, then inspect M2/M3. The applicable bending diagram should be curved, endpoint values should match Member End Forces, and the legend should report an interior extremum when it governs.
+### Added
+- 3D Analysis Results → Summary now shows Applied, Reaction and Residual for Fx, Fy, Fz, Mx, My and Mz.
+- Global moments are reported about Global Origin (0,0,0), including r × F contributions from equivalent nodal loads.
+- Per-component PASS/CHECK status plus overall PASS/WARNING.
+- Active 3D Load Pattern is shown in the equilibrium panel.
+- Existing Nodes / Members / Total DOF / Max Translation summary remains.
+
+### Protected
+- 2D analysis engine and 2D workspace.
+- V1.31 3D Building Load System.
+- V1.31.1 true M2/M3 UDL moment curves.
+- Existing 3D stiffness matrix, displacements, reactions and member-end-force calculations.
+
+### Equilibrium convention
+Residual = Applied + Reaction. A component passes when |Residual| <= max(1e-6, 1e-6 × component scale).

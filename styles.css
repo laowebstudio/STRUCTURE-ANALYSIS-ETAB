@@ -738,3 +738,12 @@ body:has(#integrated3dV128.v128-fullscreen-model){overflow:hidden!important}
 .v131-table-wrap th,.v131-table-wrap td{padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:left;white-space:nowrap}
 .v131-table-wrap th{position:sticky;top:0;background:#eaf0f8;color:#193d67;z-index:1}
 @media(max-width:900px){.v131-grid{grid-template-columns:1fr}.v131-load-card{width:96vw}.v131-inline{grid-template-columns:1fr}}
+
+/* ===== V1.32 — 3D Global Equilibrium & Analysis Summary ===== */
+.v132-equilibrium{margin-top:18px;border:1px solid #d9e2ef;border-radius:14px;background:#f8fbff;overflow:hidden}
+.v132-eq-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border-bottom:1px solid #d9e2ef;background:#eef5ff}
+.v132-eq-head>div{display:flex;flex-direction:column;gap:3px}.v132-eq-head b{font-size:16px;color:#0b2b50}.v132-eq-head span{font-size:12px;color:#5b6b7f}
+.v132-eq-head>strong{padding:6px 12px;border-radius:999px;font-size:12px;letter-spacing:.04em}.v132-eq-head>strong.pass{background:#dcfce7;color:#166534}.v132-eq-head>strong.fail{background:#fef3c7;color:#92400e}
+.v132-eq-table-wrap{overflow:auto}.v132-eq-table{width:100%;border-collapse:collapse;min-width:650px}.v132-eq-table th,.v132-eq-table td{padding:10px 12px;border-bottom:1px solid #e5edf6;text-align:right;font-variant-numeric:tabular-nums}.v132-eq-table th:first-child,.v132-eq-table td:first-child{text-align:left}.v132-eq-table th{background:#f4f8fd;color:#41546b;font-size:12px}.v132-eq-table td small{color:#718096;font-weight:400}
+.v132-eq-pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800}.v132-eq-pill.pass{background:#dcfce7;color:#166534}.v132-eq-pill.fail{background:#fee2e2;color:#991b1b}.v132-eq-note{padding:10px 16px 13px;color:#637083;font-size:12px}
+@media(max-width:800px){.v132-eq-head{align-items:flex-start;flex-direction:column}.v132-eq-table{min-width:590px}}

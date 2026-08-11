@@ -1,13 +1,13 @@
-# SAPUDOM Structure Analysis V1.31.1 Fix
+# SAPUDOM Structure Analysis V1.32
 
-## True 3D Moment Diagram Curves
+## Added — 3D Global Equilibrium & Analysis Summary
+- Added six-component global equilibrium verification: Fx, Fy, Fz, Mx, My, Mz.
+- Added Applied / Reaction / Residual table in 3D Analysis Results → Summary.
+- Added overall PASS/WARNING and per-component PASS/CHECK badges.
+- Global moment check includes direct nodal moments and r × F about global origin.
+- Active load pattern shown in the verification panel.
 
-- Keeps the verified V1.31 3D Building Load System and solver path.
-- Does not modify the verified 2D calculation engine.
-- Moment M2/M3 diagrams now sample 31 stations per member.
-- Constant UDL adds the correct quadratic (parabolic) component between solved member-end moments.
-- M3 curvature uses local qy; M2 curvature uses local qz with the program local-axis sign convention.
-- Diagram end values remain exactly the solved member-end values.
-- Legend Min/Max now includes interior-station extrema, not only member ends.
-- Moment labels show interior Min/Max to reduce clutter.
-- Axial, shear and torsion rendering behavior remains unchanged except for the shared sampled renderer.
+## Protected
+- No changes to verified 2D solver/workspace.
+- No change to V1.31.1 3D stiffness solution equations.
+- No change to true 3D M2/M3 UDL curve renderer except version labeling.
