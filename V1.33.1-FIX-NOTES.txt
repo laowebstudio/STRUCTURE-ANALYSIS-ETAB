@@ -1,0 +1,16 @@
+SAPUDOM Structure Analysis V1.33.1 Fix
+Story Governing Node Locate
+
+Fix:
+- Story Response now stores the exact node IDs that generate Ux, Uy, Drift X and Drift Y.
+- Clicking a Story locates the node that generated the displayed story displacement
+  in the governing X/Y direction.
+- Removed the old shared govNode overwrite behavior.
+- Tie handling is deterministic.
+- V1.32 3D stiffness solver remains unchanged.
+
+Regression targets:
+- Story 1 / Story 2 / Story 3 Locate
+- Story Response numerical values unchanged
+- Displacement / Reactions / Member End Forces unchanged
+- 3D diagrams unchanged
