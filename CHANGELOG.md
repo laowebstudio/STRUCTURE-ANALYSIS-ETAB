@@ -17,7 +17,7 @@
 - No change to V1.31.1 3D stiffness solution equations.
 - No change to true 3D M2/M3 UDL curve renderer except version labeling.
 
-## V1.37.2 — Load Case / Solver Connection Fix
+## V1.38 — Load Cases
 - Connected active 3D load pattern explicitly to the solver input path.
 - Added load audit and persisted nodal-load compatibility.
 - Added NO LOAD status to prevent zero-load equilibrium from appearing as a meaningful PASS.

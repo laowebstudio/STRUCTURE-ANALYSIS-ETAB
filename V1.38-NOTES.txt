@@ -1,0 +1,28 @@
+SAPUDOM Structure Analysis V1.38 — Load Cases
+
+NEW
+- Define Load Cases window.
+- Load Pattern and Load Case are now separate concepts.
+- Linear Static Load Case type.
+- Default cases: DEAD, LIVE, WIND-X, WIND-Y.
+- Each case supports one or more Load Pattern entries with Scale Factor.
+- Analyze Case uses the verified V1.37.2 / V1.35.1 3D solver for each referenced pattern.
+- Case result is available in Show Analysis Results.
+- Load Cases are stored inside model3d, so existing JSON model persistence can retain them.
+
+PROTECTED
+- V1.37.2 Load Pattern → Solver connection.
+- Pattern Analyze.
+- 3D Combos.
+- Rigid Diaphragm.
+- Story Response / Story Forces.
+- 3D rotate / zoom.
+- Existing JSON workflow.
+
+TEST
+T1 Open ▤ Load Cases: DEAD/LIVE/WIND-X/WIND-Y must appear.
+T2 Analyze DEAD and compare to DL x 1.0.
+T3 Analyze WIND-X and compare to WX x 1.0.
+T4 Analyze WIND-Y and compare to WY x 1.0.
+T5 Change WIND-Y scale to 2.0; displacement/reactions should be approximately 2x in linear analysis.
+T6 Save JSON, reload, and confirm Load Cases remain.
