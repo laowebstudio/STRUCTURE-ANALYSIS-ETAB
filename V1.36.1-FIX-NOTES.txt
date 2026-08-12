@@ -1,0 +1,23 @@
+SAPUDOM Structure Analysis V1.36.1 Fix
+3D Workspace Regression Fix
+
+FIXED
+1. Opening/loading a model while 3D Workspace is open now rebinds the workspace to the loaded model.
+2. Pattern mode Analyze button now actually calls the verified V1.35.1 solver.
+3. Pattern / Combination selectors are placed in the real integrated 3D Workspace toolbar.
+4. Removed accidental duplicate selectors from the old 3D Model Data dialog.
+5. Combination temporary pattern solves now use solve3DV128(), preserving:
+   - V1.35.1 Rigid Diaphragm
+   - V1.34 Story Forces
+   - V1.33.1 Story Response
+6. Combination reactions/member-end-forces are combined using the correct array data structures.
+7. Combination result includes Displacement and Global Equilibrium reporting.
+
+FIRST TEST
+T1:
+- Open V1.36.1
+- Open/Load the same saved model JSON
+- Enter 3D Workspace
+Expected: the complete 3D model appears immediately.
+- Pattern mode -> WY -> Analyze 3D
+Expected: Solved • 216 DOF and same result behavior as V1.35.1.
