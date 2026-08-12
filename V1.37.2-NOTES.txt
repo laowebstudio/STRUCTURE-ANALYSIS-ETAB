@@ -1,0 +1,11 @@
+SAPUDOM Structure Analysis — V1.37.2
+Load Case / Solver Connection Fix
+
+- Normalizes active 3D load-pattern IDs and guarantees the selected pattern is connected to the solver.
+- Adds a load audit before solving (nodal + member UDL terms).
+- Supports persisted nodal pattern loads stored as either an object or an array.
+- Keeps member UDL equivalent nodal loads on the verified 3D stiffness path.
+- Adds no-applied-load detection: equilibrium is reported as NO LOAD instead of a misleading PASS.
+- Solver/result status now shows the actual active pattern.
+- 3D combinations continue to solve each source pattern through the same solver path.
+- 2D analysis engine remains unchanged.
