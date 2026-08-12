@@ -1562,7 +1562,7 @@ function equilibriumSummaryHtmlV132(eq,pattern){
 
 
 
-// ===== V1.36.3 Fix — 3D Combos Button (3D constraint layer; V1.34 results protected when OFF) =====
+// ===== V1.36.4 Fix — Combos UI + Scroll (3D constraint layer; V1.34 results protected when OFF) =====
 function ensureDiaphragmsV135(){
  const m3=state.model3d||(state.model3d={nodes:[],members:[],nextNode:1,nextMember:1,view:{yaw:-35,pitch:24,scale:34}});
  m3.diaphragms ||= {enabled:false,stories:{}};
@@ -1817,52 +1817,148 @@ function solveComboV1362(combo){
 }
 function loadCombinationCenterV1362(){
   const m3=ensure3DLoadSystemV131(), combos=ensureLoadCombosV1362(), pats=v1362Patterns();
-  const wrap=document.createElement('div');wrap.className='modalWrap';
+  const wrap=document.createElement('div');
+  wrap.className='modalWrap v1364ComboOverlay';
+  wrap.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.52);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:18px;overflow:hidden';
+
+  const termRow=(t,ci,ti)=>`
+    <div class="v1364-term-row" style="display:grid;grid-template-columns:minmax(120px,1fr) 120px 38px;gap:8px;align-items:center;margin:7px 0">
+      <select data-tpat="${ci}:${ti}" style="height:38px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;background:#fff">
+        ${pats.map(p=>`<option ${p===t.pattern?'selected':''}>${p}</option>`).join('')}
+      </select>
+      <input type="number" step="0.1" data-tfac="${ci}:${ti}" value="${Number(t.factor)}"
+        style="height:38px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;text-align:right">
+      <button data-del-term="${ci}:${ti}" title="Remove term"
+        style="height:38px;border:1px solid #fecaca;background:#fff1f2;color:#b91c1c;border-radius:8px;font-weight:800;cursor:pointer">×</button>
+    </div>`;
+
   const cards=combos.map((c,ci)=>`
-    <div style="border:1px solid #cbd5e1;border-radius:12px;padding:12px;margin:10px 0;background:#fff">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input data-cname="${ci}" value="${htmlEscapeV1363(c.name)}" style="font-weight:700;min-width:230px">
-        <button data-solve-combo="${ci}" class="primary">▶ Analyze This Combo</button>
-        <button data-del-combo="${ci}" class="danger">Delete</button>
+    <section class="v1364-combo-card" style="border:1px solid #e2e8f0;border-radius:14px;background:#fff;box-shadow:0 4px 14px rgba(15,23,42,.06);overflow:hidden">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px 14px;border-bottom:1px solid #e2e8f0;background:#f8fafc">
+        <div style="min-width:0;flex:1">
+          <input data-cname="${ci}" value="${htmlEscapeV1363(c.name)}"
+            style="width:100%;height:40px;border:1px solid #cbd5e1;border-radius:9px;padding:0 11px;font-weight:800;font-size:14px;background:#fff">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+          <button data-solve-combo="${ci}" class="primary"
+            style="height:40px;padding:0 14px;border-radius:9px;font-weight:800;cursor:pointer">▶ Analyze</button>
+          <button data-del-combo="${ci}"
+            style="height:40px;padding:0 12px;border:1px solid #fecaca;background:#fff;color:#b91c1c;border-radius:9px;font-weight:700;cursor:pointer">Delete</button>
+        </div>
       </div>
-      <div style="margin-top:8px">
-        ${c.terms.map((t,ti)=>`<div style="display:flex;gap:8px;margin:6px 0">
-          <select data-tpat="${ci}:${ti}">${pats.map(p=>`<option ${p===t.pattern?'selected':''}>${p}</option>`).join('')}</select>
-          <input type="number" step="0.1" data-tfac="${ci}:${ti}" value="${Number(t.factor)}" style="width:110px">
-          <button data-del-term="${ci}:${ti}">×</button>
-        </div>`).join('')}
+      <div style="padding:12px 14px 14px">
+        <div style="display:grid;grid-template-columns:minmax(120px,1fr) 120px 38px;gap:8px;color:#64748b;font-size:12px;font-weight:800;margin-bottom:2px">
+          <div>Load Pattern</div><div style="text-align:right">Factor</div><div></div>
+        </div>
+        ${c.terms.map((t,ti)=>termRow(t,ci,ti)).join('')}
+        <button data-add-term="${ci}"
+          style="margin-top:7px;height:36px;padding:0 12px;border:1px dashed #94a3b8;background:#f8fafc;color:#334155;border-radius:8px;font-weight:700;cursor:pointer">+ Add Term</button>
       </div>
-      <button data-add-term="${ci}">+ Add Term</button>
-    </div>`).join('');
-  wrap.innerHTML=`<div class="modal" style="max-width:900px">
-    <div class="modalHead"><div><h2>3D Load Combinations — V1.36.3 Fix</h2>
-    <div>Isolated combination layer — V1.35.1 Pattern solver/workspace remains unchanged</div></div><button id="v1362X">×</button></div>
-    <div style="padding:14px">
-      <button id="v1362Add" class="primary">+ New Combination</button>
-      ${cards}
-      <div id="v1362Status" style="display:none;margin:10px 0;padding:10px;border:1px solid #86efac;background:#f0fdf4;border-radius:10px;color:#166534;font-weight:700"></div>
-      <div class="v130-building-actions"><button id="v1362Save" class="primary">Save Combinations</button><button id="v1362Close">Close</button></div>
-    </div></div>`;
+    </section>`).join('');
+
+  wrap.innerHTML=`
+  <div class="v1364ComboModal" style="width:min(960px,96vw);height:min(780px,90vh);background:#f8fafc;border-radius:18px;box-shadow:0 24px 70px rgba(15,23,42,.28);display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(255,255,255,.7)">
+    <header style="flex:0 0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff">
+      <div>
+        <div style="font-size:22px;font-weight:900;letter-spacing:.1px">3D Load Combinations</div>
+        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.36.4 Fix • Linear Add combinations • V1.35.1 Pattern solver protected</div>
+      </div>
+      <button id="v1362X" aria-label="Close"
+        style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer">×</button>
+    </header>
+
+    <div style="flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;background:#fff;border-bottom:1px solid #e2e8f0">
+      <div style="font-size:13px;color:#475569"><b>${combos.length}</b> combinations defined</div>
+      <button id="v1362Add" class="primary" style="height:38px;padding:0 14px;border-radius:9px;font-weight:800;cursor:pointer">+ New Combination</button>
+    </div>
+
+    <main id="v1364ComboScroll" style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:14px 16px;display:grid;gap:12px;align-content:start">
+      ${cards||'<div style="padding:30px;text-align:center;color:#64748b">No load combinations defined.</div>'}
+    </main>
+
+    <div id="v1362Status" style="display:none;flex:0 0 auto;margin:0 16px 10px;padding:10px 12px;border:1px solid #86efac;background:#f0fdf4;border-radius:10px;color:#166534;font-weight:700"></div>
+
+    <footer style="flex:0 0 auto;display:flex;justify-content:flex-end;gap:10px;padding:12px 16px;background:#fff;border-top:1px solid #e2e8f0">
+      <button id="v1362Close" style="height:40px;padding:0 16px;border:1px solid #cbd5e1;background:#fff;border-radius:9px;font-weight:700;cursor:pointer">Close</button>
+      <button id="v1362Save" class="primary" style="height:40px;padding:0 16px;border-radius:9px;font-weight:800;cursor:pointer">Save Combinations</button>
+    </footer>
+  </div>`;
+
   document.body.appendChild(wrap);
-  const close=()=>wrap.remove();
-  wrap.querySelector('#v1362X').onclick=close; wrap.querySelector('#v1362Close').onclick=close;
+
+  // lock background page scroll while modal is open; modal body scrolls independently.
+  const oldOverflow=document.body.style.overflow;
+  document.body.style.overflow='hidden';
+
+  const close=()=>{
+    document.body.style.overflow=oldOverflow;
+    wrap.remove();
+  };
+
+  wrap.querySelector('#v1362X').onclick=close;
+  wrap.querySelector('#v1362Close').onclick=close;
+
+  // Escape key closes
+  const escHandler=(e)=>{
+    if(e.key==='Escape'){
+      document.removeEventListener('keydown',escHandler);
+      close();
+    }
+  };
+  document.addEventListener('keydown',escHandler);
 
   const harvest=()=>{
     wrap.querySelectorAll('[data-cname]').forEach(x=>combos[Number(x.dataset.cname)].name=x.value.trim()||`COMBO${Number(x.dataset.cname)+1}`);
     wrap.querySelectorAll('[data-tpat]').forEach(x=>{const [ci,ti]=x.dataset.tpat.split(':').map(Number);combos[ci].terms[ti].pattern=x.value});
     wrap.querySelectorAll('[data-tfac]').forEach(x=>{const [ci,ti]=x.dataset.tfac.split(':').map(Number);combos[ci].terms[ti].factor=Number(x.value)||0});
   };
-  wrap.querySelector('#v1362Save').onclick=()=>{harvest();const st=wrap.querySelector('#v1362Status');st.style.display='block';st.textContent=`✓ Saved ${combos.length} combinations`;toast('3D Load Combinations saved')};
-  wrap.querySelector('#v1362Add').onclick=()=>{harvest();combos.push({name:`COMBO${combos.length+1}`,terms:[{pattern:'DL',factor:1}]});close();loadCombinationCenterV1362()};
-  wrap.querySelectorAll('[data-del-combo]').forEach(b=>b.onclick=()=>{harvest();combos.splice(Number(b.dataset.delCombo),1);close();loadCombinationCenterV1362()});
-  wrap.querySelectorAll('[data-add-term]').forEach(b=>b.onclick=()=>{harvest();combos[Number(b.dataset.addTerm)].terms.push({pattern:'DL',factor:1});close();loadCombinationCenterV1362()});
-  wrap.querySelectorAll('[data-del-term]').forEach(b=>b.onclick=()=>{harvest();const [ci,ti]=b.dataset.delTerm.split(':').map(Number);combos[ci].terms.splice(ti,1);close();loadCombinationCenterV1362()});
+
+  wrap.querySelector('#v1362Save').onclick=()=>{
+    harvest();
+    const st=wrap.querySelector('#v1362Status');
+    st.style.display='block';
+    st.style.borderColor='#86efac';st.style.background='#f0fdf4';st.style.color='#166534';
+    st.textContent=`✓ Saved ${combos.length} load combinations`;
+    toast('3D Load Combinations saved');
+  };
+
+  wrap.querySelector('#v1362Add').onclick=()=>{
+    harvest();
+    combos.push({name:`COMBO${combos.length+1}`,terms:[{pattern:'DL',factor:1}]});
+    close();
+    loadCombinationCenterV1362();
+  };
+
+  wrap.querySelectorAll('[data-del-combo]').forEach(b=>b.onclick=()=>{
+    harvest();
+    combos.splice(Number(b.dataset.delCombo),1);
+    close();
+    loadCombinationCenterV1362();
+  });
+
+  wrap.querySelectorAll('[data-add-term]').forEach(b=>b.onclick=()=>{
+    harvest();
+    combos[Number(b.dataset.addTerm)].terms.push({pattern:'DL',factor:1});
+    close();
+    loadCombinationCenterV1362();
+  });
+
+  wrap.querySelectorAll('[data-del-term]').forEach(b=>b.onclick=()=>{
+    harvest();
+    const [ci,ti]=b.dataset.delTerm.split(':').map(Number);
+    combos[ci].terms.splice(ti,1);
+    close();
+    loadCombinationCenterV1362();
+  });
+
   wrap.querySelectorAll('[data-solve-combo]').forEach(b=>b.onclick=()=>{
-    harvest(); const ci=Number(b.dataset.solveCombo), combo=combos[ci], st=wrap.querySelector('#v1362Status');
+    harvest();
+    const ci=Number(b.dataset.solveCombo), combo=combos[ci], st=wrap.querySelector('#v1362Status');
     try{
       const r=solveComboV1362(combo);
-      st.style.display='block';st.textContent=`✓ Solved ${combo.name}. Close this window, then click Show Analysis Results.`;
-      // Store result, but do NOT rebuild/rebind/replace the 3D canvas or pointer events.
+      st.style.display='block';
+      st.style.borderColor='#86efac';st.style.background='#f0fdf4';st.style.color='#166534';
+      st.textContent=`✓ Solved ${combo.name}. Close this window, then click Show Analysis Results.`;
       m3.results=r;
       const status=document.querySelector('#v128SolveStatus');
       const show=document.querySelector('#v128ShowResults');
@@ -1870,7 +1966,8 @@ function loadCombinationCenterV1362(){
       if(show)show.disabled=false;
       toast(`Solved 3D Combination: ${combo.name}`);
     }catch(e){
-      st.style.display='block';st.style.borderColor='#fecaca';st.style.background='#fef2f2';st.style.color='#991b1b';
+      st.style.display='block';
+      st.style.borderColor='#fecaca';st.style.background='#fef2f2';st.style.color='#991b1b';
       st.textContent='✕ '+e.message;
     }
   });
@@ -1878,7 +1975,7 @@ function loadCombinationCenterV1362(){
 
 function integrated3DWorkspaceV128(){
  if(integrated3dActiveV128){closeIntegrated3DV128();return}integrated3dActiveV128=true;document.querySelector('.workspace')?.classList.add('v130-3d-workspace');const center=document.querySelector('.center');[...center.children].forEach(x=>x.classList.add('v128-hide2d'));$('frame3dBtn').textContent='▣ 2D Frame';$('frame3dBtn').classList.add('active3d');
- const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.36.3 Fix</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.36.3 Fix • Stable Workspace + Working 3D Combos</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
+ const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.36.4 Fix</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.36.4 Fix • Professional Combos UI + Scroll</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
 }
 function closeIntegrated3DV128(){if(!integrated3dActiveV128)return;integrated3dActiveV128=false;integrated3dRefreshV128=null;document.querySelector('.workspace')?.classList.remove('v130-3d-workspace');document.querySelector('#integrated3dV128')?.remove();document.querySelectorAll('.v128-hide2d').forEach(x=>x.classList.remove('v128-hide2d'));$('frame3dBtn').textContent='◈ 3D Frame';$('frame3dBtn').classList.remove('active3d');resize();render();updateUI();renderResults()}
 function initIntegrated3DV128(host){
@@ -1961,5 +2058,5 @@ const patSel=host.querySelector('#v131ActivePattern');const syncPatterns=()=>{pa
 
 $('frame3dBtn').onclick=integrated3DWorkspaceV128;
 
-updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.36.3 Fix — 3D Combos Button • V1.34 solver/results protected');
+updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.36.4 Fix — Combos UI + Scroll • V1.34 solver/results protected');
 })();

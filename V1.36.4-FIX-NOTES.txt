@@ -1,0 +1,18 @@
+SAPUDOM Structure Analysis V1.36.4 Fix
+3D Combos Professional UI + Scroll
+
+FIXED
+- Combination window now uses a centered professional modal.
+- Independent vertical scrolling inside the modal.
+- Page background is locked while the modal is open.
+- Sticky-style header/footer behavior through fixed flex sections.
+- Combination cards redesigned with consistent spacing, labels and actions.
+- Close button and Escape key work.
+- Add/Delete/Analyze/Save actions retained.
+- No changes to 3D workspace, drag/rotate, zoom, Pattern Analyze, JSON load, or Diaphragm.
+
+TEST
+T1: Open Σ 3D Combos.
+Expected: centered modal with dark header and clean cards.
+T2: Scroll inside modal to bottom and back to top.
+T3: Close modal; 3D model must still rotate/zoom normally.
