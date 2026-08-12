@@ -1,0 +1,30 @@
+SAPUDOM Structure Analysis V1.36.3 Fix
+3D Combos Button Fix
+
+ROOT CAUSE FOUND
+The V1.36.2 Σ 3D Combos click handler called two helper names that do not exist
+in the verified V1.35.1 codebase:
+- ensureModel3d()
+- esc()
+
+That caused a JavaScript ReferenceError immediately after clicking the button,
+so no modal could appear.
+
+FIXED
+- Replaced ensureModel3d() with the verified ensure3DLoadSystemV131().
+- Added an isolated htmlEscapeV1363() helper for combination names.
+- Did NOT modify:
+  * 3D canvas drawing
+  * drag/rotate
+  * wheel zoom
+  * Pattern Analyze 3D
+  * JSON model loading
+  * Rigid Diaphragm solver
+
+FIRST TEST
+T1:
+Click Σ 3D Combos.
+Expected: "3D Load Combinations — V1.36.3 Fix" modal appears immediately.
+
+T2:
+Close the modal and verify model drag/rotate and Pattern Analyze still work.

@@ -1562,7 +1562,7 @@ function equilibriumSummaryHtmlV132(eq,pattern){
 
 
 
-// ===== V1.36.2 Fix — Stable Workspace + 3D Combos (3D constraint layer; V1.34 results protected when OFF) =====
+// ===== V1.36.3 Fix — 3D Combos Button (3D constraint layer; V1.34 results protected when OFF) =====
 function ensureDiaphragmsV135(){
  const m3=state.model3d||(state.model3d={nodes:[],members:[],nextNode:1,nextMember:1,view:{yaw:-35,pitch:24,scale:34}});
  m3.diaphragms ||= {enabled:false,stories:{}};
@@ -1719,8 +1719,16 @@ function storyForcesHtmlV134(sf,pat){
 }
 
 
+function htmlEscapeV1363(v){
+ return String(v??'')
+  .replaceAll('&','&amp;')
+  .replaceAll('<','&lt;')
+  .replaceAll('>','&gt;')
+  .replaceAll('"','&quot;')
+  .replaceAll("'",'&#39;');
+}
 function ensureLoadCombosV1362(){
-  const m3=ensureModel3d();
+  const m3=ensure3DLoadSystemV131();
   if(!Array.isArray(m3.loadCombinations)||!m3.loadCombinations.length){
     m3.loadCombinations=[
       {name:'1.4DL',terms:[{pattern:'DL',factor:1.4}]},
@@ -1732,13 +1740,13 @@ function ensureLoadCombosV1362(){
   return m3.loadCombinations;
 }
 function v1362Patterns(){
-  const m3=ensureModel3d();
+  const m3=ensure3DLoadSystemV131();
   const set=new Set((m3.loadPatterns||[]).map(x=>String(x.id||x)));
   ['DL','LL','RL','EQX','EQY','WX','WY'].forEach(x=>set.add(x));
   return [...set];
 }
 function v1362Combine(name,terms,solved){
-  const m3=ensureModel3d(), nodes=m3.nodes||[];
+  const m3=ensure3DLoadSystemV131(), nodes=m3.nodes||[];
   const first=Object.values(solved)[0]; if(!first)return null;
   const n=first.U.length, U=Array(n).fill(0), F=Array(n).fill(0);
 
@@ -1788,7 +1796,7 @@ function v1362Combine(name,terms,solved){
   return result;
 }
 function solveComboV1362(combo){
-  const m3=ensureModel3d();
+  const m3=ensure3DLoadSystemV131();
   if(!combo||!combo.terms?.length) throw new Error('Combination has no load terms.');
   const original=m3.activeLoadPattern||'DL', solved={};
   try{
@@ -1808,12 +1816,12 @@ function solveComboV1362(combo){
   return r;
 }
 function loadCombinationCenterV1362(){
-  const m3=ensureModel3d(), combos=ensureLoadCombosV1362(), pats=v1362Patterns();
+  const m3=ensure3DLoadSystemV131(), combos=ensureLoadCombosV1362(), pats=v1362Patterns();
   const wrap=document.createElement('div');wrap.className='modalWrap';
   const cards=combos.map((c,ci)=>`
     <div style="border:1px solid #cbd5e1;border-radius:12px;padding:12px;margin:10px 0;background:#fff">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input data-cname="${ci}" value="${esc(c.name)}" style="font-weight:700;min-width:230px">
+        <input data-cname="${ci}" value="${htmlEscapeV1363(c.name)}" style="font-weight:700;min-width:230px">
         <button data-solve-combo="${ci}" class="primary">▶ Analyze This Combo</button>
         <button data-del-combo="${ci}" class="danger">Delete</button>
       </div>
@@ -1827,7 +1835,7 @@ function loadCombinationCenterV1362(){
       <button data-add-term="${ci}">+ Add Term</button>
     </div>`).join('');
   wrap.innerHTML=`<div class="modal" style="max-width:900px">
-    <div class="modalHead"><div><h2>3D Load Combinations — V1.36.2 Fix</h2>
+    <div class="modalHead"><div><h2>3D Load Combinations — V1.36.3 Fix</h2>
     <div>Isolated combination layer — V1.35.1 Pattern solver/workspace remains unchanged</div></div><button id="v1362X">×</button></div>
     <div style="padding:14px">
       <button id="v1362Add" class="primary">+ New Combination</button>
@@ -1870,7 +1878,7 @@ function loadCombinationCenterV1362(){
 
 function integrated3DWorkspaceV128(){
  if(integrated3dActiveV128){closeIntegrated3DV128();return}integrated3dActiveV128=true;document.querySelector('.workspace')?.classList.add('v130-3d-workspace');const center=document.querySelector('.center');[...center.children].forEach(x=>x.classList.add('v128-hide2d'));$('frame3dBtn').textContent='▣ 2D Frame';$('frame3dBtn').classList.add('active3d');
- const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.36.2 Fix</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.36.2 Fix • Stable Workspace + 3D Load Combinations</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
+ const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.36.3 Fix</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.36.3 Fix • Stable Workspace + Working 3D Combos</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
 }
 function closeIntegrated3DV128(){if(!integrated3dActiveV128)return;integrated3dActiveV128=false;integrated3dRefreshV128=null;document.querySelector('.workspace')?.classList.remove('v130-3d-workspace');document.querySelector('#integrated3dV128')?.remove();document.querySelectorAll('.v128-hide2d').forEach(x=>x.classList.remove('v128-hide2d'));$('frame3dBtn').textContent='◈ 3D Frame';$('frame3dBtn').classList.remove('active3d');resize();render();updateUI();renderResults()}
 function initIntegrated3DV128(host){
@@ -1953,5 +1961,5 @@ const patSel=host.querySelector('#v131ActivePattern');const syncPatterns=()=>{pa
 
 $('frame3dBtn').onclick=integrated3DWorkspaceV128;
 
-updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.36.2 Fix — Stable Workspace + 3D Combos • V1.34 solver/results protected');
+updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.36.3 Fix — 3D Combos Button • V1.34 solver/results protected');
 })();
