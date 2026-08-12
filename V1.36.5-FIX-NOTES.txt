@@ -1,0 +1,18 @@
+SAPUDOM Structure Analysis V1.36.5 Fix
+Combos Card Layout
+
+FIXED
+- Combination cards now expand automatically with their content.
+- Load Pattern / Factor rows are fully visible.
+- Cards no longer clip term rows.
+- Scroll remains only in the central combination list.
+- Footer remains visible without covering cards.
+- Better spacing for Analyze/Delete/Add Term controls.
+- No changes to 3D solver, Pattern Analyze, JSON load, drag/rotate, zoom, or Diaphragm.
+
+TEST
+T1 Open Σ 3D Combos.
+Expected: all term rows visible inside each card.
+T2 Scroll to the last combination and back to top.
+T3 Add a term to a combination; card should grow vertically.
+T4 Close modal; 3D model rotate/zoom and Pattern Analyze still work.
