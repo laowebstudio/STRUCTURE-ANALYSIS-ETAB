@@ -1,8 +1,0 @@
-SAPUDOM Structure Analysis V1.37
-Analysis Status & Warnings
-
-- Global Equilibrium PASS is explicitly identified as equilibrium only.
-- Deformation / Drift is marked REVIEW REQUIRED.
-- Design Safety is marked NOT VERIFIED.
-- Warning clarifies that equilibrium PASS is not structural safety approval.
-- V1.36.5 solver, combos, diaphragm, JSON, rotate/zoom and result tabs are protected.
