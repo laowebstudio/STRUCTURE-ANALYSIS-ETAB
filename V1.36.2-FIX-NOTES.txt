@@ -1,0 +1,23 @@
+SAPUDOM Structure Analysis V1.36.2 Fix
+Stable Workspace + Isolated 3D Load Combinations
+
+WHY THIS REBUILD
+V1.36 / V1.36.1 modified the verified integrated 3D workspace event chain.
+Field testing found:
+- loaded model could show blank
+- Analyze 3D could stop responding
+- 3D drag/rotate could freeze
+
+FIX STRATEGY
+- Rebuilt directly from V1.35.1 Fix (the version that passed T1–T6).
+- The V1.35.1 Pattern solver, JSON load flow, canvas draw, drag/rotate, zoom,
+  Analyze button and Diaphragm are left unchanged.
+- V1.36 combination functionality is isolated behind the Σ 3D Combos button.
+- Combo analysis reuses solve3DV128() pattern solves and linear superposition,
+  without replacing workspace pointer handlers or Pattern analysis controls.
+
+FIRST TESTS
+T1 Load the same JSON model -> model must appear immediately.
+T2 Drag model / wheel zoom -> must work.
+T3 Pattern WY -> Analyze 3D -> must solve exactly like V1.35.1.
+Only after T1-T3 pass, test Σ 3D Combos.

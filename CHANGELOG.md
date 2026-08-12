@@ -1,4 +1,4 @@
-# V1.36.1 Fix.1 Fix — Diaphragm Apply Feedback
+# V1.35.1 Fix.1 Fix — Diaphragm Apply Feedback
 - Added story-based rigid diaphragm constraints for 3D analysis.
 - Uses transformation method for Ux/Uy/Rz rigid-floor kinematics.
 - Diaphragm OFF by default for V1.34 regression compatibility.
