@@ -1,0 +1,31 @@
+SAPUDOM Structure Analysis V1.38.1 Fix
+Load Case Result Switching
+
+ROOT CAUSE
+V1.38 solved LIVE correctly inside the Load Case engine, but the Results modal could
+continue showing the previous DEAD result. The Show Results function also referenced
+a stale/undefined `res` instead of reading the current `m3.results`.
+
+FIXED
+1. Show Analysis Results always reads the current `m3.results`.
+2. Solving DEAD/LIVE/WIND-X/WIND-Y immediately makes that Load Case the active result.
+3. Result modal status explicitly identifies Pattern / Case / Combo.
+4. If the result window is already open, it is re-rendered after a new Load Case solve.
+5. Load Case result metadata is stored separately from Pattern analysis.
+6. Pattern Analyze switches the active result source back to Pattern.
+
+EXPECTED TEST VALUES FOR CURRENT TEST MODEL
+- DEAD = DL × 1.0:
+  Applied Fz ≈ -1980 kN
+  Reaction Fz ≈ +1980 kN
+- LIVE = LL × 1.0:
+  Applied Fz ≈ -990 kN
+  Reaction Fz ≈ +990 kN
+
+TEST
+T4A Analyze DEAD -> Results must show Case DEAD and Fz ≈ -1980 kN.
+T4B Without reloading the page, Analyze LIVE -> Results must switch to Case LIVE
+     and Fz ≈ -990 kN.
+T4C Analyze DEAD again -> must switch back to -1980 kN.
+T4D Displacement, Story Response, Story Forces, Reactions and Member End Forces
+     must all change with the selected Load Case.
