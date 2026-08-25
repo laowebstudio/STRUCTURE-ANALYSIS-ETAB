@@ -1718,7 +1718,7 @@ function storyResponseHtmlV133(sr){
   return `<div class="v133-story-summary"><div><b>Governing Story</b><strong>Story ${g.story}</strong></div><div><b>Direction</b><strong>${g.direction}</strong></div><div><b>Max Drift</b><strong>${(Math.max(Math.abs(g.driftX),Math.abs(g.driftY))*1000).toFixed(4)} mm</strong></div><div><b>Max Drift Ratio</b><strong>${g.governingRatio.toFixed(6)}</strong></div></div><div class="v133-story-note">Story displacement = maximum floor-node translation. Story drift compares matching Grid X/Y nodes with the story below. Drift Ratio = |Δstory| / story height.</div><div class="v132-eq-table-wrap"><table class="v133-story-table"><thead><tr><th>Story</th><th>Elevation m</th><th>Ux mm</th><th>Uy mm</th><th>Drift X mm</th><th>Drift Y mm</th><th>Ratio X</th><th>Ratio Y</th><th>Gov.</th></tr></thead><tbody>${sr.rows.slice().reverse().map(r=>`<tr class="v128-result-row" ${r.nodeId?`data-node-id="${r.nodeId}"`:''}><td><button class="v128-link" ${r.nodeId?`data-node-id="${r.nodeId}"`:''}>Story ${r.story}</button></td><td>${r.elevation.toFixed(3)}</td><td>${(r.ux*1000).toFixed(4)}</td><td>${(r.uy*1000).toFixed(4)}</td><td>${(r.driftX*1000).toFixed(4)}</td><td>${(r.driftY*1000).toFixed(4)}</td><td>${r.ratioX.toFixed(6)}</td><td>${r.ratioY.toFixed(6)}</td><td>${r.direction}${r===g?' ★':''}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
-// ===== V1.38.1 Fix — Load Case Result Switching =====
+// ===== V1.39 — Load Combinations from Load Cases =====
 function normalize3DPatternIdV1372(id){return String(id||'DL').trim().toUpperCase()||'DL'}
 function patternLoadAuditV1372(m3,pat){
   pat=normalize3DPatternIdV1372(pat);let nodeTerms=0,memberTerms=0,absInput=0;
@@ -1923,7 +1923,7 @@ function loadCombinationCenterV1362(){
     <header style="flex:0 0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff">
       <div>
         <div style="font-size:22px;font-weight:900;letter-spacing:.1px">3D Load Combinations</div>
-        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.38.1 Fix • Load Case Result Switching</div>
+        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.39 • Load Combinations from Load Cases</div>
       </div>
       <button id="v1362X" aria-label="Close"
         style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer">×</button>
@@ -2098,7 +2098,7 @@ function loadCasesCenterV138(){
     </section>`).join('');
   wrap.innerHTML=`<div style="width:min(960px,96vw);max-height:90vh;background:#f8fafc;border-radius:18px;box-shadow:0 24px 70px rgba(15,23,42,.28);display:flex;flex-direction:column;overflow:hidden">
     <header style="display:flex;justify-content:space-between;gap:16px;padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff">
-      <div><div style="font-size:22px;font-weight:900">Define Load Cases</div><div style="font-size:13px;opacity:.82;margin-top:4px">V1.38.1 Fix • Load Pattern → Load Case → Correct Result Switching</div></div>
+      <div><div style="font-size:22px;font-weight:900">Define Load Cases</div><div style="font-size:13px;opacity:.82;margin-top:4px">V1.39 • Load Case → Load Combination → Analysis Results</div></div>
       <button id="v138X" style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px">×</button>
     </header>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#fff;border-bottom:1px solid #e2e8f0">
@@ -2163,9 +2163,298 @@ function loadCasesCenterV138(){
   });
 }
 
+
+function ensureLoadCombosV139(){
+  const m3=ensure3DLoadSystemV131();
+  const cases=ensureLoadCasesV138();
+
+  // Migrate the old pattern-based V1.36 combinations to Load Case based combinations.
+  const old=Array.isArray(m3.loadCombinations)?m3.loadCombinations:[];
+  const looksOld=old.some(c=>(c.terms||[]).some(t=>t.pattern && !t.caseName));
+  if(!old.length || looksOld){
+    m3.loadCombinations=[
+      {name:'1.4DEAD',type:'Linear Add',terms:[{caseName:'DEAD',factor:1.4}]},
+      {name:'1.2DEAD+1.6LIVE',type:'Linear Add',terms:[{caseName:'DEAD',factor:1.2},{caseName:'LIVE',factor:1.6}]},
+      {name:'1.2DEAD+1.0LIVE+1.0WIND-X',type:'Linear Add',terms:[{caseName:'DEAD',factor:1.2},{caseName:'LIVE',factor:1.0},{caseName:'WIND-X',factor:1.0}]},
+      {name:'1.2DEAD+1.0LIVE+1.0WIND-Y',type:'Linear Add',terms:[{caseName:'DEAD',factor:1.2},{caseName:'LIVE',factor:1.0},{caseName:'WIND-Y',factor:1.0}]}
+    ];
+  }
+  // Remove invalid dangling case names only when the case list is known.
+  const names=new Set(cases.map(c=>c.name));
+  for(const c of m3.loadCombinations){
+    c.type ||= 'Linear Add';
+    c.terms ||= [];
+    for(const t of c.terms){
+      t.caseName ||= t.case || t.pattern || 'DEAD';
+      t.factor=Number(t.factor ?? 1);
+      if(!names.has(t.caseName) && cases[0]) t.caseName=cases[0].name;
+      delete t.pattern;
+      delete t.case;
+    }
+  }
+  return m3.loadCombinations;
+}
+
+function combineLoadCaseResultsV139(name,terms,solvedCases){
+  const m3=ensure3DLoadSystemV131(), nodes=m3.nodes||[];
+  const first=Object.values(solvedCases)[0];
+  if(!first)return null;
+
+  const n=first.U.length, U=Array(n).fill(0), F=Array(n).fill(0);
+
+  for(const t of terms){
+    const r=solvedCases[t.caseName], a=Number(t.factor)||0;
+    if(!r)return null;
+    for(let i=0;i<n;i++){
+      U[i]+=a*Number(r.U[i]||0);
+      F[i]+=a*Number(r.F[i]||0);
+    }
+  }
+
+  const displacements=nodes.map((node,i)=>({
+    id:node.id,
+    ux:U[i*6]||0, uy:U[i*6+1]||0, uz:U[i*6+2]||0,
+    rx:U[i*6+3]||0, ry:U[i*6+4]||0, rz:U[i*6+5]||0
+  }));
+
+  const reactionMap=new Map(), memberMap=new Map();
+  for(const t of terms){
+    const r=solvedCases[t.caseName], a=Number(t.factor)||0;
+
+    for(const x of (r.reactions||[])){
+      if(!reactionMap.has(x.id))
+        reactionMap.set(x.id,{id:x.id,fx:0,fy:0,fz:0,mx:0,my:0,mz:0});
+      const q=reactionMap.get(x.id);
+      ['fx','fy','fz','mx','my','mz'].forEach(k=>q[k]+=a*Number(x[k]||0));
+    }
+
+    for(const x of (r.memberForces||[])){
+      if(!memberMap.has(x.id))
+        memberMap.set(x.id,{id:x.id,i:x.i,j:x.j,local:Array(12).fill(0)});
+      const q=memberMap.get(x.id);
+      (x.local||[]).forEach((v,i)=>q.local[i]+=a*Number(v||0));
+    }
+  }
+
+  const reactions=[...reactionMap.values()].sort((a,b)=>a.id-b.id);
+  const memberForces=[...memberMap.values()].sort((a,b)=>a.id-b.id);
+
+  const imap=new Map(nodes.map((node,i)=>[node.id,i]));
+  const RF=Array(n).fill(0);
+  for(const r of reactions){
+    const i=imap.get(r.id); if(i==null)continue;
+    RF[i*6]=r.fx; RF[i*6+1]=r.fy; RF[i*6+2]=r.fz;
+    RF[i*6+3]=r.mx; RF[i*6+4]=r.my; RF[i*6+5]=r.mz;
+  }
+
+  const equilibrium=equilibriumCheckV132(nodes,F,RF,imap);
+  const result={
+    U,F,displacements,reactions,memberForces,equilibrium,
+    loadPattern:name,
+    isCombination:true,
+    isLoadCase:false,
+    resultSource:'Load Combination',
+    combinationName:name,
+    combinationType:'Linear Add',
+    terms:JSON.parse(JSON.stringify(terms))
+  };
+
+  try{
+    result.storyResponse=storyResponseV133(m3,result);
+    result.storyForces=storyForcesV134(m3,result,imap);
+  }catch(e){
+    console.warn('V1.39 combination reporting',e);
+  }
+  return result;
+}
+
+function solveLoadCombinationV139(combo){
+  const m3=ensure3DLoadSystemV131(), cases=ensureLoadCasesV138();
+  if(!combo || !Array.isArray(combo.terms) || !combo.terms.length)
+    throw new Error('Load Combination has no Load Case terms.');
+
+  const caseMap=new Map(cases.map(c=>[c.name,c]));
+  const solvedCases={};
+
+  for(const t of combo.terms){
+    const c=caseMap.get(t.caseName);
+    if(!c)throw new Error(`Load Case "${t.caseName}" was not found.`);
+    if(!solvedCases[c.name]){
+      // Always solve from the current model/load assignments so stale case results are never used.
+      solvedCases[c.name]=solveLoadCaseV138(c);
+    }
+  }
+
+  const r=combineLoadCaseResultsV139(combo.name,combo.terms,solvedCases);
+  if(!r)throw new Error('Could not combine Load Case results.');
+
+  m3.comboResults ||= {};
+  m3.comboResults[combo.name]=r;
+  return r;
+}
+
+function loadCombinationCenterV139(){
+  const m3=ensure3DLoadSystemV131(), combos=ensureLoadCombosV139(), cases=ensureLoadCasesV138();
+  const caseNames=cases.map(c=>c.name);
+  const wrap=document.createElement('div');
+
+  wrap.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.52);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:18px;overflow:hidden';
+
+  const termRow=(t,ci,ti)=>`
+    <div style="display:grid;grid-template-columns:minmax(200px,1fr) 120px 38px;gap:10px;align-items:center;margin:8px 0">
+      <select data-v139-case="${ci}:${ti}" style="height:38px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;background:#fff">
+        ${caseNames.map(n=>`<option ${n===t.caseName?'selected':''}>${htmlEscapeV1363(n)}</option>`).join('')}
+      </select>
+      <input data-v139-factor="${ci}:${ti}" type="number" step="0.1" value="${Number(t.factor)}"
+        style="height:38px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;text-align:right">
+      <button data-v139-del-term="${ci}:${ti}" title="Remove term"
+        style="height:38px;border:1px solid #fecaca;background:#fff1f2;color:#b91c1c;border-radius:8px;font-weight:800">×</button>
+    </div>`;
+
+  const cards=combos.map((c,ci)=>`
+    <section style="border:1px solid #e2e8f0;border-radius:14px;background:#fff;box-shadow:0 4px 14px rgba(15,23,42,.06);flex:0 0 auto">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;padding:13px 14px;border-bottom:1px solid #e2e8f0;background:#f8fafc">
+        <input data-v139-name="${ci}" value="${htmlEscapeV1363(c.name)}"
+          style="height:40px;min-width:260px;flex:1;border:1px solid #cbd5e1;border-radius:9px;padding:0 11px;font-weight:800">
+        <select data-v139-type="${ci}" style="height:40px;border:1px solid #cbd5e1;border-radius:9px;padding:0 10px">
+          <option>Linear Add</option>
+        </select>
+        <button data-v139-run="${ci}" class="primary" style="height:40px;padding:0 14px;border-radius:9px;font-weight:800">▶ Analyze Combo</button>
+        <button data-v139-del="${ci}" style="height:40px;padding:0 12px;border:1px solid #fecaca;background:#fff;color:#b91c1c;border-radius:9px;font-weight:700">Delete</button>
+      </div>
+      <div style="padding:14px">
+        <div style="display:grid;grid-template-columns:minmax(200px,1fr) 120px 38px;gap:10px;color:#64748b;font-size:12px;font-weight:800">
+          <div>Load Case</div><div>Scale Factor</div><div></div>
+        </div>
+        ${(c.terms||[]).map((t,ti)=>termRow(t,ci,ti)).join('')}
+        <button data-v139-add-term="${ci}" style="margin-top:10px;height:36px;padding:0 12px;border:1px dashed #94a3b8;background:#f8fafc;border-radius:8px;font-weight:700">+ Add Load Case</button>
+      </div>
+    </section>`).join('');
+
+  wrap.innerHTML=`<div style="width:min(980px,96vw);max-height:90vh;background:#f8fafc;border-radius:18px;box-shadow:0 24px 70px rgba(15,23,42,.28);display:flex;flex-direction:column;overflow:hidden">
+    <header style="display:flex;justify-content:space-between;gap:16px;padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff">
+      <div>
+        <div style="font-size:22px;font-weight:900">Define Load Combinations</div>
+        <div style="font-size:13px;opacity:.82;margin-top:4px">V1.39 • ETABS-style: Load Case → Load Combination → Results</div>
+      </div>
+      <button id="v139X" style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px">×</button>
+    </header>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;background:#fff;border-bottom:1px solid #e2e8f0">
+      <div style="font-size:13px;color:#475569"><b>${combos.length}</b> Linear Add combinations • Terms now reference Load Cases, not Load Patterns</div>
+      <button id="v139Add" class="primary">+ New Combination</button>
+    </div>
+
+    <main style="flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px">
+      ${cards||'<div style="padding:30px;text-align:center;color:#64748b">No Load Combinations defined.</div>'}
+    </main>
+
+    <div id="v139Status" style="display:none;margin:0 16px 10px;padding:10px;border-radius:9px;font-weight:700"></div>
+
+    <footer style="display:flex;justify-content:flex-end;gap:10px;padding:12px 16px;background:#fff;border-top:1px solid #e2e8f0">
+      <button id="v139Close">Close</button>
+      <button id="v139Save" class="primary">Save Combinations</button>
+    </footer>
+  </div>`;
+
+  document.body.appendChild(wrap);
+
+  const oldOverflow=document.body.style.overflow;
+  document.body.style.overflow='hidden';
+  const close=()=>{document.body.style.overflow=oldOverflow;wrap.remove();};
+
+  wrap.querySelector('#v139X').onclick=close;
+  wrap.querySelector('#v139Close').onclick=close;
+
+  const harvest=()=>{
+    wrap.querySelectorAll('[data-v139-name]').forEach(x=>{
+      combos[+x.dataset.v139Name].name=x.value.trim()||`COMBO${+x.dataset.v139Name+1}`;
+    });
+    wrap.querySelectorAll('[data-v139-type]').forEach(x=>{
+      combos[+x.dataset.v139Type].type=x.value;
+    });
+    wrap.querySelectorAll('[data-v139-case]').forEach(x=>{
+      const [ci,ti]=x.dataset.v139Case.split(':').map(Number);
+      combos[ci].terms[ti].caseName=x.value;
+    });
+    wrap.querySelectorAll('[data-v139-factor]').forEach(x=>{
+      const [ci,ti]=x.dataset.v139Factor.split(':').map(Number);
+      combos[ci].terms[ti].factor=Number(x.value)||0;
+    });
+  };
+
+  wrap.querySelector('#v139Save').onclick=()=>{
+    harvest();
+    const st=wrap.querySelector('#v139Status');
+    st.style.cssText='display:block;margin:0 16px 10px;padding:10px;border:1px solid #86efac;background:#f0fdf4;color:#166534;border-radius:9px;font-weight:700';
+    st.textContent=`✓ Saved ${combos.length} Load Combinations`;
+    toast('V1.39 Load Combinations saved');
+  };
+
+  wrap.querySelector('#v139Add').onclick=()=>{
+    harvest();
+    combos.push({name:`COMBO${combos.length+1}`,type:'Linear Add',terms:[{caseName:caseNames[0]||'DEAD',factor:1}]});
+    close(); loadCombinationCenterV139();
+  };
+
+  wrap.querySelectorAll('[data-v139-del]').forEach(b=>b.onclick=()=>{
+    harvest(); combos.splice(+b.dataset.v139Del,1);
+    close(); loadCombinationCenterV139();
+  });
+
+  wrap.querySelectorAll('[data-v139-add-term]').forEach(b=>b.onclick=()=>{
+    harvest();
+    combos[+b.dataset.v139AddTerm].terms.push({caseName:caseNames[0]||'DEAD',factor:1});
+    close(); loadCombinationCenterV139();
+  });
+
+  wrap.querySelectorAll('[data-v139-del-term]').forEach(b=>b.onclick=()=>{
+    harvest();
+    const [ci,ti]=b.dataset.v139DelTerm.split(':').map(Number);
+    combos[ci].terms.splice(ti,1);
+    close(); loadCombinationCenterV139();
+  });
+
+  wrap.querySelectorAll('[data-v139-run]').forEach(b=>b.onclick=()=>{
+    harvest();
+    const combo=combos[+b.dataset.v139Run], st=wrap.querySelector('#v139Status');
+    try{
+      const r=solveLoadCombinationV139(combo);
+      m3.results=r;
+      m3.activeResultType='Load Combination';
+      m3.activeResultName=combo.name;
+      m3.activeLoadCombination=combo.name;
+
+      st.style.cssText='display:block;margin:0 16px 10px;padding:10px;border:1px solid #86efac;background:#f0fdf4;color:#166534;border-radius:9px;font-weight:700';
+      st.textContent=`✓ Solved Load Combination: ${combo.name}`;
+
+      const ws=document.querySelector('#v128SolveStatus');
+      const show=document.querySelector('#v128ShowResults');
+      const modalStatus=document.querySelector('#v128ModalStatus');
+
+      if(ws)ws.textContent=`Solved Combo • ${combo.name}`;
+      if(show)show.disabled=false;
+      if(modalStatus)modalStatus.textContent=`Solved • ${m3.nodes.length*6} DOF • Combo ${combo.name}`;
+
+      if(typeof integrated3dRefreshV128==='function') integrated3dRefreshV128(false);
+
+      const modal=document.querySelector('#v128ResultsModal');
+      if(modal && !modal.hidden){
+        const activeTab=modal.querySelector('[data-v128-tab].active');
+        if(activeTab)activeTab.click();
+      }
+
+      toast(`Solved Load Combination: ${combo.name}`);
+    }catch(e){
+      st.style.cssText='display:block;margin:0 16px 10px;padding:10px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:9px;font-weight:700';
+      st.textContent='✕ '+e.message;
+    }
+  });
+}
+
 function integrated3DWorkspaceV128(){
  if(integrated3dActiveV128){closeIntegrated3DV128();return}integrated3dActiveV128=true;document.querySelector('.workspace')?.classList.add('v130-3d-workspace');const center=document.querySelector('.center');[...center.children].forEach(x=>x.classList.add('v128-hide2d'));$('frame3dBtn').textContent='▣ 2D Frame';$('frame3dBtn').classList.add('active3d');
- const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.38.1 Fix</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.38.1 Fix • Load Case Result Switching</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
+ const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.39</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.39 • Load Combinations from Load Cases</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
 }
 function closeIntegrated3DV128(){if(!integrated3dActiveV128)return;integrated3dActiveV128=false;integrated3dRefreshV128=null;document.querySelector('.workspace')?.classList.remove('v130-3d-workspace');document.querySelector('#integrated3dV128')?.remove();document.querySelectorAll('.v128-hide2d').forEach(x=>x.classList.remove('v128-hide2d'));$('frame3dBtn').textContent='◈ 3D Frame';$('frame3dBtn').classList.remove('active3d');resize();render();updateUI();renderResults()}
 function initIntegrated3DV128(host){
@@ -2247,7 +2536,7 @@ function initIntegrated3DV128(host){
  function hideResults(){host.querySelector('#v128ResultsModal').hidden=true}
  function locateResult(type,id){focusTarget={type,id};if(type==='member'){diagramScope='selected';const sc=host.querySelector('#v129DiagramScope');if(sc)sc.value='selected'}if(type==='node'){const n=m3.nodes.find(x=>x.id===id);if(n){m3.view.cx=n.x;m3.view.cy=n.y;m3.view.cz=n.z;m3.view.scale=Math.max(m3.view.scale,65)}}else{const mm=m3.members.find(x=>x.id===id),a=mm&&m3.nodes.find(n=>n.id===mm.i),b=mm&&m3.nodes.find(n=>n.id===mm.j);if(a&&b){m3.view.cx=(a.x+b.x)/2;m3.view.cy=(a.y+b.y)/2;m3.view.cz=(a.z+b.z)/2;const L=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)||1;m3.view.scale=Math.max(35,Math.min(110,240/L))}}hideResults();host.querySelector('#v128LocateText').textContent=(type==='node'?'Node N':'Member M')+id+' located and highlighted';host.querySelector('#v128LocateBar').hidden=false;draw()}
  function analyze(){try{const res=solve3DV128();m3.activeResultType='Pattern';m3.activeResultName=res.loadPattern;const audit=res.loadAudit||patternLoadAuditV1372(m3,res.loadPattern);host.querySelector('#v128SolveStatus').textContent=(res.noAppliedLoad?'Solved • NO LOAD • ':'Solved • ')+(m3.nodes.length*6)+' DOF • '+res.loadPattern;host.querySelector('#v128ShowResults').disabled=false;host.querySelector('#v128ModalStatus').textContent=(res.noAppliedLoad?'Solved • NO LOAD • ':'Solved • ')+(m3.nodes.length*6)+' DOF • '+res.loadPattern;focusTarget=m3.members.length?{type:'member',id:m3.members[0].id}:null;diagramScope='selected';host.querySelector('#v129DiagramScope').value='selected';if(focusTarget){host.querySelector('#v128LocateText').textContent='Member M'+focusTarget.id+' selected for diagram';host.querySelector('#v128LocateBar').hidden=false}else host.querySelector('#v128LocateBar').hidden=true;renderTab();draw();toast('V1.35 3D analysis complete')}catch(e){alert(e.message)}}
- host.querySelector('#v128Edit3d').onclick=frame3dCenterV127;host.querySelector('#v130Building3d').onclick=building3dCenterV130;host.querySelector('#v131Loads3d').onclick=loadSystem3dCenterV131;host.querySelector('#v135Diaphragm').onclick=diaphragmCenterV135;host.querySelector('#v136Combos').onclick=loadCombinationCenterV1362;host.querySelector('#v138LoadCases').onclick=loadCasesCenterV138;
+ host.querySelector('#v128Edit3d').onclick=frame3dCenterV127;host.querySelector('#v130Building3d').onclick=building3dCenterV130;host.querySelector('#v131Loads3d').onclick=loadSystem3dCenterV131;host.querySelector('#v135Diaphragm').onclick=diaphragmCenterV135;host.querySelector('#v136Combos').onclick=loadCombinationCenterV139;host.querySelector('#v138LoadCases').onclick=loadCasesCenterV138;
 const d135=ensureDiaphragmsV135(),a135=Object.values(d135.stories||{}).filter(Boolean).length;
 host.querySelector('#v135Diaphragm').textContent=d135.enabled?`▦ Diaphragm ON (${a135})`:'▦ Diaphragm OFF';
 host.querySelector('#v135Diaphragm').classList.toggle('active3d',!!d135.enabled);
@@ -2256,5 +2545,5 @@ const patSel=host.querySelector('#v131ActivePattern');const syncPatterns=()=>{pa
 
 $('frame3dBtn').onclick=integrated3DWorkspaceV128;
 
-updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.38.1 Fix — Load Case Result Switching');
+updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.39 — Load Combinations from Load Cases');
 })();

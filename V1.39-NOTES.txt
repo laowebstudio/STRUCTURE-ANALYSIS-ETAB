@@ -1,0 +1,62 @@
+SAPUDOM Structure Analysis V1.39
+Load Combinations from Load Cases
+
+GOAL
+Move the combination layer to an ETABS-style workflow:
+Load Pattern -> Load Case -> Load Combination -> Results
+
+NEW
+- Σ Load Combos now references Load Cases instead of Load Patterns.
+- Linear Add combination type.
+- Default combinations:
+  1.4DEAD
+  1.2DEAD + 1.6LIVE
+  1.2DEAD + 1.0LIVE + 1.0WIND-X
+  1.2DEAD + 1.0LIVE + 1.0WIND-Y
+- Each term selects a Load Case and Scale Factor.
+- Analyze Combo re-solves each referenced Load Case from the current model.
+- Combination results include:
+  Displacement
+  Reactions
+  Member End Forces
+  Story Response
+  Story Forces
+  Global Equilibrium
+- Results switch immediately to the newly analyzed combination.
+- Combination data remains inside model3d for JSON persistence.
+
+MIGRATION
+Old V1.36 pattern-based combinations are automatically replaced by Load Case-based
+V1.39 defaults so the program no longer bypasses the Load Case engine.
+
+PROTECTED
+- V1.38.1 Load Case Result Switching.
+- DEAD/LIVE multi-pattern Load Cases.
+- Scale Factors.
+- Save/Reload JSON workflow.
+- Rigid Diaphragm.
+- 3D rotate/zoom.
+- Pattern solver and Load Assignment.
+
+RECOMMENDED TESTS
+T1 Open Σ Load Combos:
+   terms must show DEAD / LIVE / WIND-X / WIND-Y, not DL / LL / WX / WY.
+
+T2 Analyze 1.4DEAD.
+   Current model DEAD Fz = -1980 kN
+   Expected combo Applied Fz = -2772 kN
+   Expected Reaction Fz = +2772 kN.
+
+T3 Analyze 1.2DEAD + 1.6LIVE.
+   DEAD = -1980 kN, LIVE = -990 kN
+   Expected Applied Fz = 1.2(-1980)+1.6(-990) = -3960 kN
+   Expected Reaction Fz = +3960 kN.
+
+T4 Switch back to Case LIVE:
+   Results must return to Case LIVE = -990 kN, proving Case/Combo switching is isolated.
+
+T5 Save JSON, Reload, and confirm Load Combinations remain.
+
+NOTE
+V1.39 is Linear Add only. Envelope, SRSS/CQC, response spectrum and nonlinear
+combination behavior are future phases.
