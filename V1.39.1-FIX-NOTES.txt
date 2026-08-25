@@ -1,0 +1,40 @@
+SAPUDOM Structure Analysis V1.39.1 Fix
+Combination Case Factors
+
+ROOT CAUSE / DIAGNOSTIC
+A Load Combination must include BOTH:
+  Combination Factor × internal Load Case Scale Factor.
+
+The failed T3 result (-10296 kN) is mathematically consistent with a LIVE case
+whose internal LL scale is 5.0:
+  1.2(-1980) + 1.6[5(-990)] = -10296 kN.
+
+That means Global Equilibrium can still PASS while the user's current Load Case
+definition is not the standard LIVE = 1.0LL expected by the test.
+
+FIXES
+1. Combination solver now FLATTENS Load Cases to effective Load Pattern factors:
+   Effective Factor = Combo Factor × Case Scale.
+2. Each unique Load Pattern is solved exactly once.
+3. This removes nested Load-Case result-state contamination.
+4. Combo window warns when standard DEAD/LIVE/WIND cases do not have scale 1.0.
+5. Analyze Combo shows the effective Pattern factors used.
+6. No silent override of engineering input: user-defined Case scales are preserved.
+
+STANDARD TEST SETUP
+DEAD = DL × 1.0
+LIVE = LL × 1.0
+
+Then:
+1.2DEAD + 1.6LIVE
+= DL × 1.2 + LL × 1.6
+
+For the current model:
+DL = -1980 kN
+LL = -990 kN
+Expected Fz = -3960 kN
+Expected Reaction Fz = +3960 kN
+
+IMPORTANT
+If LIVE was changed during the earlier Scale Factor test, set LIVE back to
+LL × 1.0 before repeating the standard V1.39 T3 test.

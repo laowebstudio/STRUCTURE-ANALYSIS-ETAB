@@ -1718,7 +1718,7 @@ function storyResponseHtmlV133(sr){
   return `<div class="v133-story-summary"><div><b>Governing Story</b><strong>Story ${g.story}</strong></div><div><b>Direction</b><strong>${g.direction}</strong></div><div><b>Max Drift</b><strong>${(Math.max(Math.abs(g.driftX),Math.abs(g.driftY))*1000).toFixed(4)} mm</strong></div><div><b>Max Drift Ratio</b><strong>${g.governingRatio.toFixed(6)}</strong></div></div><div class="v133-story-note">Story displacement = maximum floor-node translation. Story drift compares matching Grid X/Y nodes with the story below. Drift Ratio = |Δstory| / story height.</div><div class="v132-eq-table-wrap"><table class="v133-story-table"><thead><tr><th>Story</th><th>Elevation m</th><th>Ux mm</th><th>Uy mm</th><th>Drift X mm</th><th>Drift Y mm</th><th>Ratio X</th><th>Ratio Y</th><th>Gov.</th></tr></thead><tbody>${sr.rows.slice().reverse().map(r=>`<tr class="v128-result-row" ${r.nodeId?`data-node-id="${r.nodeId}"`:''}><td><button class="v128-link" ${r.nodeId?`data-node-id="${r.nodeId}"`:''}>Story ${r.story}</button></td><td>${r.elevation.toFixed(3)}</td><td>${(r.ux*1000).toFixed(4)}</td><td>${(r.uy*1000).toFixed(4)}</td><td>${(r.driftX*1000).toFixed(4)}</td><td>${(r.driftY*1000).toFixed(4)}</td><td>${r.ratioX.toFixed(6)}</td><td>${r.ratioY.toFixed(6)}</td><td>${r.direction}${r===g?' ★':''}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
-// ===== V1.39 — Load Combinations from Load Cases =====
+// ===== V1.39.1 Fix — Combination Case Factors =====
 function normalize3DPatternIdV1372(id){return String(id||'DL').trim().toUpperCase()||'DL'}
 function patternLoadAuditV1372(m3,pat){
   pat=normalize3DPatternIdV1372(pat);let nodeTerms=0,memberTerms=0,absInput=0;
@@ -1923,7 +1923,7 @@ function loadCombinationCenterV1362(){
     <header style="flex:0 0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff">
       <div>
         <div style="font-size:22px;font-weight:900;letter-spacing:.1px">3D Load Combinations</div>
-        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.39 • Load Combinations from Load Cases</div>
+        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.39.1 Fix • Combination Case Factors</div>
       </div>
       <button id="v1362X" aria-label="Close"
         style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer">×</button>
@@ -2098,7 +2098,7 @@ function loadCasesCenterV138(){
     </section>`).join('');
   wrap.innerHTML=`<div style="width:min(960px,96vw);max-height:90vh;background:#f8fafc;border-radius:18px;box-shadow:0 24px 70px rgba(15,23,42,.28);display:flex;flex-direction:column;overflow:hidden">
     <header style="display:flex;justify-content:space-between;gap:16px;padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff">
-      <div><div style="font-size:22px;font-weight:900">Define Load Cases</div><div style="font-size:13px;opacity:.82;margin-top:4px">V1.39 • Load Case → Load Combination → Analysis Results</div></div>
+      <div><div style="font-size:22px;font-weight:900">Define Load Cases</div><div style="font-size:13px;opacity:.82;margin-top:4px">V1.39.1 Fix • Explicit Case Factors → Combination → Results</div></div>
       <button id="v138X" style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px">×</button>
     </header>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#fff;border-bottom:1px solid #e2e8f0">
@@ -2268,25 +2268,79 @@ function combineLoadCaseResultsV139(name,terms,solvedCases){
   return result;
 }
 
+
+function standardCaseScaleWarningsV1391(cases){
+  const std={DEAD:'DL',LIVE:'LL','WIND-X':'WX','WIND-Y':'WY'};
+  const out=[];
+  for(const c of cases){
+    const p=std[c.name];
+    if(!p || !Array.isArray(c.loads) || c.loads.length!==1)continue;
+    const x=c.loads[0], sc=Number(x.scale ?? 1);
+    if(x.pattern===p && Math.abs(sc-1)>1e-12)
+      out.push(`${c.name}: ${p} × ${sc}`);
+  }
+  return out;
+}
+
+function flattenComboToPatternsV1391(combo,cases){
+  const caseMap=new Map(cases.map(c=>[c.name,c]));
+  const patternFactor=new Map(), audit=[];
+
+  for(const t of combo.terms||[]){
+    const c=caseMap.get(t.caseName);
+    if(!c)throw new Error(`Load Case "${t.caseName}" was not found.`);
+    const comboFactor=Number(t.factor)||0;
+    if(!Array.isArray(c.loads)||!c.loads.length)
+      throw new Error(`Load Case "${c.name}" has no Load Pattern assignment.`);
+
+    const loads=[];
+    for(const x of c.loads){
+      const caseScale=Number(x.scale)||0;
+      const effectiveFactor=comboFactor*caseScale;
+      const pattern=String(x.pattern||'DL');
+      patternFactor.set(pattern,(patternFactor.get(pattern)||0)+effectiveFactor);
+      loads.push({pattern,caseScale,effectiveFactor});
+    }
+    audit.push({caseName:c.name,comboFactor,loads});
+  }
+  return {patternFactor,audit};
+}
+
 function solveLoadCombinationV139(combo){
   const m3=ensure3DLoadSystemV131(), cases=ensureLoadCasesV138();
   if(!combo || !Array.isArray(combo.terms) || !combo.terms.length)
     throw new Error('Load Combination has no Load Case terms.');
 
-  const caseMap=new Map(cases.map(c=>[c.name,c]));
-  const solvedCases={};
+  // V1.39.1: flatten Case factors into effective Pattern factors first.
+  // Each unique Load Pattern is solved ONCE, so nested case-result state cannot
+  // contaminate a multi-case combination.
+  const flat=flattenComboToPatternsV1391(combo,cases);
+  const original=m3.activeLoadPattern||'DL', solvedPatterns={};
 
-  for(const t of combo.terms){
-    const c=caseMap.get(t.caseName);
-    if(!c)throw new Error(`Load Case "${t.caseName}" was not found.`);
-    if(!solvedCases[c.name]){
-      // Always solve from the current model/load assignments so stale case results are never used.
-      solvedCases[c.name]=solveLoadCaseV138(c);
+  try{
+    for(const pattern of flat.patternFactor.keys()){
+      m3.activeLoadPattern=pattern;
+      solvedPatterns[pattern]=solve3DV128();
     }
+  }finally{
+    m3.activeLoadPattern=original;
   }
 
-  const r=combineLoadCaseResultsV139(combo.name,combo.terms,solvedCases);
+  const patternTerms=[...flat.patternFactor.entries()]
+    .map(([pattern,factor])=>({pattern,factor}));
+
+  const r=v1362Combine(combo.name,patternTerms,solvedPatterns);
   if(!r)throw new Error('Could not combine Load Case results.');
+
+  r.isCombination=true;
+  r.isLoadCase=false;
+  r.resultSource='Load Combination';
+  r.combinationName=combo.name;
+  r.combinationType='Linear Add';
+  r.caseTerms=JSON.parse(JSON.stringify(combo.terms));
+  r.effectivePatternTerms=JSON.parse(JSON.stringify(patternTerms));
+  r.caseFactorAudit=flat.audit;
+  r.loadPattern=combo.name;
 
   m3.comboResults ||= {};
   m3.comboResults[combo.name]=r;
@@ -2335,13 +2389,13 @@ function loadCombinationCenterV139(){
     <header style="display:flex;justify-content:space-between;gap:16px;padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff">
       <div>
         <div style="font-size:22px;font-weight:900">Define Load Combinations</div>
-        <div style="font-size:13px;opacity:.82;margin-top:4px">V1.39 • ETABS-style: Load Case → Load Combination → Results</div>
+        <div style="font-size:13px;opacity:.82;margin-top:4px">V1.39.1 Fix • Load Case Factor × Combo Factor → Results</div>
       </div>
       <button id="v139X" style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px">×</button>
     </header>
 
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;background:#fff;border-bottom:1px solid #e2e8f0">
-      <div style="font-size:13px;color:#475569"><b>${combos.length}</b> Linear Add combinations • Terms now reference Load Cases, not Load Patterns</div>
+      <div style="font-size:13px;color:#475569"><b>${combos.length}</b> Linear Add combinations • Combination Factor × Load Case Scale = Effective Pattern Factor</div>
       <button id="v139Add" class="primary">+ New Combination</button>
     </div>
 
@@ -2349,6 +2403,7 @@ function loadCombinationCenterV139(){
       ${cards||'<div style="padding:30px;text-align:center;color:#64748b">No Load Combinations defined.</div>'}
     </main>
 
+    ${standardCaseScaleWarningsV1391(cases).length?`<div style="margin:0 16px 10px;padding:11px 12px;border:1px solid #f59e0b;background:#fffbeb;color:#92400e;border-radius:9px;font-size:12px;font-weight:700">⚠ Standard Load Case scale is not 1.0: ${standardCaseScaleWarningsV1391(cases).join(' • ')}<br><span style="font-weight:500">The Load Combination will correctly include this internal Case scale. Reset the Case scale to 1.0 if you want standard DEAD/LIVE/WIND cases.</span></div>`:''}
     <div id="v139Status" style="display:none;margin:0 16px 10px;padding:10px;border-radius:9px;font-weight:700"></div>
 
     <footer style="display:flex;justify-content:flex-end;gap:10px;padding:12px 16px;background:#fff;border-top:1px solid #e2e8f0">
@@ -2426,7 +2481,8 @@ function loadCombinationCenterV139(){
       m3.activeLoadCombination=combo.name;
 
       st.style.cssText='display:block;margin:0 16px 10px;padding:10px;border:1px solid #86efac;background:#f0fdf4;color:#166534;border-radius:9px;font-weight:700';
-      st.textContent=`✓ Solved Load Combination: ${combo.name}`;
+      const eff=(r.effectivePatternTerms||[]).map(x=>`${x.pattern}×${Number(x.factor).toFixed(3)}`).join(' + ');
+      st.textContent=`✓ Solved Load Combination: ${combo.name}${eff?' • Effective: '+eff:''}`;
 
       const ws=document.querySelector('#v128SolveStatus');
       const show=document.querySelector('#v128ShowResults');
@@ -2454,7 +2510,7 @@ function loadCombinationCenterV139(){
 
 function integrated3DWorkspaceV128(){
  if(integrated3dActiveV128){closeIntegrated3DV128();return}integrated3dActiveV128=true;document.querySelector('.workspace')?.classList.add('v130-3d-workspace');const center=document.querySelector('.center');[...center.children].forEach(x=>x.classList.add('v128-hide2d'));$('frame3dBtn').textContent='▣ 2D Frame';$('frame3dBtn').classList.add('active3d');
- const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.39</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.39 • Load Combinations from Load Cases</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
+ const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.39.1 Fix</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.39.1 Fix • Combination Case Factors</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
 }
 function closeIntegrated3DV128(){if(!integrated3dActiveV128)return;integrated3dActiveV128=false;integrated3dRefreshV128=null;document.querySelector('.workspace')?.classList.remove('v130-3d-workspace');document.querySelector('#integrated3dV128')?.remove();document.querySelectorAll('.v128-hide2d').forEach(x=>x.classList.remove('v128-hide2d'));$('frame3dBtn').textContent='◈ 3D Frame';$('frame3dBtn').classList.remove('active3d');resize();render();updateUI();renderResults()}
 function initIntegrated3DV128(host){
@@ -2545,5 +2601,5 @@ const patSel=host.querySelector('#v131ActivePattern');const syncPatterns=()=>{pa
 
 $('frame3dBtn').onclick=integrated3DWorkspaceV128;
 
-updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.39 — Load Combinations from Load Cases');
+updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.39.1 Fix — Combination Case Factors');
 })();
