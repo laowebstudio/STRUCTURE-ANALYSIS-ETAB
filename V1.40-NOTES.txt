@@ -1,0 +1,11 @@
+SAPUDOM V1.40 — Analysis Envelope / Governing Combination
+Base: V1.39.1 Fix tested PASS.
+
+New: Envelope button; solves all defined Linear Add combinations; stores Max/Min for 12 local member end-force components and governing combo; Details view; prepares V1.41 RC Beam Design.
+
+Tests:
+T1 Open Envelope and confirm all combinations.
+T2 Beam Details shows Max/Min and governing combo.
+T3 Change combo factor and confirm envelope updates.
+T4 Compare one member manually with Member End Forces.
+T5 Save/reload and regenerate Envelope.
