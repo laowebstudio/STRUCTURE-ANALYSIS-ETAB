@@ -1718,7 +1718,7 @@ function storyResponseHtmlV133(sr){
   return `<div class="v133-story-summary"><div><b>Governing Story</b><strong>Story ${g.story}</strong></div><div><b>Direction</b><strong>${g.direction}</strong></div><div><b>Max Drift</b><strong>${(Math.max(Math.abs(g.driftX),Math.abs(g.driftY))*1000).toFixed(4)} mm</strong></div><div><b>Max Drift Ratio</b><strong>${g.governingRatio.toFixed(6)}</strong></div></div><div class="v133-story-note">Story displacement = maximum floor-node translation. Story drift compares matching Grid X/Y nodes with the story below. Drift Ratio = |Δstory| / story height.</div><div class="v132-eq-table-wrap"><table class="v133-story-table"><thead><tr><th>Story</th><th>Elevation m</th><th>Ux mm</th><th>Uy mm</th><th>Drift X mm</th><th>Drift Y mm</th><th>Ratio X</th><th>Ratio Y</th><th>Gov.</th></tr></thead><tbody>${sr.rows.slice().reverse().map(r=>`<tr class="v128-result-row" ${r.nodeId?`data-node-id="${r.nodeId}"`:''}><td><button class="v128-link" ${r.nodeId?`data-node-id="${r.nodeId}"`:''}>Story ${r.story}</button></td><td>${r.elevation.toFixed(3)}</td><td>${(r.ux*1000).toFixed(4)}</td><td>${(r.uy*1000).toFixed(4)}</td><td>${(r.driftX*1000).toFixed(4)}</td><td>${(r.driftY*1000).toFixed(4)}</td><td>${r.ratioX.toFixed(6)}</td><td>${r.ratioY.toFixed(6)}</td><td>${r.direction}${r===g?' ★':''}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
-// ===== V1.40 — Analysis Envelope / Governing Combination =====
+// ===== V1.40.1 Fix — Envelope Results UI =====
 function normalize3DPatternIdV1372(id){return String(id||'DL').trim().toUpperCase()||'DL'}
 function patternLoadAuditV1372(m3,pat){
   pat=normalize3DPatternIdV1372(pat);let nodeTerms=0,memberTerms=0,absInput=0;
@@ -1923,7 +1923,7 @@ function loadCombinationCenterV1362(){
     <header style="flex:0 0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff">
       <div>
         <div style="font-size:22px;font-weight:900;letter-spacing:.1px">3D Load Combinations</div>
-        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.40 • Analysis Envelope / Governing Combination</div>
+        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.40.1 Fix • Envelope Results UI</div>
       </div>
       <button id="v1362X" aria-label="Close"
         style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer">×</button>
@@ -2519,19 +2519,113 @@ function envelopeV140(){
  }
  const env={combos:solved.map(x=>x.name),members:[...map.values()]};m3.envelopeV140=env;return env;
 }
+
 function envelopeCenterV140(){
  let env;try{env=envelopeV140()}catch(e){toast(e.message);return}
- const labels=['Fx i','Fy i','Fz i','Mx i','My i','Mz i','Fx j','Fy j','Fz j','Mx j','My j','Mz j'],w=document.createElement('div');
- w.style.cssText='position:fixed;inset:0;z-index:99999;background:#0008;display:flex;align-items:center;justify-content:center;padding:18px';
- const rows=env.members.map(m=>{const p=m.v.map((q,k)=>Math.abs(q.max)>=Math.abs(q.min)?{l:labels[k],n:q.max,c:q.maxCombo}:{l:labels[k],n:q.min,c:q.minCombo}).reduce((a,b)=>Math.abs(b.n)>Math.abs(a.n)?b:a);return `<tr><td><b>M${m.id}</b></td><td>N${m.i}→N${m.j}</td><td>${p.l}</td><td style="text-align:right">${p.n.toFixed(3)}</td><td><b>${p.c}</b></td><td><button data-v140="${m.id}">Details</button></td></tr>`}).join('');
- w.innerHTML=`<div style="width:min(1050px,96vw);max-height:90vh;background:#fff;border-radius:16px;overflow:hidden;display:flex;flex-direction:column"><header style="padding:18px 20px;background:#173b68;color:#fff;display:flex;justify-content:space-between"><div><b style="font-size:21px">Analysis Envelope / Governing Combination</b><div style="font-size:12px;margin-top:4px">V1.40 • ${env.combos.length} combinations • preparation for RC Beam Design</div></div><button id="v140x">×</button></header><div style="padding:11px 16px;background:#f8fafc">Combinations: ${env.combos.join(' • ')}</div><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th>Member</th><th>Nodes</th><th>Governing Component</th><th>Value</th><th>Governing Combo</th><th></th></tr></thead><tbody>${rows}</tbody></table></div><footer style="padding:12px;text-align:right"><button id="v140close">Close</button></footer></div>`;
- document.body.appendChild(w);const close=()=>w.remove();w.querySelector('#v140x').onclick=close;w.querySelector('#v140close').onclick=close;
- w.querySelectorAll('[data-v140]').forEach(b=>b.onclick=()=>{const m=env.members.find(x=>x.id==b.dataset.v140);alert(`Member M${m.id} Envelope\n\n`+m.v.map((q,k)=>`${labels[k]}: Max ${q.max.toFixed(3)} [${q.maxCombo}] | Min ${q.min.toFixed(3)} [${q.minCombo}]`).join('\n'))});
+ const labels=['Fx','Fy','Fz','Mx','My','Mz'];
+ const w=document.createElement('div');
+ w.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.58);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:18px';
+
+ const summaryRows=env.members.map(m=>{
+   const all=[];
+   m.v.forEach((q,k)=>{
+     const end=k<6?'i':'j', comp=labels[k%6];
+     const absMax=Math.abs(q.max)>=Math.abs(q.min)?{value:q.max,combo:q.maxCombo}:{value:q.min,combo:q.minCombo};
+     all.push({end,comp,value:absMax.value,combo:absMax.combo});
+   });
+   const gov=all.reduce((a,b)=>Math.abs(b.value)>Math.abs(a.value)?b:a,all[0]);
+   return `<tr data-member-row="${m.id}">
+     <td><b>M${m.id}</b></td>
+     <td>N${m.i} → N${m.j}</td>
+     <td>${gov.comp}</td>
+     <td>${gov.end}</td>
+     <td style="text-align:right;font-weight:800">${gov.value.toFixed(3)}</td>
+     <td><span style="display:inline-block;padding:4px 8px;border-radius:999px;background:#e0f2fe;color:#075985;font-weight:800">${gov.combo}</span></td>
+     <td><button data-v140="${m.id}" style="height:30px;padding:0 10px;border:1px solid #cbd5e1;background:#fff;border-radius:7px;font-weight:700">Details</button></td>
+   </tr>`;
+ }).join('');
+
+ w.innerHTML=`<div style="width:min(1120px,96vw);max-height:92vh;background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(15,23,42,.30)">
+  <header style="padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff;display:flex;justify-content:space-between;gap:14px">
+   <div><div style="font-size:22px;font-weight:900">Analysis Envelope / Governing Combination</div><div style="font-size:13px;opacity:.82;margin-top:4px">V1.40.1 Fix • easier envelope review • preparation for RC Beam Design</div></div>
+   <button id="v140x" style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px">×</button>
+  </header>
+  <div style="padding:11px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:13px;color:#475569">
+   <b>${env.combos.length}</b> combinations: ${env.combos.join(' • ')}
+  </div>
+  <div style="overflow:auto;flex:1">
+   <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead style="position:sticky;top:0;background:#f8fafc;z-index:1">
+     <tr><th>Member</th><th>Nodes</th><th>Gov. Force</th><th>End</th><th style="text-align:right">Value</th><th>Governing Combo</th><th></th></tr>
+    </thead>
+    <tbody>${summaryRows}</tbody>
+   </table>
+  </div>
+  <footer style="padding:12px 16px;text-align:right;border-top:1px solid #e2e8f0"><button id="v140close">Close</button></footer>
+ </div>`;
+
+ document.body.appendChild(w);
+ const close=()=>w.remove();
+ w.querySelector('#v140x').onclick=close;
+ w.querySelector('#v140close').onclick=close;
+
+ w.querySelectorAll('[data-v140]').forEach(b=>b.onclick=()=>{
+   const m=env.members.find(x=>x.id==b.dataset.v140);
+   const modal=document.createElement('div');
+   modal.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.50);display:flex;align-items:center;justify-content:center;padding:18px';
+
+   const rows=[];
+   const groups=[
+     {name:'Axial / Shear', comps:[0,1,2]},
+     {name:'Moments / Torsion', comps:[3,4,5]}
+   ];
+   for(const g of groups){
+     rows.push(`<tr><td colspan="7" style="background:#eef2f7;font-weight:900;padding:8px 10px">${g.name}</td></tr>`);
+     for(const c of g.comps){
+       for(const end of ['i','j']){
+         const idx=c+(end==='j'?6:0), q=m.v[idx];
+         rows.push(`<tr>
+           <td>${labels[c]}</td>
+           <td><b>${end}</b></td>
+           <td style="text-align:right">${q.min.toFixed(3)}</td>
+           <td>${q.minCombo}</td>
+           <td style="text-align:right">${q.max.toFixed(3)}</td>
+           <td>${q.maxCombo}</td>
+           <td style="text-align:center;font-weight:800">${Math.abs(q.max)>=Math.abs(q.min)?'MAX':'MIN'}</td>
+         </tr>`);
+       }
+     }
+   }
+
+   modal.innerHTML=`<div style="width:min(900px,96vw);max-height:88vh;background:#fff;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(15,23,42,.32)">
+    <header style="padding:16px 18px;background:#173b68;color:#fff;display:flex;justify-content:space-between;gap:12px">
+      <div><div style="font-size:20px;font-weight:900">Member M${m.id} Envelope</div><div style="font-size:12px;opacity:.85;margin-top:3px">N${m.i} → N${m.j} • Min/Max by Load Combination</div></div>
+      <button id="v140dX" style="width:38px;height:38px;border:1px solid rgba(255,255,255,.35);border-radius:9px;background:rgba(255,255,255,.12);color:#fff;font-size:20px">×</button>
+    </header>
+    <div style="padding:10px 14px;background:#fff7ed;border-bottom:1px solid #fed7aa;color:#9a3412;font-size:12px">
+      <b>For V1.41 RC Beam Design:</b> focus on governing shear and moment rows and their controlling combinations.
+    </div>
+    <div style="overflow:auto;flex:1">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead style="position:sticky;top:0;background:#f8fafc"><tr>
+          <th>Force</th><th>End</th><th style="text-align:right">Min</th><th>Min Combo</th>
+          <th style="text-align:right">Max</th><th>Max Combo</th><th>Controls</th>
+        </tr></thead>
+        <tbody>${rows.join('')}</tbody>
+      </table>
+    </div>
+    <footer style="padding:12px 14px;text-align:right;border-top:1px solid #e2e8f0"><button id="v140dClose">Close</button></footer>
+   </div>`;
+   document.body.appendChild(modal);
+   const dclose=()=>modal.remove();
+   modal.querySelector('#v140dX').onclick=dclose;
+   modal.querySelector('#v140dClose').onclick=dclose;
+ });
 }
 
 function integrated3DWorkspaceV128(){
  if(integrated3dActiveV128){closeIntegrated3DV128();return}integrated3dActiveV128=true;document.querySelector('.workspace')?.classList.add('v130-3d-workspace');const center=document.querySelector('.center');[...center.children].forEach(x=>x.classList.add('v128-hide2d'));$('frame3dBtn').textContent='▣ 2D Frame';$('frame3dBtn').classList.add('active3d');
- const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.40</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.40 • Analysis Envelope / Governing Combination</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
+ const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.40.1 Fix</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.40.1 Fix • Envelope Results UI</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
 }
 function closeIntegrated3DV128(){if(!integrated3dActiveV128)return;integrated3dActiveV128=false;integrated3dRefreshV128=null;document.querySelector('.workspace')?.classList.remove('v130-3d-workspace');document.querySelector('#integrated3dV128')?.remove();document.querySelectorAll('.v128-hide2d').forEach(x=>x.classList.remove('v128-hide2d'));$('frame3dBtn').textContent='◈ 3D Frame';$('frame3dBtn').classList.remove('active3d');resize();render();updateUI();renderResults()}
 function initIntegrated3DV128(host){
@@ -2622,5 +2716,5 @@ const patSel=host.querySelector('#v131ActivePattern');const syncPatterns=()=>{pa
 
 $('frame3dBtn').onclick=integrated3DWorkspaceV128;
 
-updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.40 — Analysis Envelope / Governing Combination');
+updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.40.1 Fix — Envelope Results UI');
 })();

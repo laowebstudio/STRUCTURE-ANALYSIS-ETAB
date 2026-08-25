@@ -1,0 +1,21 @@
+SAPUDOM V1.40.1 Fix — Envelope Results UI
+
+BASE
+V1.40 Analysis Envelope / Governing Combination.
+
+UI IMPROVEMENTS
+- Cleaner governing-member summary table.
+- Separate columns for Governing Force, End, Value and Governing Combo.
+- Details now use a professional table instead of a long alert text.
+- Details columns: Force, End, Min, Min Combo, Max, Max Combo, Controls.
+- Grouped into Axial/Shear and Moments/Torsion.
+- Easier to identify the controlling combination before V1.41 RC Beam Design.
+
+NO SOLVER CHANGE
+Envelope calculation logic from V1.40 is preserved. This is a UI/readability fix only.
+
+TEST
+T1 Open Envelope.
+T2 Open Details for M1; confirm table is readable.
+T3 Confirm Min/Max values match V1.40.
+T4 Continue factor-change test from V1.40 roadmap.
