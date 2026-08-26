@@ -1,0 +1,27 @@
+SAPUDOM V1.41 — RC Beam Design from 3D Governing Envelope
+
+Base: V1.40.1 Fix (user-tested PASS T1-T5)
+
+New:
+- RC Beam Design button
+- Detect horizontal frame members as beams
+- Use governing V1.40 envelope for M2/M3 and V2/V3
+- Show governing combination for moment and shear
+- Inputs: b, h, cover, fc', fy, main bar diameter, stirrup diameter
+- Preliminary singly reinforced rectangular flexural sizing
+- Preliminary stirrup spacing estimate
+- Beam details panel
+- Recalculate after section/material changes
+- Results stored in model3d.rcBeamDesignV141
+
+Important:
+This is preliminary design-assist, not final code approval.
+It does not yet verify all minimum/maximum steel, ductility, anchorage, seismic,
+torsion, deflection/crack control or code-specific detailing requirements.
+
+Tests:
+T1 Open RC Beam Design; horizontal members listed.
+T2 Compare one beam Mu/Vu and governing combos with Envelope.
+T3 Change b/h/fc'/fy; As and stirrups must recalculate.
+T4 Beam Details values consistent with table.
+T5 Save JSON/reload; inputs persist and results can be recalculated.

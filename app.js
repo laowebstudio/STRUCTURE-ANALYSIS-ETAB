@@ -1718,7 +1718,7 @@ function storyResponseHtmlV133(sr){
   return `<div class="v133-story-summary"><div><b>Governing Story</b><strong>Story ${g.story}</strong></div><div><b>Direction</b><strong>${g.direction}</strong></div><div><b>Max Drift</b><strong>${(Math.max(Math.abs(g.driftX),Math.abs(g.driftY))*1000).toFixed(4)} mm</strong></div><div><b>Max Drift Ratio</b><strong>${g.governingRatio.toFixed(6)}</strong></div></div><div class="v133-story-note">Story displacement = maximum floor-node translation. Story drift compares matching Grid X/Y nodes with the story below. Drift Ratio = |Δstory| / story height.</div><div class="v132-eq-table-wrap"><table class="v133-story-table"><thead><tr><th>Story</th><th>Elevation m</th><th>Ux mm</th><th>Uy mm</th><th>Drift X mm</th><th>Drift Y mm</th><th>Ratio X</th><th>Ratio Y</th><th>Gov.</th></tr></thead><tbody>${sr.rows.slice().reverse().map(r=>`<tr class="v128-result-row" ${r.nodeId?`data-node-id="${r.nodeId}"`:''}><td><button class="v128-link" ${r.nodeId?`data-node-id="${r.nodeId}"`:''}>Story ${r.story}</button></td><td>${r.elevation.toFixed(3)}</td><td>${(r.ux*1000).toFixed(4)}</td><td>${(r.uy*1000).toFixed(4)}</td><td>${(r.driftX*1000).toFixed(4)}</td><td>${(r.driftY*1000).toFixed(4)}</td><td>${r.ratioX.toFixed(6)}</td><td>${r.ratioY.toFixed(6)}</td><td>${r.direction}${r===g?' ★':''}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
-// ===== V1.40.1 Fix — Envelope Results UI =====
+// ===== V1.41 — RC Beam Design from 3D Governing Envelope =====
 function normalize3DPatternIdV1372(id){return String(id||'DL').trim().toUpperCase()||'DL'}
 function patternLoadAuditV1372(m3,pat){
   pat=normalize3DPatternIdV1372(pat);let nodeTerms=0,memberTerms=0,absInput=0;
@@ -1923,7 +1923,7 @@ function loadCombinationCenterV1362(){
     <header style="flex:0 0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff">
       <div>
         <div style="font-size:22px;font-weight:900;letter-spacing:.1px">3D Load Combinations</div>
-        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.40.1 Fix • Envelope Results UI</div>
+        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.41 • RC Beam Design from 3D Governing Envelope</div>
       </div>
       <button id="v1362X" aria-label="Close"
         style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer">×</button>
@@ -2623,9 +2623,131 @@ function envelopeCenterV140(){
  });
 }
 
+
+function rcBeamDesignV141(){
+  const m3=ensure3DLoadSystemV131();
+  const env=(m3.envelopeV140&&Array.isArray(m3.envelopeV140.members))?m3.envelopeV140:envelopeV140();
+  m3.rcBeamDesignV141 ||= {defaults:{b:300,h:500,cover:40,stirrupDia:10,mainBarDia:20,fc:28,fy:420,phiFlexure:.90,phiShear:.75},memberOverrides:{}};
+  const store=m3.rcBeamDesignV141;
+  const getMember=id=>(m3.members||[]).find(x=>x.id===id);
+  const isBeam=m=>{if(!m)return false;const ni=(m3.nodes||[]).find(n=>n.id===m.i),nj=(m3.nodes||[]).find(n=>n.id===m.j);return !!(ni&&nj&&Math.abs((+ni.z||0)-(+nj.z||0))<1e-6)};
+  const absGov=q=>Math.abs(q.max)>=Math.abs(q.min)?{value:q.max,combo:q.maxCombo,control:'MAX'}:{value:q.min,combo:q.minCombo,control:'MIN'};
+
+  const designOne=e=>{
+    const cfg={...store.defaults,...(store.memberOverrides[e.id]||{})};
+    const b=Math.max(100,+cfg.b||300),h=Math.max(150,+cfg.h||500),cover=Math.max(20,+cfg.cover||40);
+    const stirrupDia=Math.max(6,+cfg.stirrupDia||10),mainBarDia=Math.max(10,+cfg.mainBarDia||20);
+    const fc=Math.max(10,+cfg.fc||28),fy=Math.max(200,+cfg.fy||420);
+    const phiF=Math.min(.95,Math.max(.5,+cfg.phiFlexure||.90)),phiV=Math.min(.95,Math.max(.5,+cfg.phiShear||.75));
+    const d=Math.max(50,h-cover-stirrupDia-mainBarDia/2);
+
+    const ms=[
+      {axis:'M2',end:'i',...absGov(e.v[4])},{axis:'M3',end:'i',...absGov(e.v[5])},
+      {axis:'M2',end:'j',...absGov(e.v[10])},{axis:'M3',end:'j',...absGov(e.v[11])}
+    ];
+    const vs=[
+      {axis:'V2',end:'i',...absGov(e.v[1])},{axis:'V3',end:'i',...absGov(e.v[2])},
+      {axis:'V2',end:'j',...absGov(e.v[7])},{axis:'V3',end:'j',...absGov(e.v[8])}
+    ];
+    const govM=ms.reduce((a,b)=>Math.abs(b.value)>Math.abs(a.value)?b:a),govV=vs.reduce((a,b)=>Math.abs(b.value)>Math.abs(a.value)?b:a);
+    const Mu=Math.abs(govM.value),Vu=Math.abs(govV.value),MuNmm=Mu*1e6;
+
+    const A=phiF*fy*fy/(2*.85*fc*b),B=-phiF*fy*d,C=MuNmm,disc=B*B-4*A*C;
+    let AsReq=0,flexureStatus='OK';
+    if(MuNmm>1e-9){
+      if(disc<0){AsReq=NaN;flexureStatus='SECTION TOO SMALL / REVIEW'}
+      else{
+        const roots=[(-B-Math.sqrt(disc))/(2*A),(-B+Math.sqrt(disc))/(2*A)].filter(x=>x>0);
+        AsReq=roots.length?Math.min(...roots):NaN;
+        if(!Number.isFinite(AsReq))flexureStatus='REVIEW';
+      }
+    }
+
+    const barArea=Math.PI*mainBarDia*mainBarDia/4,nBars=Number.isFinite(AsReq)?Math.max(2,Math.ceil(AsReq/barArea)):null,AsProv=nBars?nBars*barArea:null;
+    const VcN=.17*Math.sqrt(fc)*b*d,phiVc=phiV*VcN/1000,VsReqN=Math.max(0,Vu*1000/phiV-VcN),Av=2*Math.PI*stirrupDia*stirrupDia/4;
+    let sReq=VsReqN>1e-9?Av*fy*d/VsReqN:300;sReq=Math.min(300,d/2,sReq);sReq=Math.max(75,Math.floor(sReq/25)*25);
+
+    return {id:e.id,i:e.i,j:e.j,cfg:{b,h,cover,stirrupDia,mainBarDia,fc,fy,phiF,phiV,d},govM,govV,Mu,Vu,AsReq,nBars,AsProv,phiVc,sReq,flexureStatus};
+  };
+
+  const designs=env.members.filter(e=>isBeam(getMember(e.id))).map(designOne);
+  store.results=designs;
+  return designs;
+}
+
+function rcBeamDesignCenterV141(){
+  const m3=ensure3DLoadSystemV131(); let designs;
+  try{designs=rcBeamDesignV141()}catch(e){toast(e.message);return}
+  const store=m3.rcBeamDesignV141,w=document.createElement('div');
+  w.style.cssText='position:fixed;inset:0;z-index:100001;background:rgba(15,23,42,.58);display:flex;align-items:center;justify-content:center;padding:18px';
+
+  const rows=()=>designs.map(d=>`<tr>
+    <td><b>M${d.id}</b></td><td>N${d.i}→N${d.j}</td><td>${d.govM.axis}-${d.govM.end}</td>
+    <td style="text-align:right">${d.Mu.toFixed(3)}</td><td>${d.govM.combo}</td>
+    <td style="text-align:right">${d.Vu.toFixed(3)}</td><td>${d.govV.combo}</td>
+    <td style="text-align:right">${Number.isFinite(d.AsReq)?d.AsReq.toFixed(0):'REVIEW'}</td>
+    <td><b>${d.nBars?`${d.nBars}-Ø${d.cfg.mainBarDia}`:'REVIEW'}</b></td>
+    <td>Ø${d.cfg.stirrupDia} @ ${d.sReq} mm</td>
+    <td><button data-v141="${d.id}">Details</button></td></tr>`).join('');
+
+  w.innerHTML=`<div style="width:min(1240px,97vw);max-height:93vh;background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column">
+    <header style="padding:18px 20px;background:#173b68;color:#fff;display:flex;justify-content:space-between"><div>
+      <div style="font-size:22px;font-weight:900">RC Beam Design — 3D Governing Envelope</div>
+      <div style="font-size:13px;opacity:.84">V1.41 • preliminary section/rebar sizing from governing 3D combinations</div></div>
+      <button id="v141x" style="width:40px;height:40px;color:#fff;background:#ffffff22;border:1px solid #ffffff55;border-radius:10px">×</button></header>
+    <div style="padding:10px 14px;background:#fff7ed;color:#9a3412;font-size:12px"><b>Engineering note:</b> preliminary design-assist only. Verify section orientation, governing code, detailing, minimum/maximum reinforcement, development length, seismic provisions and engineer approval before construction.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;padding:12px 14px;background:#f8fafc;font-size:12px">
+      <label>b <input id="v141b" type="number" value="${store.defaults.b}" style="width:70px"> mm</label>
+      <label>h <input id="v141h" type="number" value="${store.defaults.h}" style="width:70px"> mm</label>
+      <label>Cover <input id="v141cover" type="number" value="${store.defaults.cover}" style="width:60px"> mm</label>
+      <label>fc' <input id="v141fc" type="number" value="${store.defaults.fc}" style="width:60px"> MPa</label>
+      <label>fy <input id="v141fy" type="number" value="${store.defaults.fy}" style="width:60px"> MPa</label>
+      <label>Main Ø <input id="v141bar" type="number" value="${store.defaults.mainBarDia}" style="width:55px"></label>
+      <label>Stirrup Ø <input id="v141st" type="number" value="${store.defaults.stirrupDia}" style="width:55px"></label>
+      <button id="v141Apply" class="primary">Apply & Recalculate</button>
+    </div>
+    <div style="overflow:auto;flex:1"><table style="width:100%;border-collapse:collapse;font-size:11.5px">
+      <thead style="position:sticky;top:0;background:#f8fafc"><tr><th>Beam</th><th>Nodes</th><th>Gov. M</th><th>Mu kN·m</th><th>Moment Combo</th><th>Vu kN</th><th>Shear Combo</th><th>As req mm²</th><th>Main Bars</th><th>Stirrups</th><th></th></tr></thead>
+      <tbody id="v141tbody">${rows()}</tbody></table></div>
+    <footer style="padding:12px 14px;display:flex;justify-content:space-between;border-top:1px solid #e2e8f0"><div>Horizontal members detected: <b>${designs.length}</b></div><button id="v141close">Close</button></footer>
+  </div>`;
+  document.body.appendChild(w);
+
+  const close=()=>w.remove();w.querySelector('#v141x').onclick=close;w.querySelector('#v141close').onclick=close;
+
+  const bindDetails=()=>w.querySelectorAll('[data-v141]').forEach(b=>b.onclick=()=>{
+    const d=designs.find(x=>x.id==b.dataset.v141),m=document.createElement('div');
+    m.style.cssText='position:fixed;inset:0;z-index:100002;background:#0008;display:flex;align-items:center;justify-content:center;padding:18px';
+    m.innerHTML=`<div style="width:min(760px,95vw);background:#fff;border-radius:16px;overflow:hidden">
+      <header style="padding:16px 18px;background:#173b68;color:#fff;display:flex;justify-content:space-between"><div><b style="font-size:20px">Beam M${d.id} — RC Design Details</b><div>N${d.i}→N${d.j}</div></div><button id="v141dx">×</button></header>
+      <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
+        <div><b>Section</b><br>${d.cfg.b} × ${d.cfg.h} mm<br>d=${d.cfg.d.toFixed(1)} mm</div>
+        <div><b>Materials</b><br>fc'=${d.cfg.fc} MPa<br>fy=${d.cfg.fy} MPa</div>
+        <div><b>Governing Moment</b><br>${d.govM.axis}-${d.govM.end}=${d.Mu.toFixed(3)} kN·m<br>${d.govM.combo}</div>
+        <div><b>Governing Shear</b><br>${d.govV.axis}-${d.govV.end}=${d.Vu.toFixed(3)} kN<br>${d.govV.combo}</div>
+        <div><b>Longitudinal Steel</b><br>As req=${Number.isFinite(d.AsReq)?d.AsReq.toFixed(0):'REVIEW'} mm²<br>${d.nBars?`${d.nBars}-Ø${d.cfg.mainBarDia} = ${d.AsProv.toFixed(0)} mm²`:'Review section'}</div>
+        <div><b>Shear Reinforcement</b><br>φVc≈${d.phiVc.toFixed(1)} kN<br>Ø${d.cfg.stirrupDia} @ ${d.sReq} mm preliminary</div>
+      </div>
+      <div style="padding:10px 16px;background:#f8fafc">Status: <b>${d.flexureStatus}</b> • Auto governing axis uses largest |M2/M3| and |V2/V3|.</div>
+      <footer style="padding:12px;text-align:right"><button id="v141dclose">Close</button></footer></div>`;
+    document.body.appendChild(m);const dc=()=>m.remove();m.querySelector('#v141dx').onclick=dc;m.querySelector('#v141dclose').onclick=dc;
+  });
+  bindDetails();
+
+  w.querySelector('#v141Apply').onclick=()=>{
+    Object.assign(store.defaults,{
+      b:+w.querySelector('#v141b').value||300,h:+w.querySelector('#v141h').value||500,
+      cover:+w.querySelector('#v141cover').value||40,fc:+w.querySelector('#v141fc').value||28,
+      fy:+w.querySelector('#v141fy').value||420,mainBarDia:+w.querySelector('#v141bar').value||20,
+      stirrupDia:+w.querySelector('#v141st').value||10
+    });
+    designs=rcBeamDesignV141();w.querySelector('#v141tbody').innerHTML=rows();bindDetails();toast('V1.41 RC Beam Design recalculated');
+  };
+}
+
 function integrated3DWorkspaceV128(){
  if(integrated3dActiveV128){closeIntegrated3DV128();return}integrated3dActiveV128=true;document.querySelector('.workspace')?.classList.add('v130-3d-workspace');const center=document.querySelector('.center');[...center.children].forEach(x=>x.classList.add('v128-hide2d'));$('frame3dBtn').textContent='▣ 2D Frame';$('frame3dBtn').classList.add('active3d');
- const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.40.1 Fix</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.40.1 Fix • Envelope Results UI</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
+ const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.41</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.41 • RC Beam Design from 3D Governing Envelope</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
 }
 function closeIntegrated3DV128(){if(!integrated3dActiveV128)return;integrated3dActiveV128=false;integrated3dRefreshV128=null;document.querySelector('.workspace')?.classList.remove('v130-3d-workspace');document.querySelector('#integrated3dV128')?.remove();document.querySelectorAll('.v128-hide2d').forEach(x=>x.classList.remove('v128-hide2d'));$('frame3dBtn').textContent='◈ 3D Frame';$('frame3dBtn').classList.remove('active3d');resize();render();updateUI();renderResults()}
 function initIntegrated3DV128(host){
@@ -2707,7 +2829,7 @@ function initIntegrated3DV128(host){
  function hideResults(){host.querySelector('#v128ResultsModal').hidden=true}
  function locateResult(type,id){focusTarget={type,id};if(type==='member'){diagramScope='selected';const sc=host.querySelector('#v129DiagramScope');if(sc)sc.value='selected'}if(type==='node'){const n=m3.nodes.find(x=>x.id===id);if(n){m3.view.cx=n.x;m3.view.cy=n.y;m3.view.cz=n.z;m3.view.scale=Math.max(m3.view.scale,65)}}else{const mm=m3.members.find(x=>x.id===id),a=mm&&m3.nodes.find(n=>n.id===mm.i),b=mm&&m3.nodes.find(n=>n.id===mm.j);if(a&&b){m3.view.cx=(a.x+b.x)/2;m3.view.cy=(a.y+b.y)/2;m3.view.cz=(a.z+b.z)/2;const L=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)||1;m3.view.scale=Math.max(35,Math.min(110,240/L))}}hideResults();host.querySelector('#v128LocateText').textContent=(type==='node'?'Node N':'Member M')+id+' located and highlighted';host.querySelector('#v128LocateBar').hidden=false;draw()}
  function analyze(){try{const res=solve3DV128();m3.activeResultType='Pattern';m3.activeResultName=res.loadPattern;const audit=res.loadAudit||patternLoadAuditV1372(m3,res.loadPattern);host.querySelector('#v128SolveStatus').textContent=(res.noAppliedLoad?'Solved • NO LOAD • ':'Solved • ')+(m3.nodes.length*6)+' DOF • '+res.loadPattern;host.querySelector('#v128ShowResults').disabled=false;host.querySelector('#v128ModalStatus').textContent=(res.noAppliedLoad?'Solved • NO LOAD • ':'Solved • ')+(m3.nodes.length*6)+' DOF • '+res.loadPattern;focusTarget=m3.members.length?{type:'member',id:m3.members[0].id}:null;diagramScope='selected';host.querySelector('#v129DiagramScope').value='selected';if(focusTarget){host.querySelector('#v128LocateText').textContent='Member M'+focusTarget.id+' selected for diagram';host.querySelector('#v128LocateBar').hidden=false}else host.querySelector('#v128LocateBar').hidden=true;renderTab();draw();toast('V1.35 3D analysis complete')}catch(e){alert(e.message)}}
- host.querySelector('#v128Edit3d').onclick=frame3dCenterV127;host.querySelector('#v130Building3d').onclick=building3dCenterV130;host.querySelector('#v131Loads3d').onclick=loadSystem3dCenterV131;host.querySelector('#v135Diaphragm').onclick=diaphragmCenterV135;host.querySelector('#v136Combos').onclick=loadCombinationCenterV139;host.querySelector('#v140Envelope').onclick=envelopeCenterV140;host.querySelector('#v138LoadCases').onclick=loadCasesCenterV138;
+ host.querySelector('#v128Edit3d').onclick=frame3dCenterV127;host.querySelector('#v130Building3d').onclick=building3dCenterV130;host.querySelector('#v131Loads3d').onclick=loadSystem3dCenterV131;host.querySelector('#v135Diaphragm').onclick=diaphragmCenterV135;host.querySelector('#v136Combos').onclick=loadCombinationCenterV139;host.querySelector('#v140Envelope').onclick=envelopeCenterV140;host.querySelector('#v141RCBeam').onclick=rcBeamDesignCenterV141;host.querySelector('#v138LoadCases').onclick=loadCasesCenterV138;
 const d135=ensureDiaphragmsV135(),a135=Object.values(d135.stories||{}).filter(Boolean).length;
 host.querySelector('#v135Diaphragm').textContent=d135.enabled?`▦ Diaphragm ON (${a135})`:'▦ Diaphragm OFF';
 host.querySelector('#v135Diaphragm').classList.toggle('active3d',!!d135.enabled);
@@ -2716,5 +2838,5 @@ const patSel=host.querySelector('#v131ActivePattern');const syncPatterns=()=>{pa
 
 $('frame3dBtn').onclick=integrated3DWorkspaceV128;
 
-updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.40.1 Fix — Envelope Results UI');
+updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.41 — RC Beam Design from 3D Governing Envelope');
 })();
