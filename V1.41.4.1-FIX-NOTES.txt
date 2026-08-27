@@ -1,0 +1,10 @@
+SAPUDOM Structure Analysis V1.41.4.1 Fix
+Professional RC Beam Drawing System
+
+- Rebuilt RC beam drawing layout for professional engineering readability.
+- Calculation-linked longitudinal elevation and contained cross-section reinforcement.
+- Clear member/title block, governing actions, reinforcement and verification status.
+- Unverified top reinforcement is shown non-prescriptively (dashed), not invented.
+- Explicit engineering notes identify checks not yet implemented: development/anchorage, lap splice, seismic detailing, torsion, serviceability and support-face detailing.
+- Print/Save PDF and SVG export retained.
+- Existing V1.41.3.1 RC design calculations are not intentionally changed by this drawing-only fix.
