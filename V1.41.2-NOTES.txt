@@ -1,0 +1,30 @@
+SAPUDOM V1.41.2 — RC Beam Overall Design Status + Flexural Code Verification
+
+Base: V1.41.1, user-tested T1-T8 PASS.
+
+New flexural verification:
+- ACI-style beta1 calculation.
+- As,min = max(0.25 sqrt(fc')/fy b d, 1.4/fy b d), SI units.
+- Uses provided longitudinal steel to calculate a, c, epsilon_t, Mn, strain-based phi, phiMn and Mu/phiMn.
+- Flexure status: PASS, STRENGTH FAIL, MIN STEEL FAIL, or DUCTILITY REVIEW.
+- Overall Beam Design is PASS only if both Flexure and Shear verification PASS.
+- A beam with flexure review/fail can no longer appear as fully verified just because shear passes.
+
+UI:
+- Main table adds phiMn, Mu/phiMn, Flexure Status and Overall Beam.
+- Details shows As min, epsilon_t, phi, beta1, Mn, phiMn and flexural DCR.
+- Shear verification from V1.41.1 remains intact.
+
+Important:
+This is still design-assist software. Verify the governing code edition and project requirements.
+T-beam action, compression reinforcement, bar fit/clear spacing, development/splice,
+seismic detailing, torsion, crack/deflection and other project-specific checks are not yet complete.
+
+Tests:
+T1 Confirm Flexure + Overall columns appear.
+T2 Normal beam: phiMn > Mu and Mu/phiMn < 1 when PASS.
+T3 Confirm As provided >= As min.
+T4 Use small section; Overall must show REVIEW / NOT VERIFIED.
+T5 Increase section/rebar until Flexure + Shear both PASS; Overall must become PASS.
+T6 Change fc'/fy; beta1, As min and capacity must respond.
+T7 JSON Save/Reload persistence.
