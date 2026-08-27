@@ -1,0 +1,14 @@
+SAPUDOM Structure Analysis V1.41.4.2 Fix
+Auto Reinforcement Minimum Steel Fix
+
+Base: V1.41.4.1 Fix — Professional RC Beam Drawing System
+
+Fixed:
+- Auto longitudinal reinforcement now sizes bars from max(As required by Mu, As,min).
+- Prevents low-demand/top-story beams from being assigned reinforcement below minimum steel.
+- Keeps As req as the moment-demand value for engineering traceability.
+- Recalculates provided steel, effective flexural capacity, strain/phi, layer count, clear spacing, detailing status, and drawing from the corrected bar selection.
+- Drawing remains calculation-linked and still requires Engineer Review for any failed/unverified check.
+
+Regression target:
+- M61 example: As req ≈ 571 mm², As min ≈ 717 mm². Auto selection must provide As >= 717 mm² (not 2Ø20 = 628 mm²).
