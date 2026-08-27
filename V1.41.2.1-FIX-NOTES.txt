@@ -1,0 +1,18 @@
+SAPUDOM Structure Analysis V1.41.2.1 Fix
+RC Beam Manual Stirrup Spacing
+
+Changes
+- Adds Stirrup Spacing Mode: Auto / Manual to RC Beam Design.
+- Adds manual spacing input in mm.
+- Manual mode uses the entered spacing directly for Vs(provided), phiVn, Vu/phiVn, spacing check, Shear Status and Overall Beam Design.
+- Auto mode preserves V1.41.2 automatic spacing behavior.
+- Details and table identify Auto vs Manual spacing.
+- Existing flexural verification and analysis engine are otherwise unchanged.
+
+T8 verification
+1. Use b=400, h=600, cover=40, fc'=25 MPa, fy=420 MPa, Main bar Ø25, Stirrup Ø6.
+2. Set Spacing Mode = Manual.
+3. Start with spacing 250 mm and Apply & Recalculate.
+4. Open M28 Details.
+5. Confirm the displayed spacing is exactly the manual value and is used in Vs(provided), phiVn and Vu/phiVn.
+6. Desired logic test: Flexure PASS + Shear REVIEW/FAIL => Overall Beam Design REVIEW / NOT VERIFIED.
