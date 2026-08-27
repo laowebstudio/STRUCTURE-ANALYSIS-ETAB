@@ -1,0 +1,18 @@
+SAPUDOM Structure Analysis V1.41.4 — RC Beam Detailing Drawing
+
+Base: V1.41.3.1 Fix — RC Beam Design Readability
+
+Added:
+- RC Beam Detailing Drawing button inside each beam Design Details dialog.
+- A3-landscape schematic beam detailing sheet generated directly from current RC design results.
+- Beam elevation with longitudinal reinforcement and stirrup spacing.
+- Section A-A with reinforcement layout based on current nBars / bars-per-layer / layer result.
+- Member, section, material, governing moment/shear, As, cover and verification title block.
+- Print / Save PDF using browser print dialog.
+- Download SVG drawing.
+
+Engineering scope:
+- V1.41.3.1 strength, shear and detailing calculations are preserved.
+- Drawing is a design-assist schematic (NTS), not a fabrication/shop drawing.
+- Top construction bars, anchorage/development length, splice, curtailment, seismic detailing, torsion and serviceability still require engineering design/verification.
+- Multi-layer / failed detailing remains REVIEW / NOT VERIFIED and is clearly shown on the sheet.
