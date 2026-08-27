@@ -21,3 +21,10 @@
 - Connected active 3D load pattern explicitly to the solver input path.
 - Added load audit and persisted nodal-load compatibility.
 - Added NO LOAD status to prevent zero-load equilibrium from appearing as a meaningful PASS.
+
+## V1.41.5 — Development / Anchorage / Lap Splice Verification
+- Added ACI 318-25-style straight tension development length calculation.
+- Added casting, coating, concrete density, Ktr, i/j anchorage and optional lap splice inputs.
+- Added Class A/B lap splice verification and development trace in Details.
+- Added Dev/Splice status to the main beam table and professional drawing.
+- Overall beam PASS now also requires development/anchorage/lap verification to pass.

@@ -1923,7 +1923,7 @@ function loadCombinationCenterV1362(){
     <header style="flex:0 0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff">
       <div>
         <div style="font-size:22px;font-weight:900;letter-spacing:.1px">3D Load Combinations</div>
-        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.41.4.2 Fix • Professional RC Beam Drawing</div>
+        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.41.5 • Development / Anchorage / Lap Splice</div>
       </div>
       <button id="v1362X" aria-label="Close"
         style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer">×</button>
@@ -2628,12 +2628,56 @@ function storeCompatV14121(store){
   store.defaults ||= {};
   if(!['auto','manual'].includes(String(store.defaults.stirrupSpacingMode||'').toLowerCase())) store.defaults.stirrupSpacingMode='auto';
   if(!(Number(store.defaults.stirrupSpacing)>0)) store.defaults.stirrupSpacing=250;
+  // V1.41.5 — straight tension development / anchorage / lap-splice verification inputs.
+  if(!['other','top'].includes(String(store.defaults.devCastPosition||'').toLowerCase())) store.defaults.devCastPosition='other';
+  if(!['uncoated','epoxy'].includes(String(store.defaults.devCoating||'').toLowerCase())) store.defaults.devCoating='uncoated';
+  if(![1,0.85,0.75].includes(Number(store.defaults.devLambda))) store.defaults.devLambda=1;
+  if(!(Number(store.defaults.devKtr)>=0)) store.defaults.devKtr=0;
+  if(!(Number(store.defaults.anchorI)>=0)) store.defaults.anchorI=600;
+  if(!(Number(store.defaults.anchorJ)>=0)) store.defaults.anchorJ=600;
+  if(typeof store.defaults.spliceEnabled!=='boolean') store.defaults.spliceEnabled=false;
+  if(!['A','B'].includes(String(store.defaults.spliceClass||'').toUpperCase())) store.defaults.spliceClass='B';
+  if(!(Number(store.defaults.spliceProvided)>=0)) store.defaults.spliceProvided=0;
+}
+
+function rcBeamDevelopmentV1415(cfg,detailing,nBars){
+  const db=Math.max(6,Number(cfg.mainBarDia)||20),fc=Math.max(10,Number(cfg.fc)||28),fy=Math.max(200,Number(cfg.fy)||420);
+  if(!nBars||!detailing?.barFitPass)return{applicable:false,status:'REVIEW',pass:false,note:'Valid longitudinal reinforcement is required before development verification.'};
+  const cast=String(cfg.devCastPosition||'other').toLowerCase(), coating=String(cfg.devCoating||'uncoated').toLowerCase();
+  const lambda=[1,0.85,0.75].includes(Number(cfg.devLambda))?Number(cfg.devLambda):1;
+  const psiT=cast==='top'?1.3:1.0;
+  const clear=Number.isFinite(detailing.actualClear)?Math.max(0,detailing.actualClear):0;
+  let psiE=1.0;
+  if(coating==='epoxy') psiE=(Number(cfg.cover)<3*db || clear<6*db)?1.5:1.2;
+  // ACI limit: psi_t * psi_e need not exceed 1.7.
+  const te=Math.min(1.7,psiT*psiE);
+  const psiS=db<=19?0.8:1.0;
+  const psiG=fy<=420?1.0:(fy<=550?1.15:1.30);
+  // cb = smaller of center-to-surface distance or half center-to-center bar spacing.
+  const centerCover=Math.max(1,Number(cfg.cover)+Number(cfg.stirrupDia)+db/2);
+  const halfCenterSpacing=clear>0?(clear+db)/2:centerCover;
+  const cb=Math.max(1,Math.min(centerCover,halfCenterSpacing));
+  const Ktr=Math.max(0,Number(cfg.devKtr)||0);
+  const confRatio=Math.min(2.5,Math.max(0.1,(cb+Ktr)/db));
+  const ldRaw=(fy*te*psiS*psiG*db)/(1.1*lambda*Math.sqrt(fc)*confRatio);
+  const ld=Math.ceil(Math.max(300,8*db,ldRaw)/5)*5;
+  const anchorI=Math.max(0,Number(cfg.anchorI)||0),anchorJ=Math.max(0,Number(cfg.anchorJ)||0);
+  const anchorIPass=anchorI+1e-9>=ld,anchorJPass=anchorJ+1e-9>=ld;
+  const spliceEnabled=!!cfg.spliceEnabled,spliceClass=String(cfg.spliceClass||'B').toUpperCase()==='A'?'A':'B';
+  const spliceFactor=spliceClass==='A'?1.0:1.3;
+  const lapRequired=spliceEnabled?Math.ceil(Math.max(300,spliceFactor*ld)/5)*5:0;
+  const spliceProvided=Math.max(0,Number(cfg.spliceProvided)||0);
+  const lapPass=!spliceEnabled || spliceProvided+1e-9>=lapRequired;
+  const pass=anchorIPass&&anchorJPass&&lapPass;
+  return {applicable:true,db,psiT,psiE,psiTE:te,psiS,psiG,lambda,cb,Ktr,confRatio,ldRaw,ld,
+    anchorI,anchorJ,anchorIPass,anchorJPass,spliceEnabled,spliceClass,spliceFactor,lapRequired,spliceProvided,lapPass,
+    pass,status:pass?'PASS':'REVIEW / FAIL'};
 }
 
 function rcBeamDesignV141(){
   const m3=ensure3DLoadSystemV131();
   const env=(m3.envelopeV140&&Array.isArray(m3.envelopeV140.members))?m3.envelopeV140:envelopeV140();
-  m3.rcBeamDesignV141 ||= {defaults:{b:300,h:500,cover:40,minCover:40,aggregateSize:20,stirrupDia:10,stirrupSpacingMode:'auto',stirrupSpacing:250,mainBarDia:20,fc:28,fy:420,phiFlexure:.90,phiShear:.75},memberOverrides:{}};
+  m3.rcBeamDesignV141 ||= {defaults:{b:300,h:500,cover:40,minCover:40,aggregateSize:20,stirrupDia:10,stirrupSpacingMode:'auto',stirrupSpacing:250,mainBarDia:20,fc:28,fy:420,phiFlexure:.90,phiShear:.75,devCastPosition:'other',devCoating:'uncoated',devLambda:1,devKtr:0,anchorI:600,anchorJ:600,spliceEnabled:false,spliceClass:'B',spliceProvided:0},memberOverrides:{}};
   storeCompatV14121(m3.rcBeamDesignV141);
   const store=m3.rcBeamDesignV141;
   const getMember=id=>(m3.members||[]).find(x=>x.id===id);
@@ -2648,6 +2692,11 @@ function rcBeamDesignV141(){
     const manualStirrupSpacing=Math.max(25,+cfg.stirrupSpacing||250);
     const aggregateSize=Math.max(1,+cfg.aggregateSize||20),minCover=Math.max(0,+cfg.minCover||40);
     const fc=Math.max(10,+cfg.fc||28),fy=Math.max(200,+cfg.fy||420);
+    const devCastPosition=String(cfg.devCastPosition||'other').toLowerCase()==='top'?'top':'other';
+    const devCoating=String(cfg.devCoating||'uncoated').toLowerCase()==='epoxy'?'epoxy':'uncoated';
+    const devLambda=[1,0.85,0.75].includes(Number(cfg.devLambda))?Number(cfg.devLambda):1;
+    const devKtr=Math.max(0,+cfg.devKtr||0),anchorI=Math.max(0,+cfg.anchorI||0),anchorJ=Math.max(0,+cfg.anchorJ||0);
+    const spliceEnabled=!!cfg.spliceEnabled,spliceClass=String(cfg.spliceClass||'B').toUpperCase()==='A'?'A':'B',spliceProvided=Math.max(0,+cfg.spliceProvided||0);
     const phiF=Math.min(.95,Math.max(.5,+cfg.phiFlexure||.90)),phiV=Math.min(.95,Math.max(.5,+cfg.phiShear||.75));
     const d=Math.max(50,h-cover-stirrupDia-mainBarDia/2);
 
@@ -2761,12 +2810,16 @@ function rcBeamDesignV141(){
     const detailingPass=barFitPass&&clearSpacingPass&&coverPass&&singleLayerPass;
     const detailingStatus=detailingPass?'PASS':(!barFitPass?'BAR FIT FAIL':(!clearSpacingPass?'CLEAR SPACING FAIL':(!coverPass?'COVER FAIL':'MULTI-LAYER REVIEW')));
 
-    const overallBeamPass=flexureCodePass&&shearStatus==='PASS'&&detailingPass;
+    // V1.41.5 — ACI 318-25-style straight tension development / anchorage / lap splice verification.
+    const development=rcBeamDevelopmentV1415({b,h,cover,stirrupDia,mainBarDia,fc,fy,devCastPosition,devCoating,devLambda,devKtr,anchorI,anchorJ,spliceEnabled,spliceClass,spliceProvided},
+      {actualClear,barFitPass},nBars);
+    const developmentPass=development.pass;
+    const overallBeamPass=flexureCodePass&&shearStatus==='PASS'&&detailingPass&&developmentPass;
     const overallBeamStatus=overallBeamPass?'PASS':'REVIEW / NOT VERIFIED';
 
     return {
       id:e.id,i:e.i,j:e.j,
-      cfg:{b,h,cover,stirrupDia,stirrupSpacingMode,stirrupSpacing:manualStirrupSpacing,aggregateSize,minCover,mainBarDia,fc,fy,phiF,phiV,d},
+      cfg:{b,h,cover,stirrupDia,stirrupSpacingMode,stirrupSpacing:manualStirrupSpacing,aggregateSize,minCover,mainBarDia,fc,fy,phiF,phiV,d,devCastPosition,devCoating,devLambda,devKtr,anchorI,anchorJ,spliceEnabled,spliceClass,spliceProvided},
       govM,govV,Mu,Vu,AsReq,AsDesign,nBars,AsProv,phiVc,sReq,flexureStatus,
       shear:{
         Av:Av2, VsProv:VsProvN/1000, Vn:VnN/1000, phiVn,
@@ -2779,6 +2832,7 @@ function rcBeamDesignV141(){
         minSteelPass,strengthPass:strengthFlexPass,ductilityStatus,status:flexureCodeStatus
       },
       detailing:{clearMin,insideStirrupWidth,barsPerLayer,layers,actualClear,barFitPass,clearSpacingPass,coverPass,singleLayerPass,status:detailingStatus,pass:detailingPass},
+      development,
       overall:{status:overallBeamStatus,pass:overallBeamPass}
     };
   };
@@ -2790,7 +2844,7 @@ function rcBeamDesignV141(){
 
 
 
-// ===== V1.41.4.2 Fix — Professional RC Beam Drawing System =====
+// ===== V1.41.5 — Professional RC Beam Drawing + Development / Anchorage / Lap Splice Verification =====
 function rcBeamDetailingDrawingV1414(d){
   const m3=ensure3DLoadSystemV131();
   const ni=(m3.nodes||[]).find(n=>String(n.id)===String(d.i)), nj=(m3.nodes||[]).find(n=>String(n.id)===String(d.j));
@@ -2824,18 +2878,20 @@ function rcBeamDetailingDrawingV1414(d){
   <text x="845" y="630" class="txt">Vu = ${d.Vu.toFixed(1)} kN</text><text x="1010" y="630" class="txt">φVn = ${d.shear.phiVn.toFixed(1)} kN</text>
   <text x="845" y="660" class="txt">As req = ${Number.isFinite(d.AsReq)?d.AsReq.toFixed(0):'REVIEW'} mm²</text><text x="1010" y="660" class="txt">As prov = ${Number.isFinite(d.AsProv)?d.AsProv.toFixed(0):'—'} mm²</text>
   <text x="845" y="690" class="txt">Cover = ${d.cfg.cover} mm</text><text x="1010" y="690" class="txt">fc' = ${d.cfg.fc} MPa • fy = ${d.cfg.fy} MPa</text>
-  <text x="845" y="730" class="h2">VERIFICATION</text><text x="845" y="760" class="txt ${d.flexure.status==='PASS'?'green':'red'}">Flexure: ${esc(d.flexure.status)}</text><text x="1010" y="760" class="txt ${d.shear.status==='PASS'?'green':'red'}">Shear: ${esc(d.shear.status)}</text><text x="845" y="790" class="txt ${d.detailing.pass?'green':'red'}">Detailing: ${esc(d.detailing.status)}</text><text x="845" y="825" class="h2 ${pass?'green':'red'}">OVERALL: ${esc(status)}</text>
-  <rect x="55" y="895" width="1125" height="105" class="thin"/><text x="70" y="920" class="h2">ENGINEERING NOTES</text><text x="70" y="946" class="note">1. Drawing is generated only from checks currently implemented in RC Beam Design. Do not infer unverified reinforcement.</text><text x="70" y="968" class="note">2. Development/anchorage, lap splice, seismic detailing, torsion, serviceability and support-face detailing are NOT yet verified.</text><text x="70" y="990" class="note">3. Dashed top reinforcement is intentionally non-prescriptive until a verified top-steel/support design module is available.</text>
+  <text x="845" y="718" class="small">ld = ${d.development?.ld??'—'} mm • Anchorage i/j = ${d.development?.anchorI??'—'}/${d.development?.anchorJ??'—'} mm</text>
+  <text x="845" y="742" class="small">Lap ${d.development?.spliceEnabled?('Class '+d.development.spliceClass+': '+d.development.spliceProvided+' / '+d.development.lapRequired+' mm'):'Not specified'}</text>
+  <text x="845" y="770" class="h2">VERIFICATION</text><text x="845" y="798" class="txt ${d.flexure.status==='PASS'?'green':'red'}">Flexure: ${esc(d.flexure.status)}</text><text x="1010" y="798" class="txt ${d.shear.status==='PASS'?'green':'red'}">Shear: ${esc(d.shear.status)}</text><text x="845" y="822" class="txt ${d.detailing.pass?'green':'red'}">Detailing: ${esc(d.detailing.status)}</text><text x="1010" y="822" class="txt ${d.development?.pass?'green':'red'}">Dev/Splice: ${esc(d.development?.status||'REVIEW')}</text><text x="845" y="845" class="h2 ${pass?'green':'red'}">OVERALL: ${esc(status)}</text>
+  <rect x="55" y="895" width="1125" height="105" class="thin"/><text x="70" y="920" class="h2">ENGINEERING NOTES</text><text x="70" y="946" class="note">1. V1.41.5 verifies straight tension development, user-defined available anchorage at i/j, and optional Class A/B tension lap splice.</text><text x="70" y="968" class="note">2. Hooked-bar anchorage, seismic detailing, torsion, serviceability, splice location/staggering and support-face detailing are NOT yet verified.</text><text x="70" y="990" class="note">3. Dashed top reinforcement remains non-prescriptive until a verified top-steel/support design module is available.</text>
   <rect x="1210" y="24" width="366" height="1002" class="border"/><text x="1235" y="70" class="h1">SAPUDOM STRUCTURE ANALYSIS</text><text x="1235" y="100" class="note">PROFESSIONAL RC BEAM DRAWING SYSTEM</text><line x1="1210" y1="125" x2="1576" y2="125" class="thin"/>
   <text x="1235" y="165" class="h2">MEMBER</text><text x="1235" y="195" class="txt">M${esc(d.id)} • N${esc(d.i)} → N${esc(d.j)}</text><text x="1235" y="225" class="txt">Section ${d.cfg.b} × ${d.cfg.h} mm</text><text x="1235" y="255" class="txt">Length ${L} mm</text><line x1="1210" y1="285" x2="1576" y2="285" class="thin"/>
   <text x="1235" y="325" class="h2">GOVERNING ACTIONS</text><text x="1235" y="355" class="txt">Moment ${esc(d.govM.axis)}-${esc(d.govM.end)}: ${d.Mu.toFixed(1)} kN·m</text><text x="1235" y="382" class="small">${esc(d.govM.combo)}</text><text x="1235" y="420" class="txt">Shear ${esc(d.govV.axis)}-${esc(d.govV.end)}: ${d.Vu.toFixed(1)} kN</text><line x1="1210" y1="455" x2="1576" y2="455" class="thin"/>
   <text x="1235" y="495" class="h2">REINFORCEMENT</text><text x="1235" y="530" class="txt green">Bottom: ${esc(barText)}</text><text x="1235" y="560" class="txt green">Stirrups: Ø${sd} @ ${ss} mm</text><text x="1235" y="590" class="txt">Cover: ${d.cfg.cover} mm</text><text x="1235" y="620" class="txt">Layers: ${layers}</text><line x1="1210" y1="650" x2="1576" y2="650" class="thin"/>
   <text x="1235" y="690" class="h2">DRAWING STATUS</text><text x="1235" y="730" class="h1 ${pass?'green':'red'}">${esc(status)}</text><text x="1235" y="765" class="note">Calculation-linked drawing</text><text x="1235" y="790" class="note">Not construction-issued until</text><text x="1235" y="810" class="note">all required detailing checks pass.</text><line x1="1210" y1="850" x2="1576" y2="850" class="thin"/>
-  <text x="1235" y="890" class="h2">SHEET</text><text x="1235" y="925" class="txt">RC-BEAM-M${esc(d.id)}</text><text x="1235" y="955" class="txt">Scale: NTS</text><text x="1235" y="985" class="small">V1.41.4.2 Fix</text></svg>`;
+  <text x="1235" y="890" class="h2">SHEET</text><text x="1235" y="925" class="txt">RC-BEAM-M${esc(d.id)}</text><text x="1235" y="955" class="txt">Scale: NTS</text><text x="1235" y="985" class="small">V1.41.5</text></svg>`;
   const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:100004;background:#0f172aF2;padding:12px;display:flex;flex-direction:column;gap:8px';
-  o.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;color:white"><div><b style="font-size:20px">Professional RC Beam Drawing — M${d.id}</b><div style="font-size:12px;opacity:.8">V1.41.4.2 Fix • Calculation-linked professional drawing layout</div></div><div style="display:flex;gap:8px"><button id="v1414print">Print / Save PDF</button><button id="v1414svg">Download SVG</button><button id="v1414close">Close</button></div></div><div style="background:#dbe3ec;flex:1;overflow:auto;border-radius:6px;padding:10px"><div style="background:#fff;box-shadow:0 4px 18px #0004;min-width:1050px">${svg}</div></div>`;
+  o.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;color:white"><div><b style="font-size:20px">Professional RC Beam Drawing — M${d.id}</b><div style="font-size:12px;opacity:.8">V1.41.5 • Development / Anchorage / Lap Splice Verification</div></div><div style="display:flex;gap:8px"><button id="v1414print">Print / Save PDF</button><button id="v1414svg">Download SVG</button><button id="v1414close">Close</button></div></div><div style="background:#dbe3ec;flex:1;overflow:auto;border-radius:6px;padding:10px"><div style="background:#fff;box-shadow:0 4px 18px #0004;min-width:1050px">${svg}</div></div>`;
   document.body.appendChild(o);o.querySelector('#v1414close').onclick=()=>o.remove();
-  o.querySelector('#v1414svg').onclick=()=>{const blob=new Blob([svg],{type:'image/svg+xml'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`SAPUDOM-M${d.id}-Professional-RC-Beam-V1.41.4.2.svg`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)};
+  o.querySelector('#v1414svg').onclick=()=>{const blob=new Blob([svg],{type:'image/svg+xml'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`SAPUDOM-M${d.id}-Professional-RC-Beam-V1.41.5.svg`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)};
   o.querySelector('#v1414print').onclick=()=>{const pw=window.open('','_blank');if(!pw){toast('Allow pop-ups to print drawing');return}pw.document.write(`<html><head><title>RC Beam M${d.id}</title><style>@page{size:A3 landscape;margin:5mm}body{margin:0}svg{width:100%;height:auto}</style></head><body>${svg}</body></html>`);pw.document.close();setTimeout(()=>pw.print(),250)};
 }
 
@@ -2879,6 +2935,7 @@ function rcBeamDesignCenterV141(){
     <td style="text-align:right">${d.shear.DCR.toFixed(3)}</td>
     <td>${statusBadge(d.shear.status)}</td>
     <td>${compactDetailing(d)}</td>
+    <td>${statusBadge(d.development?.status||'REVIEW',d.development?.pass?'pass':'fail')}</td>
     <td>${compactOverall(d)}</td>
     <td><button data-v141="${d.id}" style="white-space:nowrap">Details</button></td>
   </tr>`).join('');
@@ -2886,9 +2943,9 @@ function rcBeamDesignCenterV141(){
   w.innerHTML=`<div style="width:min(1120px,96vw);max-height:93vh;background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 70px #0005">
     <header style="padding:18px 20px;background:#173b68;color:#fff;display:flex;justify-content:space-between"><div>
       <div style="font-size:22px;font-weight:900">RC Beam Design — 3D Governing Envelope</div>
-      <div style="font-size:13px;opacity:.84">V1.41.4.2 Fix • Professional RC Beam Drawing</div></div>
+      <div style="font-size:13px;opacity:.84">V1.41.5 • Development / Anchorage / Lap Splice Verification</div></div>
       <button id="v141x" style="width:40px;height:40px;color:#fff;background:#ffffff22;border:1px solid #ffffff55;border-radius:10px">×</button></header>
-    <div style="padding:10px 14px;background:#fff7ed;color:#9a3412;font-size:12px"><b>Engineering note:</b> V1.41.3.1 Fix keeps V1.41.3 calculations unchanged and improves readability. Detailing still verifies bar fit, clear spacing, cover and single-layer constructability. Multi-layer reinforcement is flagged REVIEW because flexural capacity still uses a one-layer tensile-steel centroid. Development/splice length, seismic detailing, torsion and serviceability remain outside this verification.</div>
+    <div style="padding:10px 14px;background:#fff7ed;color:#9a3412;font-size:12px"><b>Engineering note:</b> V1.41.5 adds straight tension development length, available anchorage checks at member i/j ends, and optional Class A/B tension lap-splice verification using ACI 318-25-style factors. Hooked bars, seismic detailing, torsion, serviceability, splice-location/staggering and top reinforcement remain outside this verification.</div>
     <div style="padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:12px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
         <fieldset style="display:flex;gap:8px;align-items:end;border:1px solid #cbd5e1;border-radius:10px;padding:7px 9px">
@@ -2916,11 +2973,25 @@ function rcBeamDesignCenterV141(){
             <label>Aggregate<br><input id="v141agg" type="number" value="${store.defaults.aggregateSize??20}" style="width:58px"> mm</label>
           </div>
         </details>
+        <details style="border:1px solid #cbd5e1;border-radius:10px;padding:7px 9px;max-width:500px">
+          <summary style="cursor:pointer;font-weight:800;color:#475569">Development / Anchorage / Lap</summary>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(90px,1fr));gap:8px;margin-top:8px;align-items:end">
+            <label>Cast position<br><select id="v141cast"><option value="other" ${store.defaults.devCastPosition!=='top'?'selected':''}>Other</option><option value="top" ${store.defaults.devCastPosition==='top'?'selected':''}>Top bar</option></select></label>
+            <label>Coating<br><select id="v141coat"><option value="uncoated" ${store.defaults.devCoating!=='epoxy'?'selected':''}>Uncoated</option><option value="epoxy" ${store.defaults.devCoating==='epoxy'?'selected':''}>Epoxy</option></select></label>
+            <label>Concrete λ<br><select id="v141lambda"><option value="1" ${Number(store.defaults.devLambda)===1?'selected':''}>1.00 Normal</option><option value="0.85" ${Number(store.defaults.devLambda)===0.85?'selected':''}>0.85 Sand-LW</option><option value="0.75" ${Number(store.defaults.devLambda)===0.75?'selected':''}>0.75 All-LW</option></select></label>
+            <label>Ktr<br><input id="v141ktr" type="number" min="0" value="${store.defaults.devKtr??0}" style="width:62px"> mm</label>
+            <label>Anchor i<br><input id="v141ai" type="number" min="0" value="${store.defaults.anchorI??600}" style="width:72px"> mm</label>
+            <label>Anchor j<br><input id="v141aj" type="number" min="0" value="${store.defaults.anchorJ??600}" style="width:72px"> mm</label>
+            <label>Lap splice<br><select id="v141splice"><option value="off" ${!store.defaults.spliceEnabled?'selected':''}>None</option><option value="on" ${store.defaults.spliceEnabled?'selected':''}>Verify</option></select></label>
+            <label>Class<br><select id="v141sclass"><option value="A" ${store.defaults.spliceClass==='A'?'selected':''}>A</option><option value="B" ${store.defaults.spliceClass!=='A'?'selected':''}>B</option></select></label>
+            <label>Provided lap<br><input id="v141slap" type="number" min="0" value="${store.defaults.spliceProvided??0}" style="width:76px"> mm</label>
+          </div>
+        </details>
         <button id="v141Apply" class="primary" style="height:36px;white-space:nowrap">Apply & Recalculate</button>
       </div>
     </div>
     <div style="padding:7px 14px;background:#eef6ff;border-bottom:1px solid #dbeafe;color:#1e3a8a;font-size:11px">
-      Main table is compact. Governing combinations, stirrup details, bar fit, clear spacing, cover and layer checks are available in <b>Details</b>.
+      Main table is compact. Governing combinations, detailing, and development/anchorage/lap-splice trace are available in <b>Details</b>.
     </div>
     <div style="overflow:auto;flex:1">
       <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:11.5px;min-width:930px">
@@ -2929,7 +3000,7 @@ function rcBeamDesignCenterV141(){
             <th style="text-align:left">Beam</th>
             <th>Mu</th><th>φMn</th><th>Mu/φMn</th><th>Flexure</th>
             <th>Vu</th><th>φVn</th><th>Vu/φVn</th><th>Shear</th>
-            <th>Detailing</th><th>Overall</th><th></th>
+            <th>Detailing</th><th>Dev / Splice</th><th>Overall</th><th></th>
           </tr>
         </thead>
         <tbody id="v141tbody">${rows()}</tbody>
@@ -2988,6 +3059,12 @@ function rcBeamDesignCenterV141(){
           Vu/φVn = ${d.shear.DCR.toFixed(3)}<br>
           Use Ø${d.cfg.stirrupDia} @ ${d.sReq} mm (${d.cfg.stirrupSpacingMode==='manual'?'Manual':'Auto'})
         </div>
+        <div style="padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;grid-column:1/-1"><b>Development / Anchorage / Lap Splice — Straight Tension Bar</b><br>
+          ld = <b>${d.development?.ld??'—'} mm</b> (raw ${Number.isFinite(d.development?.ldRaw)?d.development.ldRaw.toFixed(1):'—'} mm) • (cb+Ktr)/db = ${Number.isFinite(d.development?.confRatio)?d.development.confRatio.toFixed(3):'—'}<br>
+          ψt=${d.development?.psiT??'—'} • ψe=${d.development?.psiE??'—'} • ψs=${d.development?.psiS??'—'} • ψg=${d.development?.psiG??'—'} • λ=${d.development?.lambda??'—'} • cb=${Number.isFinite(d.development?.cb)?d.development.cb.toFixed(1):'—'} mm • Ktr=${d.development?.Ktr??'—'} mm<br>
+          Anchorage i: ${d.development?.anchorI??'—'} mm / ${d.development?.ld??'—'} mm = <b>${d.development?.anchorIPass?'PASS':'FAIL'}</b> • Anchorage j: ${d.development?.anchorJ??'—'} mm / ${d.development?.ld??'—'} mm = <b>${d.development?.anchorJPass?'PASS':'FAIL'}</b><br>
+          Lap splice: ${d.development?.spliceEnabled?`Class ${d.development.spliceClass} • provided ${d.development.spliceProvided} mm / required ${d.development.lapRequired} mm = <b>${d.development.lapPass?'PASS':'FAIL'}</b>`:'Not specified — N/A'}
+        </div>
       </div>
       <div style="padding:10px 16px;background:#f8fafc;line-height:1.6">
         <b>Flexural verification:</b>
@@ -3006,6 +3083,7 @@ function rcBeamDesignCenterV141(){
         Cover <b>${d.detailing.coverPass?'PASS':'FAIL'}</b> •
         Layers <b>${d.detailing.singleLayerPass?'1 LAYER PASS':'MULTI-LAYER REVIEW'}</b> •
         Detailing status <b style="color:${d.detailing.pass?'#166534':'#b45309'}">${d.detailing.status}</b><br>
+        <b>Development / Anchorage / Lap:</b> <b style="color:${d.development?.pass?'#166534':'#b91c1c'}">${d.development?.status||'REVIEW'}</b> • ld=${d.development?.ld??'—'} mm • i=${d.development?.anchorIPass?'PASS':'FAIL'} • j=${d.development?.anchorJPass?'PASS':'FAIL'} • lap=${d.development?.spliceEnabled?(d.development.lapPass?'PASS':'FAIL'):'N/A'}<br>
         <b>Overall Beam Design:</b>
         <b style="color:${d.overall.pass?'#166534':'#b91c1c'};font-size:14px">${d.overall.status}</b>
       </div>
@@ -3023,15 +3101,22 @@ function rcBeamDesignCenterV141(){
       fy:+w.querySelector('#v141fy').value||420,mainBarDia:+w.querySelector('#v141bar').value||20,
       stirrupDia:+w.querySelector('#v141st').value||10,
       stirrupSpacingMode:w.querySelector('#v141smode').value==='manual'?'manual':'auto',
-      stirrupSpacing:Math.max(25,+w.querySelector('#v141spacing').value||250)
+      stirrupSpacing:Math.max(25,+w.querySelector('#v141spacing').value||250),
+      devCastPosition:w.querySelector('#v141cast').value==='top'?'top':'other',
+      devCoating:w.querySelector('#v141coat').value==='epoxy'?'epoxy':'uncoated',
+      devLambda:Number(w.querySelector('#v141lambda').value)||1,
+      devKtr:Math.max(0,+w.querySelector('#v141ktr').value||0),
+      anchorI:Math.max(0,+w.querySelector('#v141ai').value||0),anchorJ:Math.max(0,+w.querySelector('#v141aj').value||0),
+      spliceEnabled:w.querySelector('#v141splice').value==='on',spliceClass:w.querySelector('#v141sclass').value==='A'?'A':'B',
+      spliceProvided:Math.max(0,+w.querySelector('#v141slap').value||0)
     });
-    designs=rcBeamDesignV141();w.querySelector('#v141tbody').innerHTML=rows();bindDetails();toast('V1.41.4 RC Beam Design recalculated');
+    designs=rcBeamDesignV141();w.querySelector('#v141tbody').innerHTML=rows();bindDetails();toast('V1.41.5 RC Beam Design + Development verification recalculated');
   };
 }
 
 function integrated3DWorkspaceV128(){
  if(integrated3dActiveV128){closeIntegrated3DV128();return}integrated3dActiveV128=true;document.querySelector('.workspace')?.classList.add('v130-3d-workspace');const center=document.querySelector('.center');[...center.children].forEach(x=>x.classList.add('v128-hide2d'));$('frame3dBtn').textContent='▣ 2D Frame';$('frame3dBtn').classList.add('active3d');
- const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.41.4.2 Fix</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.41.4.2 Fix • Professional RC Beam Drawing</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
+ const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.41.5</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.41.5 • Development / Anchorage / Lap Splice</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
 }
 function closeIntegrated3DV128(){if(!integrated3dActiveV128)return;integrated3dActiveV128=false;integrated3dRefreshV128=null;document.querySelector('.workspace')?.classList.remove('v130-3d-workspace');document.querySelector('#integrated3dV128')?.remove();document.querySelectorAll('.v128-hide2d').forEach(x=>x.classList.remove('v128-hide2d'));$('frame3dBtn').textContent='◈ 3D Frame';$('frame3dBtn').classList.remove('active3d');resize();render();updateUI();renderResults()}
 function initIntegrated3DV128(host){
@@ -3122,5 +3207,5 @@ const patSel=host.querySelector('#v131ActivePattern');const syncPatterns=()=>{pa
 
 $('frame3dBtn').onclick=integrated3DWorkspaceV128;
 
-updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.41.1 — RC Beam Shear Design Verification');
+updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.41.5 — Development / Anchorage / Lap Splice Verification');
 })();

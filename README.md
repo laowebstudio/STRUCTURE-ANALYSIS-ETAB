@@ -19,3 +19,6 @@ V1.32 is built directly from the verified V1.31.1 Fix base. It adds a read-only 
 
 ### Equilibrium convention
 Residual = Applied + Reaction. A component passes when |Residual| <= max(1e-6, 1e-6 × component scale).
+
+### V1.41.5
+RC Beam Design now includes straight tension-bar development length, anchorage-at-i/j and optional Class A/B lap-splice verification. Hooked anchorage, seismic detailing, top reinforcement design, torsion/serviceability and splice-location/staggering remain outside this version and require engineer review.

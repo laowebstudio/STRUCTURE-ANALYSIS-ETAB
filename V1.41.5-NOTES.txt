@@ -1,0 +1,22 @@
+SAPUDOM Structure Analysis V1.41.5
+Development / Anchorage / Lap Splice Verification
+
+Base: V1.41.4.2 Fix — Auto Minimum Steel
+
+Added
+- Straight deformed tension-bar development length verification (ACI 318-25-style SI equation)
+- Development factors: casting position, coating, concrete lambda, bar size, steel grade
+- Confinement input Ktr and calculated cb with ((cb+Ktr)/db) capped at 2.5
+- Minimum ld = max(calculated, 300 mm, 8db)
+- User-defined available anchorage at member i and j ends with PASS/FAIL
+- Optional Class A / Class B tension lap-splice verification
+- Development / Splice status added to RC Beam Design table and Details
+- Professional RC Beam Drawing now reports ld, available anchorage, optional lap requirement and status
+- Overall beam status now requires Flexure + Shear + Detailing + Development/Anchorage/Lap to pass
+
+Important scope limits
+- Straight tension bars only in V1.41.5
+- Hooked-bar anchorage is not verified
+- Splice location/staggering and seismic detailing are not verified
+- Top reinforcement is still not designed by this module
+- Engineer review remains required before construction issue
