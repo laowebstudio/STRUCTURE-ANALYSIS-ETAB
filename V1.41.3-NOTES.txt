@@ -1,0 +1,32 @@
+SAPUDOM V1.41.3 — RC Beam Detailing Verification
+Base: user-tested V1.41.2.1 Fix (T1–T9 PASS).
+
+NEW
+- Bar fit check inside stirrups.
+- Minimum clear spacing check: max(25 mm, db, 4/3 aggregate size).
+- User input for nominal aggregate size (default 20 mm).
+- Minimum cover verification input (default 40 mm).
+- Bars-per-layer and required layer count.
+- Multi-layer layouts are REVIEW, not PASS, because current flexural capacity assumes one tensile layer at effective depth d.
+- Detailing Status added to table and Details.
+- Overall Beam PASS now requires Flexure PASS + Shear PASS + Detailing PASS.
+
+NOT YET VERIFIED
+- Development / splice length
+- Seismic confinement/detailing
+- Torsion reinforcement
+- T-beam/flange action
+- Compression reinforcement
+- Multi-layer centroid-aware flexural redesign
+- Deflection/crack/serviceability
+- Engineer-of-record/project code review
+
+TEST PLAN
+T1 Confirm Detailing column and Aggregate/Min Cover inputs appear.
+T2 Normal 400x600, reasonable bars: Bar Fit/Clear Spacing/Cover/1 Layer PASS.
+T3 Narrow beam or many large bars: MULTI-LAYER REVIEW or BAR FIT FAIL; Overall NOT VERIFIED.
+T4 Reduce cover below Min Cover: COVER FAIL.
+T5 Increase aggregate size: minimum clear spacing must increase and status respond.
+T6 Restore valid geometry: Detailing PASS and Overall PASS when Flexure+Shear pass.
+T7 Auto/Manual stirrup spacing regression test.
+T8 JSON Save/Reload regression.
