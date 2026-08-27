@@ -1,0 +1,21 @@
+SAPUDOM V1.41.3.1 Fix — RC Beam Design Readability
+
+Base
+- V1.41.3 RC Beam Detailing Verification.
+- Calculation / analysis logic intentionally unchanged.
+
+Readability fixes
+- Compact main results table:
+  Beam | Mu | phiMn | Mu/phiMn | Flexure | Vu | phiVn | Vu/phiVn | Shear | Detailing | Overall.
+- Governing moment/shear combinations moved out of the main table and kept in Details.
+- Stirrup specification and Auto/Manual mode kept in Details.
+- PASS / FAIL / REVIEW rendered as compact colored badges.
+- Long "MULTI-LAYER REVIEW" main-table text shortened to "MULTI-LAYER".
+- Long "REVIEW / NOT VERIFIED" main-table text shortened to "NOT VERIFIED".
+- Inputs grouped into Section / Material / Reinforcement.
+- Min Cover and Aggregate moved into collapsible "Detailing inputs".
+- Details modal enlarged and organized into cards.
+- Row hover and alternating row backgrounds added.
+- Horizontal scrolling retained only as a fallback for small screens.
+
+No engineering formulas were changed in this Fix.
