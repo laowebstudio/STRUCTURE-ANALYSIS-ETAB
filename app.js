@@ -1718,7 +1718,7 @@ function storyResponseHtmlV133(sr){
   return `<div class="v133-story-summary"><div><b>Governing Story</b><strong>Story ${g.story}</strong></div><div><b>Direction</b><strong>${g.direction}</strong></div><div><b>Max Drift</b><strong>${(Math.max(Math.abs(g.driftX),Math.abs(g.driftY))*1000).toFixed(4)} mm</strong></div><div><b>Max Drift Ratio</b><strong>${g.governingRatio.toFixed(6)}</strong></div></div><div class="v133-story-note">Story displacement = maximum floor-node translation. Story drift compares matching Grid X/Y nodes with the story below. Drift Ratio = |Δstory| / story height.</div><div class="v132-eq-table-wrap"><table class="v133-story-table"><thead><tr><th>Story</th><th>Elevation m</th><th>Ux mm</th><th>Uy mm</th><th>Drift X mm</th><th>Drift Y mm</th><th>Ratio X</th><th>Ratio Y</th><th>Gov.</th></tr></thead><tbody>${sr.rows.slice().reverse().map(r=>`<tr class="v128-result-row" ${r.nodeId?`data-node-id="${r.nodeId}"`:''}><td><button class="v128-link" ${r.nodeId?`data-node-id="${r.nodeId}"`:''}>Story ${r.story}</button></td><td>${r.elevation.toFixed(3)}</td><td>${(r.ux*1000).toFixed(4)}</td><td>${(r.uy*1000).toFixed(4)}</td><td>${(r.driftX*1000).toFixed(4)}</td><td>${(r.driftY*1000).toFixed(4)}</td><td>${r.ratioX.toFixed(6)}</td><td>${r.ratioY.toFixed(6)}</td><td>${r.direction}${r===g?' ★':''}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
-// ===== V1.41 — RC Beam Design from 3D Governing Envelope =====
+// ===== V1.41.1 — RC Beam Shear Design Verification =====
 function normalize3DPatternIdV1372(id){return String(id||'DL').trim().toUpperCase()||'DL'}
 function patternLoadAuditV1372(m3,pat){
   pat=normalize3DPatternIdV1372(pat);let nodeTerms=0,memberTerms=0,absInput=0;
@@ -1923,7 +1923,7 @@ function loadCombinationCenterV1362(){
     <header style="flex:0 0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff">
       <div>
         <div style="font-size:22px;font-weight:900;letter-spacing:.1px">3D Load Combinations</div>
-        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.41 • RC Beam Design from 3D Governing Envelope</div>
+        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.41.1 • RC Beam Shear Design Verification</div>
       </div>
       <button id="v1362X" aria-label="Close"
         style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer">×</button>
@@ -2667,7 +2667,46 @@ function rcBeamDesignV141(){
     const VcN=.17*Math.sqrt(fc)*b*d,phiVc=phiV*VcN/1000,VsReqN=Math.max(0,Vu*1000/phiV-VcN),Av=2*Math.PI*stirrupDia*stirrupDia/4;
     let sReq=VsReqN>1e-9?Av*fy*d/VsReqN:300;sReq=Math.min(300,d/2,sReq);sReq=Math.max(75,Math.floor(sReq/25)*25);
 
-    return {id:e.id,i:e.i,j:e.j,cfg:{b,h,cover,stirrupDia,mainBarDia,fc,fy,phiF,phiV,d},govM,govV,Mu,Vu,AsReq,nBars,AsProv,phiVc,sReq,flexureStatus};
+    
+    // V1.41.1 shear verification
+    const Av2=Av; // 2-legged stirrup area, mm2
+    const VsProvN = Av2*fy*d/sReq;
+    const VnN = VcN + VsProvN;
+    const phiVn = phiV*VnN/1000; // kN
+    const shearDCR = phiVn>1e-9 ? Vu/phiVn : Infinity;
+
+    // Required Av/s from Vu <= phi(Vc+Vs)
+    const requiredVsN = Math.max(0, Vu*1000/phiV - VcN);
+    const AvOverSReq = requiredVsN>0 ? requiredVsN/(fy*d) : 0; // mm2/mm
+    const AvOverSProv = Av2/sReq;
+
+    // ACI-style practical max spacing limits (design-assist layer).
+    // General beam shear reinforcement cap: min(d/2, 600 mm).
+    // When Vs demand is high, tighten to min(d/4, 300 mm).
+    const highShear = requiredVsN > 4*VcN;
+    const sMaxCode = Math.max(75, Math.min(highShear ? d/4 : d/2, highShear ? 300 : 600));
+    const spacingPass = sReq <= sMaxCode + 1e-9;
+
+    // Maximum nominal shear stress safeguard.
+    // Vn,max ~= Vc + 0.66*sqrt(fc')*b*d (N), simplified ACI-style ceiling.
+    const VsMaxN = 0.66*Math.sqrt(fc)*b*d;
+    const phiVnMax = phiV*(VcN + VsMaxN)/1000;
+    const maxShearPass = Vu <= phiVnMax + 1e-9;
+
+    const shearStrengthPass = Vu <= phiVn + 1e-9;
+    const shearStatus = (shearStrengthPass && spacingPass && maxShearPass) ? 'PASS' : 'REVIEW / FAIL';
+
+    return {
+      id:e.id,i:e.i,j:e.j,
+      cfg:{b,h,cover,stirrupDia,mainBarDia,fc,fy,phiF,phiV,d},
+      govM,govV,Mu,Vu,AsReq,nBars,AsProv,phiVc,sReq,flexureStatus,
+      shear:{
+        Av:Av2, VsProv:VsProvN/1000, Vn:VnN/1000, phiVn,
+        DCR:shearDCR, AvOverSReq, AvOverSProv,
+        sMaxCode, spacingPass, maxShearPass, phiVnMax,
+        strengthPass:shearStrengthPass, status:shearStatus
+      }
+    };
   };
 
   const designs=env.members.filter(e=>isBeam(getMember(e.id))).map(designOne);
@@ -2688,14 +2727,17 @@ function rcBeamDesignCenterV141(){
     <td style="text-align:right">${Number.isFinite(d.AsReq)?d.AsReq.toFixed(0):'REVIEW'}</td>
     <td><b>${d.nBars?`${d.nBars}-Ø${d.cfg.mainBarDia}`:'REVIEW'}</b></td>
     <td>Ø${d.cfg.stirrupDia} @ ${d.sReq} mm</td>
+    <td style="text-align:right">${d.shear.phiVn.toFixed(1)}</td>
+    <td style="text-align:right">${d.shear.DCR.toFixed(3)}</td>
+    <td><b style="color:${d.shear.status==='PASS'?'#166534':'#b91c1c'}">${d.shear.status}</b></td>
     <td><button data-v141="${d.id}">Details</button></td></tr>`).join('');
 
   w.innerHTML=`<div style="width:min(1240px,97vw);max-height:93vh;background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column">
     <header style="padding:18px 20px;background:#173b68;color:#fff;display:flex;justify-content:space-between"><div>
       <div style="font-size:22px;font-weight:900">RC Beam Design — 3D Governing Envelope</div>
-      <div style="font-size:13px;opacity:.84">V1.41 • preliminary section/rebar sizing from governing 3D combinations</div></div>
+      <div style="font-size:13px;opacity:.84">V1.41.1 • RC beam shear verification from governing 3D combinations</div></div>
       <button id="v141x" style="width:40px;height:40px;color:#fff;background:#ffffff22;border:1px solid #ffffff55;border-radius:10px">×</button></header>
-    <div style="padding:10px 14px;background:#fff7ed;color:#9a3412;font-size:12px"><b>Engineering note:</b> preliminary design-assist only. Verify section orientation, governing code, detailing, minimum/maximum reinforcement, development length, seismic provisions and engineer approval before construction.</div>
+    <div style="padding:10px 14px;background:#fff7ed;color:#9a3412;font-size:12px"><b>Engineering note:</b> V1.41.1 verifies beam shear using Vu, φVc, provided stirrups, φVn, Vu/φVn and spacing limits. Flexural/detailing checks remain design-assist only. Verify section orientation, governing code, detailing, minimum/maximum reinforcement, development length, seismic provisions and engineer approval before construction.</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;padding:12px 14px;background:#f8fafc;font-size:12px">
       <label>b <input id="v141b" type="number" value="${store.defaults.b}" style="width:70px"> mm</label>
       <label>h <input id="v141h" type="number" value="${store.defaults.h}" style="width:70px"> mm</label>
@@ -2707,7 +2749,7 @@ function rcBeamDesignCenterV141(){
       <button id="v141Apply" class="primary">Apply & Recalculate</button>
     </div>
     <div style="overflow:auto;flex:1"><table style="width:100%;border-collapse:collapse;font-size:11.5px">
-      <thead style="position:sticky;top:0;background:#f8fafc"><tr><th>Beam</th><th>Nodes</th><th>Gov. M</th><th>Mu kN·m</th><th>Moment Combo</th><th>Vu kN</th><th>Shear Combo</th><th>As req mm²</th><th>Main Bars</th><th>Stirrups</th><th></th></tr></thead>
+      <thead style="position:sticky;top:0;background:#f8fafc"><tr><th>Beam</th><th>Nodes</th><th>Gov. M</th><th>Mu kN·m</th><th>Moment Combo</th><th>Vu kN</th><th>Shear Combo</th><th>As req mm²</th><th>Main Bars</th><th>Stirrups</th><th>φVn kN</th><th>Vu/φVn</th><th>Shear Status</th><th></th></tr></thead>
       <tbody id="v141tbody">${rows()}</tbody></table></div>
     <footer style="padding:12px 14px;display:flex;justify-content:space-between;border-top:1px solid #e2e8f0"><div>Horizontal members detected: <b>${designs.length}</b></div><button id="v141close">Close</button></footer>
   </div>`;
@@ -2726,9 +2768,21 @@ function rcBeamDesignCenterV141(){
         <div><b>Governing Moment</b><br>${d.govM.axis}-${d.govM.end}=${d.Mu.toFixed(3)} kN·m<br>${d.govM.combo}</div>
         <div><b>Governing Shear</b><br>${d.govV.axis}-${d.govV.end}=${d.Vu.toFixed(3)} kN<br>${d.govV.combo}</div>
         <div><b>Longitudinal Steel</b><br>As req=${Number.isFinite(d.AsReq)?d.AsReq.toFixed(0):'REVIEW'} mm²<br>${d.nBars?`${d.nBars}-Ø${d.cfg.mainBarDia} = ${d.AsProv.toFixed(0)} mm²`:'Review section'}</div>
-        <div><b>Shear Reinforcement</b><br>φVc≈${d.phiVc.toFixed(1)} kN<br>Ø${d.cfg.stirrupDia} @ ${d.sReq} mm preliminary</div>
+        <div><b>Shear Reinforcement</b><br>
+          φVc = ${d.phiVc.toFixed(1)} kN<br>
+          Vs(provided) = ${d.shear.VsProv.toFixed(1)} kN<br>
+          φVn = ${d.shear.phiVn.toFixed(1)} kN<br>
+          Vu/φVn = ${d.shear.DCR.toFixed(3)}<br>
+          Use Ø${d.cfg.stirrupDia} @ ${d.sReq} mm
+        </div>
       </div>
-      <div style="padding:10px 16px;background:#f8fafc">Status: <b>${d.flexureStatus}</b> • Auto governing axis uses largest |M2/M3| and |V2/V3|.</div>
+      <div style="padding:10px 16px;background:#f8fafc;line-height:1.55">
+        Flexure calc status: <b>${d.flexureStatus}</b><br>
+        Shear strength: <b>${d.shear.strengthPass?'PASS':'FAIL'}</b> •
+        Spacing: <b>${d.shear.spacingPass?'PASS':'FAIL'}</b> (s=${d.sReq} mm ≤ smax=${d.shear.sMaxCode.toFixed(0)} mm) •
+        Max shear limit: <b>${d.shear.maxShearPass?'PASS':'FAIL'}</b><br>
+        Overall shear verification: <b style="color:${d.shear.status==='PASS'?'#166534':'#b91c1c'}">${d.shear.status}</b>
+      </div>
       <footer style="padding:12px;text-align:right"><button id="v141dclose">Close</button></footer></div>`;
     document.body.appendChild(m);const dc=()=>m.remove();m.querySelector('#v141dx').onclick=dc;m.querySelector('#v141dclose').onclick=dc;
   });
@@ -2747,7 +2801,7 @@ function rcBeamDesignCenterV141(){
 
 function integrated3DWorkspaceV128(){
  if(integrated3dActiveV128){closeIntegrated3DV128();return}integrated3dActiveV128=true;document.querySelector('.workspace')?.classList.add('v130-3d-workspace');const center=document.querySelector('.center');[...center.children].forEach(x=>x.classList.add('v128-hide2d'));$('frame3dBtn').textContent='▣ 2D Frame';$('frame3dBtn').classList.add('active3d');
- const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.41</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.41 • RC Beam Design from 3D Governing Envelope</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
+ const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.41.1</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.41.1 • RC Beam Shear Design Verification</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
 }
 function closeIntegrated3DV128(){if(!integrated3dActiveV128)return;integrated3dActiveV128=false;integrated3dRefreshV128=null;document.querySelector('.workspace')?.classList.remove('v130-3d-workspace');document.querySelector('#integrated3dV128')?.remove();document.querySelectorAll('.v128-hide2d').forEach(x=>x.classList.remove('v128-hide2d'));$('frame3dBtn').textContent='◈ 3D Frame';$('frame3dBtn').classList.remove('active3d');resize();render();updateUI();renderResults()}
 function initIntegrated3DV128(host){
@@ -2838,5 +2892,5 @@ const patSel=host.querySelector('#v131ActivePattern');const syncPatterns=()=>{pa
 
 $('frame3dBtn').onclick=integrated3DWorkspaceV128;
 
-updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.41 — RC Beam Design from 3D Governing Envelope');
+updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.41.1 — RC Beam Shear Design Verification');
 })();

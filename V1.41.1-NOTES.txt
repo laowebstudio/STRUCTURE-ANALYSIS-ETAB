@@ -1,0 +1,40 @@
+SAPUDOM V1.41.1 — RC Beam Shear Design Verification
+
+BASE
+V1.41 RC Beam Design from 3D Governing Envelope.
+
+NEW SHEAR VERIFICATION
+- Uses governing Vu from 3D Envelope.
+- Calculates concrete shear contribution Vc.
+- Calculates provided stirrup shear contribution Vs.
+- Calculates nominal shear strength Vn = Vc + Vs.
+- Calculates design shear strength phi*Vn.
+- Calculates Demand/Capacity Ratio: Vu / (phi*Vn).
+- Shows PASS when Vu <= phi*Vn.
+- Calculates required Av/s and compares with provided Av/s.
+- Checks stirrup spacing against a practical ACI-style maximum spacing limit.
+- Adds simplified maximum shear ceiling check.
+- Table now shows phiVn, Vu/phiVn and Shear Status.
+- Beam Details shows:
+  Vu
+  phiVc
+  Vs provided
+  phiVn
+  Vu/phiVn
+  stirrup spacing
+  maximum spacing
+  PASS/FAIL for shear strength, spacing and max shear limit.
+
+IMPORTANT
+This remains engineering design-assist software, not final code approval.
+The V1.41.1 shear layer improves traceability but does not yet replace a complete
+code-specific design check, seismic detailing review, anchorage/development checks,
+torsion design, or engineer-of-record verification.
+
+RECOMMENDED TESTS
+T1 Open RC Beam Design and confirm new phiVn / Vu/phiVn / Shear Status columns.
+T2 Beam M29: verify Vu=208.765 kN remains unchanged.
+T3 Open M29 Details and confirm phiVn > Vu and DCR < 1 for a PASS case.
+T4 Reduce stirrup diameter or increase spacing demand to create DCR > 1 or spacing FAIL.
+T5 Change section/material/stirrup inputs and confirm phiVn and DCR recalculate.
+T6 Save JSON/reload and confirm design inputs persist.
