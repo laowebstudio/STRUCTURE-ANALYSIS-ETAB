@@ -20,6 +20,13 @@ V1.32 is built directly from the verified V1.31.1 Fix base. It adds a read-only 
 ### Equilibrium convention
 Residual = Applied + Reaction. A component passes when |Residual| <= max(1e-6, 1e-6 × component scale).
 
+
+### V1.41.6
+- Automatic Anchorage Solution: straight development is checked first; when unavailable, a standard 90° hook design-assist solution is evaluated and reported at member i/j ends.
+- Automatic Rebar Arrangement Verification: multi-layer bars are arranged by available beam width, horizontal/vertical clear spacing is verified, and the steel centroid/effective depth is recalculated.
+- Flexure is rechecked using centroid-aware effective depth; bar quantity can increase automatically if multi-layer placement reduces capacity.
+- RC Beam Drawing now reports/draws the selected anchorage method and allows verified multi-layer layouts to PASS.
+
 ### V1.41.5.1
 - Professional RC Beam Drawing readability redesign.
 - Automatic tension lap-splice Class A/B eligibility verification.

@@ -1,0 +1,24 @@
+SAPUDOM Structure Analysis V1.41.6
+Automatic Anchorage Solution + Rebar Arrangement Verification
+
+Built from V1.41.5.1.
+
+Added
+- Automatic multi-layer bottom reinforcement arrangement.
+- Horizontal clear-spacing verification per layer.
+- Vertical layer-fit verification.
+- Reinforcement centroid calculation and centroid-aware effective depth d_eff.
+- Flexural capacity recheck after multi-layer centroid shift; automatic bar-count increase when required.
+- Automatic anchorage solution: Straight development first, then standard 90-degree hook design-assist when straight ld is unavailable.
+- Hook development length ldh and 90-degree hook tail shown in calculation data.
+- RC Beam Drawing shows selected anchorage method at i/j and draws hook geometry when automatically selected.
+- Multi-layer arrangements can now PASS when fit/spacing/cover/vertical geometry are verified instead of always forcing MULTI-LAYER REVIEW.
+
+Protected / unchanged
+- Existing 2D analysis engine.
+- 3D stiffness-analysis path.
+- Load combinations/envelope logic.
+- V1.41.5.1 automatic Class A/B lap-splice eligibility logic.
+
+Important engineering limitation
+- Automatic 90-degree hook is a design-assist check. Project-specific support dimensions, side cover, confinement, seismic requirements, top-bar design, torsion, serviceability and splice location/staggering still require engineering review before construction issue.
