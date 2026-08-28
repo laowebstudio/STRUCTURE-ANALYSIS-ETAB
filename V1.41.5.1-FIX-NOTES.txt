@@ -1,0 +1,25 @@
+SAPUDOM Structure Analysis V1.41.5.1
+Drawing Readability + Automatic Lap Splice Class Verification
+
+Changes
+1. Redesigned RC Beam Drawing into a construction-oriented sheet.
+   - Larger beam elevation and sections.
+   - Stronger rebar line hierarchy.
+   - Bottom bars split by actual drawing layers (L1, L2, ...).
+   - Anchorage dimensions at i/j shown directly on elevation.
+   - Compact Bar / Detail Schedule added.
+   - Calculation-heavy Design Check Data removed from the drawing sheet; full trace remains in RC Beam Design Details.
+   - Cleaner title block with quick status only.
+
+2. Automatic Class A lap-splice eligibility verification.
+   - New input: Bars spliced (%).
+   - Requested Class A is accepted only when As(provided)/As(required) >= 2.0 AND bars spliced <= 50%.
+   - If Class A is requested but conditions are not satisfied, SAPUDOM automatically uses Class B (1.3 ld).
+   - Details panel reports requested/effective class, As ratio, bars-spliced percentage, required lap and provided lap.
+
+3. Existing V1.41.5 development / anchorage calculations remain integrated with Overall Beam status.
+
+Limitations retained
+- Top reinforcement/support negative-moment design is not yet generated.
+- Hooked bars, seismic detailing, torsion, splice-location/staggering and full BBS fabrication lengths remain for future versions.
+- Multi-layer flexural capacity remains ENGINEER REVIEW until centroid-aware design is added.

@@ -1,3 +1,8 @@
+## V1.41.5.1 — Drawing Readability + Automatic Lap Class Verification
+- Redesigned Final RC Beam Drawing for construction readability: larger elevation/sections, layer callouts, anchorage dimensions, compact bar/detail schedule, and simplified title block.
+- Added Bars Spliced (%) input and automatic Class A eligibility check. Requested Class A is automatically downgraded to Class B unless As(provided)/As(required) >= 2.0 and bars spliced <= 50%.
+- Calculation trace remains in RC Beam Design Details instead of crowding the drawing sheet.
+
 # V1.35.1 Fix.1 Fix — Diaphragm Apply Feedback
 - Added story-based rigid diaphragm constraints for 3D analysis.
 - Uses transformation method for Ux/Uy/Rz rigid-floor kinematics.
