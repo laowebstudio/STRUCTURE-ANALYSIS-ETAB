@@ -1,23 +1,11 @@
-# SAPUDOM Structure Analysis V1.42.2
+# SAPUDOM Structure Analysis V1.43
 
-## True Section Cut Rebar Rendering
-End-i / End-j now show a true midspan cross-section with longitudinal bars rendered as circles at their actual calculation-linked layer coordinates. This fixes the V1.42.1 issue where 90° hook tails obscured the 6+3 arrangement in end views.
+## Top Reinforcement + Full Beam Rebar Cage
 
-# SAPUDOM Structure Analysis V1.42
+V1.43 extends the verified V1.42.2 beam 3D rebar viewer into a full beam reinforcement cage. The viewer now renders bottom longitudinal reinforcement, top longitudinal cage bars, stirrups and the selected bottom-bar anchorage solution together.
 
-## 3D RC Rebar Visualization Foundation
+Top reinforcement can be set to **Auto**, which provides two continuous construction bars for the current foundation phase, or **Manual**, which allows a user-specified top bar count and diameter. The same geometric bar-fit engine checks whether the top bars physically fit the beam section.
 
-V1.42 continues directly from V1.41.6.2. It adds a read-only, calculation-linked 3D rebar viewer for RC beams while protecting the tested analysis and RC design logic.
+The End-i and End-j true section cuts show both bottom and top layers. The 2D RC beam detailing drawing is also linked to the top cage input.
 
-### What is visualized
-- Concrete beam envelope (semi-transparent)
-- Bottom longitudinal reinforcement from the actual RC design result
-- Automatic multi-layer arrangement (for example 9Ø20 = 6+3)
-- Stirrups using the current designed/provided spacing
-- 90° anchorage hooks at i/j when selected by the development verification
-
-### Viewer controls
-Drag to rotate, mouse wheel to zoom, Fit, Isometric, and visibility toggles for Concrete / Stirrups / Main Bars.
-
-### Scope
-This is the foundation phase toward a full RC reinforcement BIM/detailing model. Top reinforcement, columns, beam-column joints, slabs, splice staggering and full-building reinforcement are future phases.
+Important: V1.43 does not yet claim code-verified top negative-moment design, top development/anchorage, curtailment, seismic joint detailing, torsion, or serviceability. The existing bottom flexural / shear / detailing / development logic remains protected.

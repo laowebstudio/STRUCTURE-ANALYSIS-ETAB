@@ -1,0 +1,20 @@
+SAPUDOM Structure Analysis V1.43
+Top Reinforcement + Full Beam Rebar Cage
+
+Added
+- Top longitudinal reinforcement inputs in RC Beam Design.
+- Top Mode: Auto (2 continuous construction bars) or Manual bar count.
+- Independent top bar diameter input.
+- Top-bar geometric fit verification using the existing rebar-arrangement engine.
+- Full 3D beam cage: bottom bars + top bars + stirrups + bottom anchorage hooks.
+- True End-i / End-j section cuts now show bottom bars and top bars together.
+- 3D viewer can toggle Bottom bars and Top bars independently.
+- RC Beam Detailing Drawing now shows top longitudinal bars and top bars in sections.
+
+Protected / unchanged
+- Existing V1.41.6.2 bottom flexural design logic.
+- Development / anchorage / lap splice verification for verified bottom bars.
+- V1.42.2 True Section Cut behavior and camera controls.
+
+Engineering scope note
+V1.43 top reinforcement is a calculation-linked cage/detailing input. Auto currently provides two continuous construction top bars. Top negative-moment flexural design, bar curtailment, independent top anchorage/development, seismic joint detailing, torsion and serviceability are not yet code-verified and remain future work.
