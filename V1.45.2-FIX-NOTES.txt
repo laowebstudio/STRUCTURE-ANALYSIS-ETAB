@@ -1,0 +1,14 @@
+SAPUDOM Structure Analysis V1.45.2
+Rebar Viewer Live Solver Results Fix
+
+Fixes the stale-result path observed after Advanced 3D Point Loads changed the 3D moment diagram but RC Rebar Viewer still showed the previous Vu/top/stirrup zones.
+
+Changes:
+- Adds a live RC envelope candidate sourced directly from the current 3D solver pattern.
+- Governing RC demand now considers live pattern results together with normal load-combination results.
+- 3D Rebar Viewer forces a fresh RC design rebuild whenever it opens.
+- Advanced Point/Trapezoidal/Member Moment load effects can no longer be hidden by an older RC/viewer object.
+- Viewer footer and engineering note identify the V1.45.2 live-solver data path.
+
+Regression target:
+M28 with Advanced Point Load near j must show changed live RC end shear/top reinforcement/stirrup zones when solver end forces change.

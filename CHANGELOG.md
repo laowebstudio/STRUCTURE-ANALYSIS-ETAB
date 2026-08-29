@@ -1,8 +1,7 @@
-## V1.45.1 — Advanced Loads → RC Design Synchronization Fix
+# Changelog
 
-- Fixed stale RC Beam Design demand after adding Point / Trapezoidal / Member Moment loads in 3D Loads.
-- Advanced-load assign/clear now invalidates governing envelope and RC derived results.
-- Analyze 3D marks the newest solution and clears any pre-solve envelope cache.
-- RC Beam Design always regenerates the governing load-combination envelope from current member loads before design.
-- Preserves RC design inputs/member overrides while refreshing only derived demand/results.
-- Keeps V1.45 Advanced Member Loads and V1.44.1 demand-linked stirrup zoning.
+## V1.45.2 — Rebar Viewer Live Solver Results Fix
+- Fixed stale RC/Rebar Viewer demand after Advanced Member Loads.
+- RC design envelope now includes a fresh direct solve of the active 3D Load Pattern in addition to governing load combinations.
+- Opening 3D RC Rebar Viewer automatically rebuilds the selected member design from the live solver path.
+- Updated synchronization/version feedback in RC Design and Rebar Viewer.
