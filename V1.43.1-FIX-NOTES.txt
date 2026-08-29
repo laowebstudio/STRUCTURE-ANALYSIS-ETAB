@@ -1,0 +1,13 @@
+SAPUDOM Structure Analysis V1.43.1 — Rebar Cage Fit / Clear Spacing Fix
+
+Changes
+- Preserves V1.43 top + bottom full beam rebar cage and 3D viewer.
+- Adds combined top/bottom cage vertical clear-spacing verification.
+- Uses governing minimum clear spacing = max(25 mm, bottom bar dia, top bar dia, 4/3 aggregate size).
+- Cage Fit now requires bottom arrangement PASS, top arrangement PASS, and top-to-bottom cage separation PASS.
+- Adds explicit failure states: BOTTOM ..., TOP ..., TOP/BOTTOM CLEAR SPACING FAIL.
+- 3D Rebar info panel reports actual top↔bottom clear spacing and required minimum.
+- Overall verification cannot PASS when combined cage fit fails.
+
+Important test note
+A 400x600 beam with Top 30Ø32 can legitimately remain PASS if the computed clear spacing still satisfies the geometry rule. To force a FAIL test, increase bars/layers or reduce section depth until actual top↔bottom clear spacing is below the required minimum.
