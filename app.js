@@ -3018,10 +3018,10 @@ function rcBeamRebar3DViewerV142(d){
 
   const modal=document.createElement('div');
   modal.style.cssText='position:fixed;inset:0;z-index:100006;background:rgba(2,6,23,.94);display:flex;flex-direction:column;padding:10px;gap:8px';
-  modal.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;color:#fff;gap:12px;flex-wrap:wrap"><div><b style="font-size:20px">3D RC Rebar Viewer — M${d.id}</b><div style="font-size:12px;opacity:.78">V1.42.1 • 3D Rebar View Controls • Bottom steel phase</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><button id="v142fit">Fit</button><button id="v142iso">Isometric</button><button id="v142side">Side</button><button id="v142top">Top</button><button id="v142endi">End-i</button><button id="v142endj">End-j</button><label style="font-size:12px"><input id="v142conc" type="checkbox" checked> Concrete</label><label style="font-size:12px"><input id="v142st" type="checkbox" checked> Stirrups</label><label style="font-size:12px"><input id="v142bars" type="checkbox" checked> Main bars</label><button id="v142close">Close</button></div></div><div style="position:relative;flex:1;min-height:360px;background:#e8eef5;border-radius:8px;overflow:hidden"><canvas id="v142canvas" style="width:100%;height:100%;display:block;touch-action:none"></canvas><div id="v142info" style="position:absolute;left:12px;top:12px;background:rgba(255,255,255,.94);padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px #0002;font:12px Arial;line-height:1.55;color:#0f172a;max-width:360px"></div><div style="position:absolute;right:12px;bottom:10px;background:rgba(15,23,42,.86);color:white;padding:7px 10px;border-radius:7px;font:11px Arial">Drag: Rotate • Wheel: Zoom • V1.42.1 view controls</div></div>`;
+  modal.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;color:#fff;gap:12px;flex-wrap:wrap"><div><b style="font-size:20px">3D RC Rebar Viewer — M${d.id}</b><div style="font-size:12px;opacity:.78">V1.42.2 • True Section Cut Rebar Rendering • Bottom steel phase</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><button id="v142fit">Fit</button><button id="v142iso">Isometric</button><button id="v142side">Side</button><button id="v142top">Top</button><button id="v142endi">End-i</button><button id="v142endj">End-j</button><label style="font-size:12px"><input id="v142conc" type="checkbox" checked> Concrete</label><label style="font-size:12px"><input id="v142st" type="checkbox" checked> Stirrups</label><label style="font-size:12px"><input id="v142bars" type="checkbox" checked> Main bars</label><button id="v142close">Close</button></div></div><div style="position:relative;flex:1;min-height:360px;background:#e8eef5;border-radius:8px;overflow:hidden"><canvas id="v142canvas" style="width:100%;height:100%;display:block;touch-action:none"></canvas><div id="v142info" style="position:absolute;left:12px;top:12px;background:rgba(255,255,255,.94);padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px #0002;font:12px Arial;line-height:1.55;color:#0f172a;max-width:360px"></div><div style="position:absolute;right:12px;bottom:10px;background:rgba(15,23,42,.86);color:white;padding:7px 10px;border-radius:7px;font:11px Arial">Drag: Rotate • Wheel: Zoom • V1.42.2 section-cut viewer</div></div>`;
   document.body.appendChild(modal);
   const canvas=modal.querySelector('#v142canvas'),ctx=canvas.getContext('2d');let dpr=1;
-  const view={yaw:-32,pitch:24,scale:.13,ox:0,oy:0}, flags={concrete:true,stirrups:true,bars:true};
+  const view={yaw:-32,pitch:24,scale:.13,ox:0,oy:0,sectionCut:null}, flags={concrete:true,stirrups:true,bars:true};
   let drag=null;
 
   function rotated(p){
@@ -3033,6 +3033,7 @@ function rcBeamRebar3DViewerV142(d){
   function proj(p){const q=rotated(p);return [view.ox+q[0]*view.scale,view.oy-q[2]*view.scale,q[1]]}
   function line(points,width=2,alpha=1){if(points.length<2)return;ctx.save();ctx.globalAlpha=alpha;ctx.lineWidth=width;ctx.beginPath();points.forEach((p,i)=>{const q=proj(p);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])});ctx.stroke();ctx.restore()}
   function fit(){
+    if(view.sectionCut){draw();return}
     const r=canvas.getBoundingClientRect(),corners=[];for(const x of [0,L])for(const y of [-b/2,b/2])for(const z of [0,h])corners.push(rotated([x,y,z]));
     const xs=corners.map(q=>q[0]),zs=corners.map(q=>q[2]),w=Math.max(1,Math.max(...xs)-Math.min(...xs)),hh=Math.max(1,Math.max(...zs)-Math.min(...zs));
     view.scale=Math.max(.03,Math.min(.5,Math.min((r.width-100)/w,(r.height-100)/hh)));view.ox=r.width/2-(Math.min(...xs)+Math.max(...xs))/2*view.scale;view.oy=r.height/2+(Math.min(...zs)+Math.max(...zs))/2*view.scale;draw();
@@ -3041,7 +3042,23 @@ function rcBeamRebar3DViewerV142(d){
     ctx.save();ctx.fillStyle=fill;ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.beginPath();points.forEach((p,i)=>{const q=proj(p);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])});ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
   }
   function barYPositions(n){if(n<=1)return[0];const avail=Math.max(0,insideW-db);return Array.from({length:n},(_,i)=>-avail/2+i*avail/(n-1))}
+  function drawSectionCut(end){
+    const r=canvas.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);ctx.fillStyle='#eef3f8';ctx.fillRect(0,0,r.width,r.height);
+    const margin=90, aw=Math.max(1,r.width-2*margin), ah=Math.max(1,r.height-2*margin);
+    const sc=Math.max(.05,Math.min(1.2,Math.min(aw/b,ah/h)));
+    const cx=r.width/2, baseY=r.height/2+h*sc/2;
+    const X=y=>cx+(end==='j'?-1:1)*y*sc, Y=z=>baseY-z*sc;
+    // concrete section outline at midspan (true section cut; hooks intentionally excluded)
+    if(flags.concrete){ctx.save();ctx.fillStyle='rgba(148,163,184,.10)';ctx.strokeStyle='rgba(71,85,105,.55)';ctx.lineWidth=1.4;ctx.fillRect(cx-b*sc/2,baseY-h*sc,b*sc,h*sc);ctx.strokeRect(cx-b*sc/2,baseY-h*sc,b*sc,h*sc);ctx.restore()}
+    const y0=-b/2+cover+sd/2,y1=b/2-cover-sd/2,z0=cover+sd/2,z1=h-cover-sd/2;
+    if(flags.stirrups){ctx.save();ctx.strokeStyle='#16a34a';ctx.lineWidth=Math.max(2,sd*sc*.7);ctx.strokeRect(Math.min(X(y0),X(y1)),Y(z1),Math.abs(X(y1)-X(y0)),Math.abs(Y(z0)-Y(z1)));ctx.restore()}
+    if(flags.bars){ctx.save();ctx.fillStyle='#dc2626';ctx.strokeStyle='#991b1b';ctx.lineWidth=1;counts.forEach((n,li)=>{const z=Number.isFinite(centers[li])?centers[li]:(cover+sd+db/2+li*(db+Math.max(25,db)));barYPositions(n).forEach(y=>{ctx.beginPath();ctx.arc(X(y),Y(z),Math.max(4,db*sc/2),0,Math.PI*2);ctx.fill();ctx.stroke()})});ctx.restore()}
+    // layer labels and section-cut title
+    ctx.save();ctx.fillStyle='#0f172a';ctx.textAlign='center';ctx.font='700 14px Arial';ctx.fillText(`END-${end.toUpperCase()} • TRUE SECTION CUT @ MIDSPAN`,cx,34);ctx.font='12px Arial';ctx.fillStyle='#475569';ctx.fillText(`${b} × ${h} mm • ${counts.map((n,i)=>`L${i+1}: ${n}Ø${db}`).join(' • ')}`,cx,54);ctx.restore();
+    ctx.save();ctx.fillStyle='#0f172a';ctx.font='700 13px Arial';ctx.fillText(end,Math.min(r.width-30,cx+b*sc/2+18),Math.max(24,baseY-h*sc-8));ctx.restore();
+  }
   function draw(){
+    if(view.sectionCut){drawSectionCut(view.sectionCut);return}
     const r=canvas.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);ctx.fillStyle='#eef3f8';ctx.fillRect(0,0,r.width,r.height);
     // floor/grid reference
     ctx.strokeStyle='rgba(100,116,139,.18)';ctx.lineWidth=1;for(let x=-1000;x<=L+1000;x+=500)line([[x,-b,0],[x,b,0]],1,.45);for(let y=-1000;y<=1000;y+=250)line([[-500,y,0],[L+500,y,0]],1,.35);
@@ -3059,17 +3076,17 @@ function rcBeamRebar3DViewerV142(d){
   modal.querySelector('#v142info').innerHTML=`<b>M${d.id} • ${b}×${h} mm • L=${L} mm</b><br>Main: <b>${d.nBars||0}Ø${db}</b> • ${counts.map((n,i)=>`L${i+1}: ${n}Ø${db}`).join(' • ')||'No valid arrangement'}<br>Stirrups: <b>Ø${sd} @ ${ss} mm</b> • Cover ${cover} mm<br>Anchorage i: <b>${d.development?.anchorIMethod||'—'}</b> • j: <b>${d.development?.anchorJMethod||'—'}</b><br>Detailing: <b>${d.detailing?.status||'—'}</b> • Overall: <b>${d.overall?.status||'—'}</b><br><span style="color:#92400e">Top reinforcement remains outside V1.42 Phase 1 verification.</span>`;
   modal.querySelector('#v142close').onclick=()=>modal.remove();
   modal.querySelector('#v142fit').onclick=fit;
-  function preset(yaw,pitch){view.yaw=yaw;view.pitch=pitch;fit()}
+  function preset(yaw,pitch){view.sectionCut=null;view.yaw=yaw;view.pitch=pitch;fit()}
   modal.querySelector('#v142iso').onclick=()=>preset(-32,24);
   modal.querySelector('#v142side').onclick=()=>preset(0,0);
   modal.querySelector('#v142top').onclick=()=>preset(0,80);
-  modal.querySelector('#v142endi').onclick=()=>preset(-90,0);
-  modal.querySelector('#v142endj').onclick=()=>preset(90,0);
+  modal.querySelector('#v142endi').onclick=()=>{view.sectionCut='i';draw()};
+  modal.querySelector('#v142endj').onclick=()=>{view.sectionCut='j';draw()};
   modal.querySelector('#v142conc').onchange=e=>{flags.concrete=e.target.checked;draw()};modal.querySelector('#v142st').onchange=e=>{flags.stirrups=e.target.checked;draw()};modal.querySelector('#v142bars').onchange=e=>{flags.bars=e.target.checked;draw()};
-  canvas.onpointerdown=e=>{canvas.setPointerCapture?.(e.pointerId);drag={x:e.clientX,y:e.clientY,yaw:view.yaw,pitch:view.pitch}};
+  canvas.onpointerdown=e=>{if(view.sectionCut){view.yaw=view.sectionCut==='i'?-90:90;view.pitch=0;view.sectionCut=null;fit()}canvas.setPointerCapture?.(e.pointerId);drag={x:e.clientX,y:e.clientY,yaw:view.yaw,pitch:view.pitch}};
   canvas.onpointermove=e=>{if(!drag)return;view.yaw=drag.yaw+(e.clientX-drag.x)*.35;view.pitch=Math.max(-80,Math.min(80,drag.pitch-(e.clientY-drag.y)*.3));draw()};
   canvas.onpointerup=canvas.onpointercancel=()=>drag=null;
-  canvas.onwheel=e=>{e.preventDefault();const f=Math.exp(-e.deltaY*.001);view.scale=Math.max(.02,Math.min(1.2,view.scale*f));draw()};
+  canvas.onwheel=e=>{e.preventDefault();if(view.sectionCut){draw();return}const f=Math.exp(-e.deltaY*.001);view.scale=Math.max(.02,Math.min(1.2,view.scale*f));draw()};
   const ro=window.ResizeObserver?new ResizeObserver(resize):null;ro?.observe(canvas.parentElement);setTimeout(resize,0);
 }
 

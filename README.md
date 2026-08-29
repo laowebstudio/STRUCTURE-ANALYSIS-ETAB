@@ -1,3 +1,8 @@
+# SAPUDOM Structure Analysis V1.42.2
+
+## True Section Cut Rebar Rendering
+End-i / End-j now show a true midspan cross-section with longitudinal bars rendered as circles at their actual calculation-linked layer coordinates. This fixes the V1.42.1 issue where 90° hook tails obscured the 6+3 arrangement in end views.
+
 # SAPUDOM Structure Analysis V1.42
 
 ## 3D RC Rebar Visualization Foundation

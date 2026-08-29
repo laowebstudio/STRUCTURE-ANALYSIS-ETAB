@@ -1,0 +1,11 @@
+SAPUDOM Structure Analysis V1.42.2
+True Section Cut Rebar Rendering
+
+Changes
+- End-i and End-j now render a true midspan section cut instead of looking at the anchorage hook geometry.
+- Longitudinal reinforcement is shown as circular bar cross-sections at the calculation-linked layer coordinates.
+- Multi-layer arrangements such as 9Ø20 = L1 6Ø20 + L2 3Ø20 are directly countable in End views.
+- Stirrup and concrete section are drawn in the same true section coordinate system.
+- End view title explicitly identifies TRUE SECTION CUT @ MIDSPAN.
+- Dragging from an End view returns to the normal rotatable 3D view.
+- RC design, anchorage, lap splice, manual-main-bar and verification logic are unchanged from V1.41.6.2 / V1.42.1.

@@ -1,3 +1,9 @@
+## V1.42.2 — True Section Cut Rebar Rendering
+- Fixed End-i / End-j visualization: section cut is now taken at midspan, away from anchorage hooks.
+- Main longitudinal bars render as circular cross-sections using verified layer coordinates.
+- Concrete and stirrup section geometry share the same section scale.
+- No RC calculation logic changed.
+
 # V1.42.1 — 3D RC Rebar View Controls
 
 - Added Side, Top, End-i and End-j camera presets to the 3D RC Rebar Viewer.
