@@ -1,0 +1,12 @@
+SAPUDOM Structure Analysis V1.44 — Beam Reinforcement Zoning
+
+Scope
+- Top negative-moment support zones: Support-i / Midspan / Support-j.
+- Variable stirrup zones: Support-i / Midspan / Support-j.
+- Top support quantity in Auto mode is calculation-linked to negative end-moment envelope.
+- Stirrup spacing in Auto mode is calculation-linked to end shear envelope; midspan uses a reduced interpolated demand.
+- 3D viewer and beam drawing display the zoning.
+
+Important verification boundary
+- Support-zone lengths are detailing-assist, using a preliminary support-zone rule.
+- Full station-by-station moment/shear envelope, top anchorage/development, seismic detailing, torsion, serviceability, and splice staggering are not yet code-verified.

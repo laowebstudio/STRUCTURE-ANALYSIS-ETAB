@@ -2736,7 +2736,7 @@ function rcBeamDevelopmentV1415(cfg,detailing,nBars){
 function rcBeamDesignV141(){
   const m3=ensure3DLoadSystemV131();
   const env=(m3.envelopeV140&&Array.isArray(m3.envelopeV140.members))?m3.envelopeV140:envelopeV140();
-  m3.rcBeamDesignV141 ||= {defaults:{b:300,h:500,cover:40,minCover:40,aggregateSize:20,stirrupDia:10,stirrupSpacingMode:'auto',stirrupSpacing:250,mainBarMode:'auto',manualMainBars:5,mainBarDia:20,topBarMode:'auto',manualTopBars:2,topBarDia:20,fc:28,fy:420,phiFlexure:.90,phiShear:.75,devCastPosition:'other',devCoating:'uncoated',devLambda:1,devKtr:0,anchorI:600,anchorJ:600,spliceEnabled:false,spliceClass:'B',spliceProvided:0,spliceBarsPercent:100},memberOverrides:{}};
+  m3.rcBeamDesignV141 ||= {defaults:{b:300,h:500,cover:40,minCover:40,aggregateSize:20,stirrupDia:10,stirrupSpacingMode:'auto',stirrupSpacing:250,mainBarMode:'auto',manualMainBars:5,mainBarDia:20,topBarMode:'auto',manualTopBars:2,topBarDia:20,topSupportZoneFraction:.25,fc:28,fy:420,phiFlexure:.90,phiShear:.75,devCastPosition:'other',devCoating:'uncoated',devLambda:1,devKtr:0,anchorI:600,anchorJ:600,spliceEnabled:false,spliceClass:'B',spliceProvided:0,spliceBarsPercent:100},memberOverrides:{}};
   storeCompatV14121(m3.rcBeamDesignV141);
   const store=m3.rcBeamDesignV141;
   const getMember=id=>(m3.members||[]).find(x=>x.id===id);
@@ -2773,6 +2773,14 @@ function rcBeamDesignV141(){
     ];
     const govM=ms.reduce((a,b)=>Math.abs(b.value)>Math.abs(a.value)?b:a),govV=vs.reduce((a,b)=>Math.abs(b.value)>Math.abs(a.value)?b:a);
     const Mu=Math.abs(govM.value),Vu=Math.abs(govV.value),MuNmm=Mu*1e6;
+    // V1.44 — end-zone demand extraction.  Top support steel uses the negative envelope at each end.
+    const qv=k=>e.v?.[k]||{};
+    const negMomentAt=idxs=>Math.max(0,...idxs.map(k=>Math.max(0,-Number(qv(k).min||0))));
+    const absShearAt=idxs=>Math.max(0,...idxs.map(k=>Math.max(Math.abs(Number(qv(k).min||0)),Math.abs(Number(qv(k).max||0)))));
+    const MnegI=negMomentAt([4,5]), MnegJ=negMomentAt([10,11]);
+    const VuI=absShearAt([1,2]), VuJ=absShearAt([7,8]);
+    const memberObj=getMember(e.id), nI=(m3.nodes||[]).find(n=>n.id===memberObj?.i), nJ=(m3.nodes||[]).find(n=>n.id===memberObj?.j);
+    const Lmm=(nI&&nJ)?Math.max(500,Math.hypot((+nJ.x||0)-(+nI.x||0),(+nJ.y||0)-(+nI.y||0),(+nJ.z||0)-(+nI.z||0))*1000):5000;
 
     const d0=dNominal;
     const A=phiF*fy*fy/(2*.85*fc*b),B=-phiF*fy*d0,C=MuNmm,disc=B*B-4*A*C;
@@ -2810,15 +2818,29 @@ function rcBeamDesignV141(){
       d=Number.isFinite(arrangement.dEff)?Math.max(50,arrangement.dEff):d0;
     }
     const AsProv=nBars?nBars*barArea:null;
-    // V1.43 — top reinforcement / full cage foundation. Auto currently provides two continuous
-    // construction top bars; Manual lets the user specify a calculation-linked cage quantity.
-    // Top flexural demand/curtailment is intentionally not claimed as code-verified in V1.43.
-    const topNBars=topBarMode==='manual'?manualTopBars:2;
-    const topArrangement=rcBeamRebarArrangementV1416({b,h,cover,minCover,stirrupDia,mainBarDia:topBarDia,aggregateSize,nBars:topNBars});
-    const topAsProv=topNBars*Math.PI*topBarDia*topBarDia/4;
-    // V1.43.1 — full-cage fit verification. Bottom and top arrangements must not only
-    // fit independently; their innermost layers must also preserve the governing
-    // vertical clear spacing when both cages occupy the same section.
+    // V1.44 — support top-reinforcement zoning. Auto uses negative end-moment envelope;
+    // Manual retains a uniform user quantity for all zones.  Two bars remain continuous through midspan.
+    const topArea=Math.PI*topBarDia*topBarDia/4;
+    const topBarsForMoment=(mu)=>{
+      if(topBarMode==='manual')return manualTopBars;
+      if(!(mu>1e-9))return 2;
+      const dt=Math.max(50,h-cover-stirrupDia-topBarDia/2),AsMinT=Math.max(0.25*Math.sqrt(fc)/fy*b*dt,1.4/fy*b*dt);
+      const AA=phiF*fy*fy/(2*.85*fc*b),BB=-phiF*fy*dt,CC=mu*1e6,DD=BB*BB-4*AA*CC;
+      if(DD<0)return Math.max(2,Math.ceil(AsMinT/topArea));
+      const roots=[(-BB-Math.sqrt(DD))/(2*AA),(-BB+Math.sqrt(DD))/(2*AA)].filter(x=>x>0);
+      const asR=roots.length?Math.min(...roots):0, asD=Math.max(asR,AsMinT);
+      return Math.max(2,Math.ceil(asD/topArea));
+    };
+    const topNI=topBarsForMoment(MnegI), topNJ=topBarsForMoment(MnegJ), topNMid=topBarMode==='manual'?manualTopBars:2;
+    const topArrangementI=rcBeamRebarArrangementV1416({b,h,cover,minCover,stirrupDia,mainBarDia:topBarDia,aggregateSize,nBars:topNI});
+    const topArrangementJ=rcBeamRebarArrangementV1416({b,h,cover,minCover,stirrupDia,mainBarDia:topBarDia,aggregateSize,nBars:topNJ});
+    const topArrangementMid=rcBeamRebarArrangementV1416({b,h,cover,minCover,stirrupDia,mainBarDia:topBarDia,aggregateSize,nBars:topNMid});
+    const topNBars=Math.max(topNI,topNJ,topNMid), topArrangement=[topArrangementI,topArrangementJ,topArrangementMid].sort((a,b)=>b.layers-a.layers)[0];
+    const topAsProv=topNBars*topArea;
+    const zoneFrac=Math.max(.15,Math.min(.40,Number(cfg.topSupportZoneFraction)||.25));
+    const topZoneLenI=Math.min(Lmm/2,Math.max(zoneFrac*Lmm,40*topBarDia));
+    const topZoneLenJ=Math.min(Lmm/2,Math.max(zoneFrac*Lmm,40*topBarDia));
+    // Full-cage fit uses the governing (largest) support top cage.
     const bottomDeepestCenter=arrangement.centers?.length?arrangement.centers[arrangement.centers.length-1]:NaN;
     const topDeepestFromTop=topArrangement.centers?.length?topArrangement.centers[topArrangement.centers.length-1]:NaN;
     const bottomInnerSurface=Number.isFinite(bottomDeepestCenter)?bottomDeepestCenter+mainBarDia/2:NaN;
@@ -2831,6 +2853,16 @@ function rcBeamDesignV141(){
     const VcN=.17*Math.sqrt(fc)*b*d,phiVc=phiV*VcN/1000,VsReqN=Math.max(0,Vu*1000/phiV-VcN),Av=2*Math.PI*stirrupDia*stirrupDia/4;
     let sAuto=VsReqN>1e-9?Av*fy*d/VsReqN:300;sAuto=Math.min(300,d/2,sAuto);sAuto=Math.max(75,Math.floor(sAuto/25)*25);
     const sReq=stirrupSpacingMode==='manual'?manualStirrupSpacing:sAuto;
+    // V1.44 — variable stirrup zones.  End zones use end shear envelopes; midspan uses a reduced
+    // interpolated demand so detailing can relax where shear demand falls.
+    const spacingForVu=(vu)=>{const req=Math.max(0,vu*1000/phiV-VcN);let sx=req>1e-9?Av*fy*d/req:300;sx=Math.min(300,d/2,sx);sx=Math.max(75,Math.floor(sx/25)*25);return sx};
+    const midVu=Math.max(0,Math.min(VuI,VuJ)*0.25);
+    const zi=Math.min(Lmm*.30,Math.max(Lmm*.20,2*d)),zj=zi;
+    const stirrupZones=stirrupSpacingMode==='manual'?
+      [{name:'Uniform',x0:0,x1:Lmm,Vu:Vu,spacing:manualStirrupSpacing}]:
+      [{name:'Support-i',x0:0,x1:zi,Vu:VuI,spacing:spacingForVu(VuI)},
+       {name:'Midspan',x0:zi,x1:Math.max(zi,Lmm-zj),Vu:midVu,spacing:spacingForVu(midVu)},
+       {name:'Support-j',x0:Math.max(zi,Lmm-zj),x1:Lmm,Vu:VuJ,spacing:spacingForVu(VuJ)}];
 
     
     // V1.41.1 shear verification
@@ -2928,8 +2960,9 @@ function rcBeamDesignV141(){
         minSteelPass,strengthPass:strengthFlexPass,ductilityStatus,status:flexureCodeStatus
       },
       detailing:{...arrangement,clearMin,insideStirrupWidth,barsPerLayer,layers,actualClear,barFitPass,clearSpacingPass,coverPass,singleLayerPass,cageVerticalClear,cageClearMin,cageSeparationPass,cageFitPass,status:detailingStatus,pass:detailingPass},
-      topRebar:{nBars:topNBars,dia:topBarDia,AsProv:topAsProv,mode:topBarMode,arrangement:topArrangement,pass:topArrangement.pass,status:topArrangement.pass?'PASS':topArrangement.status},
-      development,
+      topRebar:{nBars:topNBars,dia:topBarDia,AsProv:topAsProv,mode:topBarMode,arrangement:topArrangement,pass:topArrangement.pass,status:topArrangement.pass?'PASS':topArrangement.status,
+        zones:{i:{nBars:topNI,Mu:MnegI,length:topZoneLenI,arrangement:topArrangementI},mid:{nBars:topNMid,length:Math.max(0,Lmm-topZoneLenI-topZoneLenJ),arrangement:topArrangementMid},j:{nBars:topNJ,Mu:MnegJ,length:topZoneLenJ,arrangement:topArrangementJ}}},
+      stirrupZones,Lmm,development,
       overall:{status:overallBeamStatus,pass:overallBeamPass}
     };
   };
@@ -2959,7 +2992,8 @@ function rcBeamDetailingDrawingV1414(d){
   const W=1680,H=1120, x0=90,x1=1240,y0=210,beamH=190, scale=(x1-x0)/L;
   const anchorI=d.development?.anchorI||0,anchorJ=d.development?.anchorJ||0,ld=d.development?.ld||0;
   const aiX=Math.min(x1-70,x0+Math.max(0,anchorI)*scale), ajX=Math.max(x0+70,x1-Math.max(0,anchorJ)*scale);
-  const st=[]; for(let mm=0;mm<=L;mm+=Math.max(75,ss)){let x=x0+mm*scale;st.push(`<path d="M${x} ${y0+14}V${y0+beamH-14}" class="st"/>`)}
+  const st=[]; const sz=(d.stirrupZones?.length?d.stirrupZones:[{x0:0,x1:L,spacing:ss,name:'Uniform'}]);
+  sz.forEach(z=>{const a=Math.max(0,Math.min(L,z.x0)),bb=Math.max(a,Math.min(L,z.x1)),sp=Math.max(50,Number(z.spacing)||ss);for(let mm=a;mm<=bb+1;mm+=sp){let x=x0+mm*scale;st.push(`<path d="M${x} ${y0+14}V${y0+beamH-14}" class="st"/>`)}});
   function barsRow(x,y,w,count){let out='';if(count<=0)return out;for(let k=0;k<count;k++){const xx=count===1?x+w/2:x+18+k*(w-36)/(count-1);out+=`<circle cx="${xx}" cy="${y}" r="8" class="bar"/>`}return out}
   function section(cx,cy,label){
     const sw=255,sh=300,x=cx-sw/2,y=cy-sh/2;
@@ -3000,7 +3034,7 @@ function rcBeamDetailingDrawingV1414(d){
   <text x="${(x0+x1)/2}" y="155" class="h1 mid">BEAM ELEVATION</text>
   <rect x="${x0-42}" y="${y0-22}" width="42" height="${beamH+44}" class="support"/><rect x="${x1}" y="${y0-22}" width="42" height="${beamH+44}" class="support"/>
   <rect x="${x0}" y="${y0}" width="${x1-x0}" height="${beamH}" class="conc"/>${st.join('')}
-  <line x1="${x0+12}" y1="${y0+42}" x2="${x1-12}" y2="${y0+42}" style="stroke:#1d4ed8;stroke-width:5"/><text x="${(x0+x1)/2}" y="${y0+31}" class="h2 mid" style="fill:#1d4ed8">T1  ${esc((d.topRebar?.nBars||0)+'Ø'+topDia)} TOP  •  ${esc(topText)}</text>
+  <line x1="${x0+12}" y1="${y0+42}" x2="${x1-12}" y2="${y0+42}" style="stroke:#1d4ed8;stroke-width:4"/><line x1="${x0+12}" y1="${y0+56}" x2="${x0+12+Math.min(L,d.topRebar?.zones?.i?.length||0)*scale}" y2="${y0+56}" style="stroke:#1d4ed8;stroke-width:8"/><line x1="${x1-12-Math.min(L,d.topRebar?.zones?.j?.length||0)*scale}" y1="${y0+56}" x2="${x1-12}" y2="${y0+56}" style="stroke:#1d4ed8;stroke-width:8"/><text x="${(x0+x1)/2}" y="${y0+31}" class="h2 mid" style="fill:#1d4ed8">TOP ZONES  i:${esc(d.topRebar?.zones?.i?.nBars||0)}Ø${topDia} • mid:${esc(d.topRebar?.zones?.mid?.nBars||0)}Ø${topDia} • j:${esc(d.topRebar?.zones?.j?.nBars||0)}Ø${topDia}</text>
   <path d="M${x0+12} ${y0+beamH-38}${d.development?.anchorIMethod==='90° HOOK'?` L${x0-18} ${y0+beamH-38} L${x0-18} ${y0+beamH-38-Math.min(105,d.development.hookTail90*scale)}`:''} M${x0+12} ${y0+beamH-38} L${x1-12} ${y0+beamH-38}${d.development?.anchorJMethod==='90° HOOK'?` L${x1+18} ${y0+beamH-38} L${x1+18} ${y0+beamH-38-Math.min(105,d.development.hookTail90*scale)}`:''}" class="rebar"/><text x="${(x0+x1)/2}" y="${y0+beamH-52}" class="h2 mid">B1  ${esc(barText)} BOTTOM  •  ${esc(layerText)}</text>
   <line x1="${x0}" y1="440" x2="${x1}" y2="440" class="dim"/><line x1="${x0}" y1="420" x2="${x0}" y2="460" class="thin"/><line x1="${x1}" y1="420" x2="${x1}" y2="460" class="thin"/><text x="${(x0+x1)/2}" y="432" class="txt mid">${L} mm</text>
   <line x1="${x0}" y1="485" x2="${aiX}" y2="485" class="dim"/><text x="${(x0+aiX)/2}" y="477" class="note mid">ANCHORAGE i = ${anchorI} mm • ${d.development?.anchorIMethod||'—'} ${d.development?.anchorIPass?'✓':'✕'}  (ld=${ld}${d.development?.anchorIMethod==='90° HOOK'?`, ldh=${d.development.ldh}`:''})</text>
@@ -3021,7 +3055,7 @@ function rcBeamDetailingDrawingV1414(d){
   <text x="1295" y="715" class="h2">STATUS</text><text x="1295" y="755" class="h1 ${pass?'green':'red'}">${esc(status)}</text><text x="1295" y="790" class="note">Calculation-linked drawing.</text><text x="1295" y="815" class="note">Issue for construction only after</text><text x="1295" y="840" class="note">all required checks are complete.</text><line x1="1270" y1="875" x2="1656" y2="875" class="thin"/>
   <text x="1295" y="920" class="h2">SHEET</text><text x="1295" y="955" class="txt">RC-BEAM-M${esc(d.id)}</text><text x="1295" y="985" class="txt">Scale: NTS</text><text x="1295" y="1020" class="small">SAPUDOM V1.41.6.1</text></svg>`;
   const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:100004;background:#0f172aF2;padding:12px;display:flex;flex-direction:column;gap:8px';
-  o.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;color:white"><div><b style="font-size:20px">RC Beam Construction Drawing — M${d.id}</b><div style="font-size:12px;opacity:.8">V1.43.1 • Rebar Cage Fit / Clear Spacing Fix</div></div><div style="display:flex;gap:8px"><button id="v142draw3d">3D Rebar</button><button id="v1414print">Print / Save PDF</button><button id="v1414svg">Download SVG</button><button id="v1414close">Close</button></div></div><div style="background:#dbe3ec;flex:1;overflow:auto;border-radius:6px;padding:10px"><div style="background:#fff;box-shadow:0 4px 18px #0004;min-width:1100px">${svg}</div></div>`;
+  o.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;color:white"><div><b style="font-size:20px">RC Beam Construction Drawing — M${d.id}</b><div style="font-size:12px;opacity:.8">V1.44 • Beam Reinforcement Zoning</div></div><div style="display:flex;gap:8px"><button id="v142draw3d">3D Rebar</button><button id="v1414print">Print / Save PDF</button><button id="v1414svg">Download SVG</button><button id="v1414close">Close</button></div></div><div style="background:#dbe3ec;flex:1;overflow:auto;border-radius:6px;padding:10px"><div style="background:#fff;box-shadow:0 4px 18px #0004;min-width:1100px">${svg}</div></div>`;
   document.body.appendChild(o);o.querySelector('#v1414close').onclick=()=>o.remove();o.querySelector('#v142draw3d').onclick=()=>rcBeamRebar3DViewerV142(d);
   o.querySelector('#v1414svg').onclick=()=>{const blob=new Blob([svg],{type:'image/svg+xml'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`SAPUDOM-M${d.id}-RC-Beam-V1.41.6.1.svg`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)};
   o.querySelector('#v1414print').onclick=()=>{const pw=window.open('','_blank');if(!pw){toast('Allow pop-ups to print drawing');return}pw.document.write(`<html><head><title>RC Beam M${d.id}</title><style>@page{size:A3 landscape;margin:5mm}body{margin:0}svg{width:100%;height:auto}</style></head><body>${svg}</body></html>`);pw.document.close();setTimeout(()=>pw.print(),250)};
@@ -3051,7 +3085,7 @@ function rcBeamRebar3DViewerV142(d){
 
   const modal=document.createElement('div');
   modal.style.cssText='position:fixed;inset:0;z-index:100006;background:rgba(2,6,23,.94);display:flex;flex-direction:column;padding:10px;gap:8px';
-  modal.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;color:#fff;gap:12px;flex-wrap:wrap"><div><b style="font-size:20px">3D RC Rebar Viewer — M${d.id}</b><div style="font-size:12px;opacity:.78">V1.43.1 • Rebar Cage Fit / Clear Spacing Fix</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><button id="v142fit">Fit</button><button id="v142iso">Isometric</button><button id="v142side">Side</button><button id="v142top">Top</button><button id="v142endi">End-i</button><button id="v142endj">End-j</button><label style="font-size:12px"><input id="v142conc" type="checkbox" checked> Concrete</label><label style="font-size:12px"><input id="v142st" type="checkbox" checked> Stirrups</label><label style="font-size:12px"><input id="v142bars" type="checkbox" checked> Bottom bars</label><label style="font-size:12px"><input id="v143topbars" type="checkbox" checked> Top bars</label><button id="v142close">Close</button></div></div><div style="position:relative;flex:1;min-height:360px;background:#e8eef5;border-radius:8px;overflow:hidden"><canvas id="v142canvas" style="width:100%;height:100%;display:block;touch-action:none"></canvas><div id="v142info" style="position:absolute;left:12px;top:12px;background:rgba(255,255,255,.94);padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px #0002;font:12px Arial;line-height:1.55;color:#0f172a;max-width:360px"></div><div style="position:absolute;right:12px;bottom:10px;background:rgba(15,23,42,.86);color:white;padding:7px 10px;border-radius:7px;font:11px Arial">Drag: Rotate • Wheel: Zoom • V1.43.1 cage-fit viewer</div></div>`;
+  modal.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;color:#fff;gap:12px;flex-wrap:wrap"><div><b style="font-size:20px">3D RC Rebar Viewer — M${d.id}</b><div style="font-size:12px;opacity:.78">V1.44 • Beam Reinforcement Zoning</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><button id="v142fit">Fit</button><button id="v142iso">Isometric</button><button id="v142side">Side</button><button id="v142top">Top</button><button id="v142endi">End-i</button><button id="v142endj">End-j</button><label style="font-size:12px"><input id="v142conc" type="checkbox" checked> Concrete</label><label style="font-size:12px"><input id="v142st" type="checkbox" checked> Stirrups</label><label style="font-size:12px"><input id="v142bars" type="checkbox" checked> Bottom bars</label><label style="font-size:12px"><input id="v143topbars" type="checkbox" checked> Top bars</label><button id="v142close">Close</button></div></div><div style="position:relative;flex:1;min-height:360px;background:#e8eef5;border-radius:8px;overflow:hidden"><canvas id="v142canvas" style="width:100%;height:100%;display:block;touch-action:none"></canvas><div id="v142info" style="position:absolute;left:12px;top:12px;background:rgba(255,255,255,.94);padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px #0002;font:12px Arial;line-height:1.55;color:#0f172a;max-width:360px"></div><div style="position:absolute;right:12px;bottom:10px;background:rgba(15,23,42,.86);color:white;padding:7px 10px;border-radius:7px;font:11px Arial">Drag: Rotate • Wheel: Zoom • V1.44 zoning viewer</div></div>`;
   document.body.appendChild(modal);
   const canvas=modal.querySelector('#v142canvas'),ctx=canvas.getContext('2d');let dpr=1;
   const view={yaw:-32,pitch:24,scale:.13,ox:0,oy:0,sectionCut:null}, flags={concrete:true,stirrups:true,bars:true,topBars:true};
@@ -3086,9 +3120,11 @@ function rcBeamRebar3DViewerV142(d){
     const y0=-b/2+cover+sd/2,y1=b/2-cover-sd/2,z0=cover+sd/2,z1=h-cover-sd/2;
     if(flags.stirrups){ctx.save();ctx.strokeStyle='#16a34a';ctx.lineWidth=Math.max(2,sd*sc*.7);ctx.strokeRect(Math.min(X(y0),X(y1)),Y(z1),Math.abs(X(y1)-X(y0)),Math.abs(Y(z0)-Y(z1)));ctx.restore()}
     if(flags.bars){ctx.save();ctx.fillStyle='#dc2626';ctx.strokeStyle='#991b1b';ctx.lineWidth=1;counts.forEach((n,li)=>{const z=Number.isFinite(centers[li])?centers[li]:(cover+sd+db/2+li*(db+Math.max(25,db)));barYPositions(n).forEach(y=>{ctx.beginPath();ctx.arc(X(y),Y(z),Math.max(4,db*sc/2),0,Math.PI*2);ctx.fill();ctx.stroke()})});ctx.restore()}
-    if(flags.topBars){ctx.save();ctx.fillStyle='#2563eb';ctx.strokeStyle='#1e40af';ctx.lineWidth=1;topCounts.forEach((n,li)=>{const c=Number.isFinite(topCenters[li])?topCenters[li]:(cover+sd+tdb/2+li*(tdb+Math.max(25,tdb)));const z=h-c;barYPositions(n,topInsideW,tdb).forEach(y=>{ctx.beginPath();ctx.arc(X(y),Y(z),Math.max(4,tdb*sc/2),0,Math.PI*2);ctx.fill();ctx.stroke()})});ctx.restore()}
-    // layer labels and section-cut title
-    ctx.save();ctx.fillStyle='#0f172a';ctx.textAlign='center';ctx.font='700 14px Arial';ctx.fillText(`END-${end.toUpperCase()} • TRUE SECTION CUT @ MIDSPAN`,cx,34);ctx.font='12px Arial';ctx.fillStyle='#475569';ctx.fillText(`${b} × ${h} mm • Bottom ${counts.map((n,i)=>`L${i+1}:${n}Ø${db}`).join(' • ')} • Top ${topCounts.map((n,i)=>`T${i+1}:${n}Ø${tdb}`).join(' • ')}`,cx,54);ctx.restore();
+    const endZone=end==='i'?d.topRebar?.zones?.i:d.topRebar?.zones?.j, endArr=endZone?.arrangement||d.topRebar?.arrangement;
+    const endTopCounts=(endArr?.counts||topCounts).map(x=>Math.max(0,Math.floor(Number(x)||0))).filter(Boolean), endTopCenters=(endArr?.centers||topCenters).map(Number), endTopInsideW=Math.max(tdb,Number(endArr?.insideWidth)||topInsideW);
+    if(flags.topBars){ctx.save();ctx.fillStyle='#2563eb';ctx.strokeStyle='#1e40af';ctx.lineWidth=1;endTopCounts.forEach((n,li)=>{const c=Number.isFinite(endTopCenters[li])?endTopCenters[li]:(cover+sd+tdb/2+li*(tdb+Math.max(25,tdb)));const z=h-c;barYPositions(n,endTopInsideW,tdb).forEach(y=>{ctx.beginPath();ctx.arc(X(y),Y(z),Math.max(4,tdb*sc/2),0,Math.PI*2);ctx.fill();ctx.stroke()})});ctx.restore()}
+    // V1.44 end section cuts show the support zone at the selected end (not midspan top steel).
+    ctx.save();ctx.fillStyle='#0f172a';ctx.textAlign='center';ctx.font='700 14px Arial';ctx.fillText(`END-${end.toUpperCase()} • SUPPORT ZONE SECTION CUT`,cx,34);ctx.font='12px Arial';ctx.fillStyle='#475569';ctx.fillText(`${b} × ${h} mm • Bottom ${counts.map((n,i)=>`L${i+1}:${n}Ø${db}`).join(' • ')} • Top ${endTopCounts.map((n,i)=>`T${i+1}:${n}Ø${tdb}`).join(' • ')}`,cx,54);ctx.restore();
     ctx.save();ctx.fillStyle='#0f172a';ctx.font='700 13px Arial';ctx.fillText(end,Math.min(r.width-30,cx+b*sc/2+18),Math.max(24,baseY-h*sc-8));ctx.restore();
   }
   function draw(){
@@ -3101,14 +3137,18 @@ function rcBeamRebar3DViewerV142(d){
       const faces=[[A,B,F,E],[D,C,G,H],[E,F,G,H],[A,D,H,E],[B,C,G,F],[A,B,C,D]].map(ps=>({ps,dep:ps.reduce((a,p)=>a+rotated(p)[1],0)/4})).sort((a,b)=>a.dep-b.dep);
       faces.forEach(x=>face(x.ps,'rgba(148,163,184,.10)','rgba(71,85,105,.35)'));
     }
-    if(flags.stirrups){ctx.strokeStyle='#16a34a';const y0=-b/2+cover+sd/2,y1=b/2-cover-sd/2,z0=cover+sd/2,z1=h-cover-sd/2;for(let x=0;x<=L+1;x+=ss){line([[x,y0,z0],[x,y1,z0],[x,y1,z1],[x,y0,z1],[x,y0,z0]],Math.max(1.2,sd*view.scale*.65),.82)}}
+    if(flags.stirrups){ctx.strokeStyle='#16a34a';const y0=-b/2+cover+sd/2,y1=b/2-cover-sd/2,z0=cover+sd/2,z1=h-cover-sd/2;const zones=d.stirrupZones?.length?d.stirrupZones:[{x0:0,x1:L,spacing:ss}];zones.forEach(z=>{const a=Math.max(0,Math.min(L,z.x0)),bb=Math.max(a,Math.min(L,z.x1)),sp=Math.max(50,Number(z.spacing)||ss);for(let x=a;x<=bb+1;x+=sp){line([[x,y0,z0],[x,y1,z0],[x,y1,z1],[x,y0,z1],[x,y0,z0]],Math.max(1.2,sd*view.scale*.65),.82)}})}
     if(flags.bars){ctx.strokeStyle='#dc2626';ctx.lineCap='round';counts.forEach((n,li)=>{const z=Number.isFinite(centers[li])?centers[li]:(cover+sd+db/2+li*(db+Math.max(25,db)));barYPositions(n).forEach(y=>{const pts=[];if(hookI)pts.push([0,y,Math.min(h-cover-sd-db/2,z+hookTail)]);pts.push([0,y,z],[L,y,z]);if(hookJ)pts.push([L,y,Math.min(h-cover-sd-db/2,z+hookTail)]);line(pts,Math.max(2.2,db*view.scale*.8),.96)})})}
-    if(flags.topBars){ctx.strokeStyle='#2563eb';ctx.lineCap='round';topCounts.forEach((n,li)=>{const c=Number.isFinite(topCenters[li])?topCenters[li]:(cover+sd+tdb/2+li*(tdb+Math.max(25,tdb)));const z=h-c;barYPositions(n,topInsideW,tdb).forEach(y=>line([[0,y,z],[L,y,z]],Math.max(2.2,tdb*view.scale*.8),.96))})}
+    if(flags.topBars){ctx.strokeStyle='#2563eb';ctx.lineCap='round';
+      const drawTopZone=(zone,x0,x1)=>{const arr=zone?.arrangement||d.topRebar?.arrangement,cs=arr?.counts||[],ct=arr?.centers||[];cs.forEach((n,li)=>{const c=Number.isFinite(ct[li])?ct[li]:(cover+sd+tdb/2+li*(tdb+Math.max(25,tdb)));const z=h-c;barYPositions(n,topInsideW,tdb).forEach(y=>line([[x0,y,z],[x1,y,z]],Math.max(2.2,tdb*view.scale*.8),.96))})};
+      const zi=Math.min(L/2,Number(d.topRebar?.zones?.i?.length)||0),zj=Math.min(L/2,Number(d.topRebar?.zones?.j?.length)||0);
+      drawTopZone(d.topRebar?.zones?.i,0,zi); drawTopZone(d.topRebar?.zones?.mid,zi,Math.max(zi,L-zj)); drawTopZone(d.topRebar?.zones?.j,Math.max(zi,L-zj),L);
+    }
     // end labels / axes
     ctx.fillStyle='#0f172a';ctx.font='700 12px Arial';const qi=proj([0,0,h+100]),qj=proj([L,0,h+100]);ctx.fillText('i',qi[0]-4,qi[1]);ctx.fillText('j',qj[0]-4,qj[1]);
   }
   function resize(){const r=canvas.getBoundingClientRect();dpr=Math.max(1,window.devicePixelRatio||1);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);fit()}
-  modal.querySelector('#v142info').innerHTML=`<b>M${d.id} • ${b}×${h} mm • L=${L} mm</b><br>Bottom: <b>${d.nBars||0}Ø${db}</b> • ${counts.map((n,i)=>`L${i+1}: ${n}Ø${db}`).join(' • ')||'No valid arrangement'}<br>Top: <b>${d.topRebar?.nBars||0}Ø${tdb}</b> • ${topCounts.map((n,i)=>`T${i+1}: ${n}Ø${tdb}`).join(' • ')||'No valid arrangement'} • ${String(d.topRebar?.mode||'auto').toUpperCase()}<br>Stirrups: <b>Ø${sd} @ ${ss} mm</b> • Cover ${cover} mm<br>Bottom anchorage i: <b>${d.development?.anchorIMethod||'—'}</b> • j: <b>${d.development?.anchorJMethod||'—'}</b><br>Cage fit: <b>${d.detailing?.status||'—'}</b> • Overall: <b>${d.overall?.status||'—'}</b><br>Top↔Bottom clear: <b>${Number.isFinite(d.detailing?.cageVerticalClear)?d.detailing.cageVerticalClear.toFixed(1)+' mm':'—'}</b> • Required ≥ ${Number.isFinite(d.detailing?.cageClearMin)?d.detailing.cageClearMin.toFixed(1):'—'} mm<br><span style="color:#92400e">V1.43 top bars are cage/detailing inputs; top flexural demand, curtailment and independent anchorage verification are not yet code-verified.</span>`;
+  modal.querySelector('#v142info').innerHTML=`<b>M${d.id} • ${b}×${h} mm • L=${L} mm</b><br>Bottom: <b>${d.nBars||0}Ø${db}</b> • ${counts.map((n,i)=>`L${i+1}: ${n}Ø${db}`).join(' • ')||'No valid arrangement'}<br>Top zones: <b>i ${d.topRebar?.zones?.i?.nBars||0}Ø${tdb}</b> • mid <b>${d.topRebar?.zones?.mid?.nBars||0}Ø${tdb}</b> • j <b>${d.topRebar?.zones?.j?.nBars||0}Ø${tdb}</b> • ${String(d.topRebar?.mode||'auto').toUpperCase()}<br>Stirrup zones: ${(d.stirrupZones||[]).map(z=>`${z.name} Ø${sd}@${Math.round(z.spacing)} (${Math.round(z.x0)}-${Math.round(z.x1)} mm)`).join(' • ')||`Ø${sd}@${ss}`} • Cover ${cover} mm<br>Bottom anchorage i: <b>${d.development?.anchorIMethod||'—'}</b> • j: <b>${d.development?.anchorJMethod||'—'}</b><br>Cage fit: <b>${d.detailing?.status||'—'}</b> • Overall: <b>${d.overall?.status||'—'}</b><br>Top↔Bottom clear: <b>${Number.isFinite(d.detailing?.cageVerticalClear)?d.detailing.cageVerticalClear.toFixed(1)+' mm':'—'}</b> • Required ≥ ${Number.isFinite(d.detailing?.cageClearMin)?d.detailing.cageClearMin.toFixed(1):'—'} mm<br><span style="color:#92400e">V1.44 support top bars are calculation-linked to negative end-moment envelopes; zone cut-off lengths remain detailing-assist until full station-envelope/anchorage verification.</span>`;
   modal.querySelector('#v142close').onclick=()=>modal.remove();
   modal.querySelector('#v142fit').onclick=fit;
   function preset(yaw,pitch){view.sectionCut=null;view.yaw=yaw;view.pitch=pitch;fit()}
@@ -3173,9 +3213,9 @@ function rcBeamDesignCenterV141(){
   w.innerHTML=`<div style="width:min(1120px,96vw);max-height:93vh;background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 70px #0005">
     <header style="padding:18px 20px;background:#173b68;color:#fff;display:flex;justify-content:space-between"><div>
       <div style="font-size:22px;font-weight:900">RC Beam Design — 3D Governing Envelope</div>
-      <div style="font-size:13px;opacity:.84">V1.43.1 • Rebar Cage Fit / Clear Spacing Fix</div></div>
+      <div style="font-size:13px;opacity:.84">V1.44 • Beam Reinforcement Zoning</div></div>
       <button id="v141x" style="width:40px;height:40px;color:#fff;background:#ffffff22;border:1px solid #ffffff55;border-radius:10px">×</button></header>
-    <div style="padding:10px 14px;background:#fff7ed;color:#9a3412;font-size:12px"><b>Engineering note:</b> V1.43 extends the calculation-linked 3D RC Rebar Viewer to a full beam cage: verified bottom longitudinal reinforcement, user-controlled top cage bars, stirrups and selected bottom 90° anchorage hooks. V1.41.6.2 bottom design logic remains protected. Top flexural demand/curtailment, top anchorage, seismic detailing, torsion, serviceability and splice-location/staggering remain outside code verification in this version.</div>
+    <div style="padding:10px 14px;background:#fff7ed;color:#9a3412;font-size:12px"><b>Engineering note:</b> V1.44 adds beam reinforcement zoning: support top reinforcement is sized from negative end-moment envelopes, while automatic stirrups are split into Support-i / Midspan / Support-j zones from end shear envelopes. Zone lengths are detailing-assist and use a preliminary support-zone rule; full station-by-station moment/shear envelope, top anchorage, seismic detailing, torsion, serviceability and splice staggering remain outside code verification.</div>
     <div style="padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:12px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
         <fieldset style="display:flex;gap:8px;align-items:end;border:1px solid #cbd5e1;border-radius:10px;padding:7px 9px">
@@ -3355,13 +3395,13 @@ function rcBeamDesignCenterV141(){
       spliceProvided:Math.max(0,+w.querySelector('#v141slap').value||0),
       spliceBarsPercent:Math.min(100,Math.max(0,+w.querySelector('#v141spct').value||0))
     });
-    designs=rcBeamDesignV141();w.querySelector('#v141tbody').innerHTML=rows();bindDetails();toast('V1.43.1 RC Beam Design recalculated • Cage fit verified');
+    designs=rcBeamDesignV141();w.querySelector('#v141tbody').innerHTML=rows();bindDetails();toast('V1.44 RC Beam Design recalculated • Top/support + shear zones updated');
   };
 }
 
 function integrated3DWorkspaceV128(){
  if(integrated3dActiveV128){closeIntegrated3DV128();return}integrated3dActiveV128=true;document.querySelector('.workspace')?.classList.add('v130-3d-workspace');const center=document.querySelector('.center');[...center.children].forEach(x=>x.classList.add('v128-hide2d'));$('frame3dBtn').textContent='▣ 2D Frame';$('frame3dBtn').classList.add('active3d');
- const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.43</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.43.1 • Rebar Cage Fit / Clear Spacing Fix</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
+ const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.44</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.44 • Beam Reinforcement Zoning</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
 }
 function closeIntegrated3DV128(){if(!integrated3dActiveV128)return;integrated3dActiveV128=false;integrated3dRefreshV128=null;document.querySelector('.workspace')?.classList.remove('v130-3d-workspace');document.querySelector('#integrated3dV128')?.remove();document.querySelectorAll('.v128-hide2d').forEach(x=>x.classList.remove('v128-hide2d'));$('frame3dBtn').textContent='◈ 3D Frame';$('frame3dBtn').classList.remove('active3d');resize();render();updateUI();renderResults()}
 function initIntegrated3DV128(host){
