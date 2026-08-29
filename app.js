@@ -1923,7 +1923,7 @@ function loadCombinationCenterV1362(){
     <header style="flex:0 0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff">
       <div>
         <div style="font-size:22px;font-weight:900;letter-spacing:.1px">3D Load Combinations</div>
-        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.42 • 3D RC Rebar Visualization Foundation</div>
+        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.42.1 • 3D RC Rebar View Controls</div>
       </div>
       <button id="v1362X" aria-label="Close"
         style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer">×</button>
@@ -3018,7 +3018,7 @@ function rcBeamRebar3DViewerV142(d){
 
   const modal=document.createElement('div');
   modal.style.cssText='position:fixed;inset:0;z-index:100006;background:rgba(2,6,23,.94);display:flex;flex-direction:column;padding:10px;gap:8px';
-  modal.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;color:#fff;gap:12px;flex-wrap:wrap"><div><b style="font-size:20px">3D RC Rebar Viewer — M${d.id}</b><div style="font-size:12px;opacity:.78">V1.42 • Calculation-linked Rebar Visualization Foundation • Bottom steel phase</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><button id="v142fit">Fit</button><button id="v142iso">Isometric</button><label style="font-size:12px"><input id="v142conc" type="checkbox" checked> Concrete</label><label style="font-size:12px"><input id="v142st" type="checkbox" checked> Stirrups</label><label style="font-size:12px"><input id="v142bars" type="checkbox" checked> Main bars</label><button id="v142close">Close</button></div></div><div style="position:relative;flex:1;min-height:360px;background:#e8eef5;border-radius:8px;overflow:hidden"><canvas id="v142canvas" style="width:100%;height:100%;display:block;touch-action:none"></canvas><div id="v142info" style="position:absolute;left:12px;top:12px;background:rgba(255,255,255,.94);padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px #0002;font:12px Arial;line-height:1.55;color:#0f172a;max-width:360px"></div><div style="position:absolute;right:12px;bottom:10px;background:rgba(15,23,42,.86);color:white;padding:7px 10px;border-radius:7px;font:11px Arial">Drag: Rotate • Wheel: Zoom • V1.42 read-only viewer</div></div>`;
+  modal.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;color:#fff;gap:12px;flex-wrap:wrap"><div><b style="font-size:20px">3D RC Rebar Viewer — M${d.id}</b><div style="font-size:12px;opacity:.78">V1.42.1 • 3D Rebar View Controls • Bottom steel phase</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><button id="v142fit">Fit</button><button id="v142iso">Isometric</button><button id="v142side">Side</button><button id="v142top">Top</button><button id="v142endi">End-i</button><button id="v142endj">End-j</button><label style="font-size:12px"><input id="v142conc" type="checkbox" checked> Concrete</label><label style="font-size:12px"><input id="v142st" type="checkbox" checked> Stirrups</label><label style="font-size:12px"><input id="v142bars" type="checkbox" checked> Main bars</label><button id="v142close">Close</button></div></div><div style="position:relative;flex:1;min-height:360px;background:#e8eef5;border-radius:8px;overflow:hidden"><canvas id="v142canvas" style="width:100%;height:100%;display:block;touch-action:none"></canvas><div id="v142info" style="position:absolute;left:12px;top:12px;background:rgba(255,255,255,.94);padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px #0002;font:12px Arial;line-height:1.55;color:#0f172a;max-width:360px"></div><div style="position:absolute;right:12px;bottom:10px;background:rgba(15,23,42,.86);color:white;padding:7px 10px;border-radius:7px;font:11px Arial">Drag: Rotate • Wheel: Zoom • V1.42.1 view controls</div></div>`;
   document.body.appendChild(modal);
   const canvas=modal.querySelector('#v142canvas'),ctx=canvas.getContext('2d');let dpr=1;
   const view={yaw:-32,pitch:24,scale:.13,ox:0,oy:0}, flags={concrete:true,stirrups:true,bars:true};
@@ -3058,7 +3058,13 @@ function rcBeamRebar3DViewerV142(d){
   function resize(){const r=canvas.getBoundingClientRect();dpr=Math.max(1,window.devicePixelRatio||1);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);fit()}
   modal.querySelector('#v142info').innerHTML=`<b>M${d.id} • ${b}×${h} mm • L=${L} mm</b><br>Main: <b>${d.nBars||0}Ø${db}</b> • ${counts.map((n,i)=>`L${i+1}: ${n}Ø${db}`).join(' • ')||'No valid arrangement'}<br>Stirrups: <b>Ø${sd} @ ${ss} mm</b> • Cover ${cover} mm<br>Anchorage i: <b>${d.development?.anchorIMethod||'—'}</b> • j: <b>${d.development?.anchorJMethod||'—'}</b><br>Detailing: <b>${d.detailing?.status||'—'}</b> • Overall: <b>${d.overall?.status||'—'}</b><br><span style="color:#92400e">Top reinforcement remains outside V1.42 Phase 1 verification.</span>`;
   modal.querySelector('#v142close').onclick=()=>modal.remove();
-  modal.querySelector('#v142fit').onclick=fit;modal.querySelector('#v142iso').onclick=()=>{view.yaw=-32;view.pitch=24;fit()};
+  modal.querySelector('#v142fit').onclick=fit;
+  function preset(yaw,pitch){view.yaw=yaw;view.pitch=pitch;fit()}
+  modal.querySelector('#v142iso').onclick=()=>preset(-32,24);
+  modal.querySelector('#v142side').onclick=()=>preset(0,0);
+  modal.querySelector('#v142top').onclick=()=>preset(0,80);
+  modal.querySelector('#v142endi').onclick=()=>preset(-90,0);
+  modal.querySelector('#v142endj').onclick=()=>preset(90,0);
   modal.querySelector('#v142conc').onchange=e=>{flags.concrete=e.target.checked;draw()};modal.querySelector('#v142st').onchange=e=>{flags.stirrups=e.target.checked;draw()};modal.querySelector('#v142bars').onchange=e=>{flags.bars=e.target.checked;draw()};
   canvas.onpointerdown=e=>{canvas.setPointerCapture?.(e.pointerId);drag={x:e.clientX,y:e.clientY,yaw:view.yaw,pitch:view.pitch}};
   canvas.onpointermove=e=>{if(!drag)return;view.yaw=drag.yaw+(e.clientX-drag.x)*.35;view.pitch=Math.max(-80,Math.min(80,drag.pitch-(e.clientY-drag.y)*.3));draw()};

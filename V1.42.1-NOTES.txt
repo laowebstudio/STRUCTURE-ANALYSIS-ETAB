@@ -1,0 +1,13 @@
+SAPUDOM Structure Analysis V1.42.1
+3D RC Rebar View Controls
+
+Changes from V1.42:
+- Added deterministic camera presets to the RC Beam 3D Rebar Viewer:
+  Isometric, Side, Top, End-i and End-j.
+- End-i / End-j allow direct cross-section inspection of multi-layer longitudinal bars.
+- Fit remains available after manual rotation/zoom.
+- Existing V1.42 rebar geometry and V1.41.6.2 RC design logic are unchanged.
+- Viewer remains read-only.
+
+T1 target:
+For M28 400x600, 9Ø20 with L1=6Ø20 + L2=3Ø20, press End-i or End-j and verify 6+3 bars.

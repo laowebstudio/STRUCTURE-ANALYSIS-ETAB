@@ -1,3 +1,9 @@
+# V1.42.1 — 3D RC Rebar View Controls
+
+- Added Side, Top, End-i and End-j camera presets to the 3D RC Rebar Viewer.
+- End views support direct verification of multi-layer bar counts.
+- No RC design calculation logic changed.
+
 # V1.42 — 3D RC Rebar Visualization Foundation
 - Added calculation-linked interactive 3D RC beam rebar viewer.
 - Main bars, layer arrangement, stirrups, cover envelope and 90° hooks are driven by current RC Beam Design results.
