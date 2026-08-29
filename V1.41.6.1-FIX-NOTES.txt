@@ -1,0 +1,12 @@
+SAPUDOM Structure Analysis V1.41.6.1 Fix
+Rebar Vertical Fit Safety + Scaled RC Beam Drawing
+
+FIXES
+1. Adds explicit requiredVerticalDepth verification for multi-layer longitudinal reinforcement.
+2. Required depth = 2(cover + stirrup dia) + Nlayers(db) + (Nlayers-1)(vertical clear spacing).
+3. Detail status is VERTICAL FIT FAIL when required depth exceeds beam depth.
+4. RC beam section drawing now maps bars from physical coordinates to the SVG section instead of using a fixed 38 px layer pitch.
+5. Overall DESIGN VERIFIED remains impossible when the detailing check fails.
+
+REGRESSION NOTE
+For the reported M28 test, 250x600 mm with 30Ø20 arranged as 10 layers of 3 bars requires about 544 mm total cage depth using the current 26.7 mm minimum vertical clear spacing. It therefore physically fits within 600 mm; the visible overflow in V1.41.6 was a drawing-scale bug. A true vertical-fit failure requires a deeper layer stack, e.g. 12 layers at the same geometry (~637 mm required > 600 mm).

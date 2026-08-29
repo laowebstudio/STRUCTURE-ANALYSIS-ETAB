@@ -34,3 +34,11 @@ Residual = Applied + Reaction. A component passes when |Residual| <= max(1e-6, 1
 
 ### V1.41.5
 RC Beam Design now includes straight tension-bar development length, anchorage-at-i/j and optional Class A/B lap-splice verification. Hooked anchorage, seismic detailing, top reinforcement design, torsion/serviceability and splice-location/staggering remain outside this version and require engineer review.
+
+
+### V1.41.6.1 Fix
+- Adds an explicit full-depth reinforcement cage check: required vertical depth includes bottom/top cover, stirrup diameter, every longitudinal bar layer, and every required vertical clear spacing.
+- `verticalFitPass` can only pass when `requiredVerticalDepth <= member depth`.
+- RC Beam Drawing sections now plot reinforcement from real section geometry and calculated layer-center locations instead of a fixed pixel pitch.
+- Prevents visually overflowing reinforcement layers in the drawing when the physical arrangement fits; genuine vertical-fit failures are labelled `VERTICAL FIT FAIL`.
+- Overall `DESIGN VERIFIED` remains blocked whenever detailing fails.

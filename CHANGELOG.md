@@ -33,3 +33,9 @@
 - Added Class A/B lap splice verification and development trace in Details.
 - Added Dev/Splice status to the main beam table and professional drawing.
 - Overall beam PASS now also requires development/anchorage/lap verification to pass.
+
+
+## V1.41.6.1 Fix
+- Fixed RC beam section drawing overflow for high layer counts by scaling bar coordinates from actual section geometry.
+- Added explicit full-depth cage verification and exposed required/available vertical depth in detailing data.
+- Genuine cage-depth overflow now returns `VERTICAL FIT FAIL` and blocks `DESIGN VERIFIED`.
