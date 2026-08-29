@@ -1,0 +1,23 @@
+SAPUDOM Structure Analysis V1.45 — Advanced Member Loads
+
+Scope
+- Developed directly from V1.44.1.
+- Advanced loading is added inside the existing 3D Loads panel.
+- Existing 2D analysis and V1.44.1 RC beam zoning logic are retained.
+
+New 3D member loads
+1. UDL — Global X / Y / Z.
+2. Point Load — magnitude P and position x/L measured from member end i.
+3. Trapezoidal Load — w1, w2, start x/L and end x/L.
+4. Member Moment — Local 1 / 2 / 3 axis, magnitude M and position x/L.
+5. Single Member target in addition to All Beams / Beam-X / Beam-Y / Story filters.
+
+Analysis integration
+- All four member-load types generate consistent equivalent nodal loads for the 3D frame solver.
+- Point and trapezoidal forces are transformed from global direction to member local axes.
+- Member moments are applied about the member local axes.
+- Load audit/no-load detection recognizes the new load types.
+- 3D Workspace visualization displays UDL, point, trapezoidal and member-moment symbols.
+
+Primary validation target
+- Assign a downward Point Load to M28 near end j (for example P = -100 kN at x/L = 0.85), Analyze 3D, then verify the changed i/j shear demand in RC Beam Design / V1.44.1 stirrup zoning.

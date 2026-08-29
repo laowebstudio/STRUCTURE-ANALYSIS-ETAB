@@ -1,3 +1,9 @@
+# SAPUDOM Structure Analysis V1.45 — Advanced Member Loads
+
+V1.45 continues directly from V1.44.1 and adds advanced member loading inside the existing **3D Loads** panel. The 3D frame solver now accepts UDL, Point Load, Trapezoidal Load and Member Moment assignments, including single-member targeting for asymmetric load tests and practical structural analysis.
+
+Key additions: Point Load magnitude + x/L position; Trapezoidal w1/w2 + start/end x/L; Member Moment about Local 1/2/3 + x/L position; solver-consistent equivalent nodal loads; load audit support; and 3D load visualization. Existing V1.44.1 demand-linked stirrup zoning remains available for verification against asymmetric loads.
+
 # SAPUDOM Structure Analysis V1.44.1 — Demand-Linked Stirrup Zoning Fix
 
 V1.44.1 fixes the V1.44 Auto stirrup-zoning case where Support-i / Midspan / Support-j could all display the same spacing even after end shear increased. The local shear calculation is retained, and support zones that require meaningful stirrup contribution now receive a conservative support-detailing spacing cap, while midspan retains the normal local-demand spacing.

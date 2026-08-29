@@ -1,3 +1,12 @@
+## V1.45 — Advanced Member Loads
+- Upgraded the existing 3D Loads panel from UDL-only assignment to UDL / Point / Trapezoidal / Member Moment.
+- Added Single Member targeting for direct member-specific loading.
+- Point and trapezoidal loads support Global X / Y / Z direction and x/L positioning.
+- Member Moment supports Local 1 / Local 2 / Local 3 axis and x/L positioning.
+- Added consistent equivalent nodal load vectors for all new load types in the 3D frame solver.
+- Updated load audit / no-load detection and 3D workspace load visualization.
+- Preserved V1.44.1 RC Beam Reinforcement Zoning and Demand-Linked Stirrup Zoning logic.
+
 ## V1.44.1 — Demand-Linked Stirrup Zoning Fix
 - Fixed Auto stirrup zones staying visually uniform when d/2 controlled all zones.
 - Added demand-triggered conservative support-zone densification when Vu > phiVc.
