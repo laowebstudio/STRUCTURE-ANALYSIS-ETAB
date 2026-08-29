@@ -1,0 +1,17 @@
+SAPUDOM Structure Analysis V1.41.6.2 — Manual Main Rebar + Class A Testability
+
+Changes
+- Added independent Main Mode: Auto / Manual.
+- Manual mode exposes Main Bars count (minimum 2 bars).
+- Manual bar count is used directly for As provided, bar arrangement, centroid/effective depth, flexural capacity, detailing and development/lap verification.
+- Manual mode does not silently add bars when strength is insufficient; it reports STRENGTH FAIL.
+- Existing stirrup Auto/Manual control renamed to Stirrup Mode to avoid ambiguity.
+- Enables deterministic T8C Class A lap-splice testing: requested A, bars spliced <= 50%, and As provided / As required >= 2.0.
+- Existing Vertical Fit Safety and scaled construction drawing logic retained.
+
+T8C suggested test
+1) b=400, h=900, cover=40, Main Ø20.
+2) Main Mode=Manual; start with 10 bars.
+3) Lap splice=Verify; Requested class=A (auto-check); Bars spliced=50%; Provided lap=2000 mm.
+4) Apply & Recalculate, open M28 Details and check As prov/req.
+5) If ratio >= 2.00 and all flexure/detailing checks pass, Drawing should report Class A / Auto A.

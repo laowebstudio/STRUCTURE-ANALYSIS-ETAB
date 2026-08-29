@@ -1923,7 +1923,7 @@ function loadCombinationCenterV1362(){
     <header style="flex:0 0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff">
       <div>
         <div style="font-size:22px;font-weight:900;letter-spacing:.1px">3D Load Combinations</div>
-        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.41.6.1 • Vertical Fit Safety + Scaled Rebar Drawing</div>
+        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.41.6.2 • Manual Main Rebar + Class A Testability</div>
       </div>
       <button id="v1362X" aria-label="Close"
         style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer">×</button>
@@ -2627,6 +2627,8 @@ function envelopeCenterV140(){
 function storeCompatV14121(store){
   store.defaults ||= {};
   if(!['auto','manual'].includes(String(store.defaults.stirrupSpacingMode||'').toLowerCase())) store.defaults.stirrupSpacingMode='auto';
+  if(!['auto','manual'].includes(String(store.defaults.mainBarMode||'').toLowerCase())) store.defaults.mainBarMode='auto';
+  if(!(Number(store.defaults.manualMainBars)>=2)) store.defaults.manualMainBars=5;
   if(!(Number(store.defaults.stirrupSpacing)>0)) store.defaults.stirrupSpacing=250;
   // V1.41.5 — straight tension development / anchorage / lap-splice verification inputs.
   if(!['other','top'].includes(String(store.defaults.devCastPosition||'').toLowerCase())) store.defaults.devCastPosition='other';
@@ -2734,7 +2736,7 @@ function rcBeamDevelopmentV1415(cfg,detailing,nBars){
 function rcBeamDesignV141(){
   const m3=ensure3DLoadSystemV131();
   const env=(m3.envelopeV140&&Array.isArray(m3.envelopeV140.members))?m3.envelopeV140:envelopeV140();
-  m3.rcBeamDesignV141 ||= {defaults:{b:300,h:500,cover:40,minCover:40,aggregateSize:20,stirrupDia:10,stirrupSpacingMode:'auto',stirrupSpacing:250,mainBarDia:20,fc:28,fy:420,phiFlexure:.90,phiShear:.75,devCastPosition:'other',devCoating:'uncoated',devLambda:1,devKtr:0,anchorI:600,anchorJ:600,spliceEnabled:false,spliceClass:'B',spliceProvided:0,spliceBarsPercent:100},memberOverrides:{}};
+  m3.rcBeamDesignV141 ||= {defaults:{b:300,h:500,cover:40,minCover:40,aggregateSize:20,stirrupDia:10,stirrupSpacingMode:'auto',stirrupSpacing:250,mainBarMode:'auto',manualMainBars:5,mainBarDia:20,fc:28,fy:420,phiFlexure:.90,phiShear:.75,devCastPosition:'other',devCoating:'uncoated',devLambda:1,devKtr:0,anchorI:600,anchorJ:600,spliceEnabled:false,spliceClass:'B',spliceProvided:0,spliceBarsPercent:100},memberOverrides:{}};
   storeCompatV14121(m3.rcBeamDesignV141);
   const store=m3.rcBeamDesignV141;
   const getMember=id=>(m3.members||[]).find(x=>x.id===id);
@@ -2747,6 +2749,8 @@ function rcBeamDesignV141(){
     const stirrupDia=Math.max(6,+cfg.stirrupDia||10),mainBarDia=Math.max(10,+cfg.mainBarDia||20);
     const stirrupSpacingMode=String(cfg.stirrupSpacingMode||'auto').toLowerCase()==='manual'?'manual':'auto';
     const manualStirrupSpacing=Math.max(25,+cfg.stirrupSpacing||250);
+    const mainBarMode=String(cfg.mainBarMode||'auto').toLowerCase()==='manual'?'manual':'auto';
+    const manualMainBars=Math.max(2,Math.floor(+cfg.manualMainBars||2));
     const aggregateSize=Math.max(1,+cfg.aggregateSize||20),minCover=Math.max(0,+cfg.minCover||40);
     const fc=Math.max(10,+cfg.fc||28),fy=Math.max(200,+cfg.fy||420);
     const devCastPosition=String(cfg.devCastPosition||'other').toLowerCase()==='top'?'top':'other';
@@ -2788,7 +2792,7 @@ function rcBeamDesignV141(){
     const AsMin=Math.max(AsMin1,AsMin2);
     const AsDesign=Number.isFinite(AsReq)?Math.max(AsReq,AsMin):NaN;
     const barArea=Math.PI*mainBarDia*mainBarDia/4;
-    let nBars=Number.isFinite(AsDesign)?Math.max(2,Math.ceil(AsDesign/barArea)):null;
+    let nBars=mainBarMode==='manual'?manualMainBars:(Number.isFinite(AsDesign)?Math.max(2,Math.ceil(AsDesign/barArea)):null);
     let arrangement=rcBeamRebarArrangementV1416({b,h,cover,minCover,stirrupDia,mainBarDia,aggregateSize,nBars});
     let d=Number.isFinite(arrangement.dEff)?Math.max(50,arrangement.dEff):d0;
     // If the centroid shift from multi-layer steel reduces capacity, add bars until strength demand is recovered.
@@ -2797,7 +2801,7 @@ function rcBeamDesignV141(){
         arrangement=rcBeamRebarArrangementV1416({b,h,cover,minCover,stirrupDia,mainBarDia,aggregateSize,nBars});
         d=Number.isFinite(arrangement.dEff)?Math.max(50,arrangement.dEff):d0;
         const as=nBars*barArea,a=as*fy/(0.85*fc*b),mn=as*fy*(d-a/2)/1e6;
-        if(phiF*mn+1e-9>=Mu || !arrangement.pass)break;
+        if(phiF*mn+1e-9>=Mu || !arrangement.pass || mainBarMode==='manual')break;
         nBars++;
       }
       arrangement=rcBeamRebarArrangementV1416({b,h,cover,minCover,stirrupDia,mainBarDia,aggregateSize,nBars});
@@ -2891,7 +2895,7 @@ function rcBeamDesignV141(){
 
     return {
       id:e.id,i:e.i,j:e.j,
-      cfg:{b,h,cover,stirrupDia,stirrupSpacingMode,stirrupSpacing:manualStirrupSpacing,aggregateSize,minCover,mainBarDia,fc,fy,phiF,phiV,d,dNominal,devCastPosition,devCoating,devLambda,devKtr,anchorI,anchorJ,spliceEnabled,spliceClass,spliceProvided,spliceBarsPercent},
+      cfg:{b,h,cover,stirrupDia,stirrupSpacingMode,stirrupSpacing:manualStirrupSpacing,mainBarMode,manualMainBars,aggregateSize,minCover,mainBarDia,fc,fy,phiF,phiV,d,dNominal,devCastPosition,devCoating,devLambda,devKtr,anchorI,anchorJ,spliceEnabled,spliceClass,spliceProvided,spliceBarsPercent},
       govM,govV,Mu,Vu,AsReq,AsDesign,nBars,AsProv,phiVc,sReq,flexureStatus,
       shear:{
         Av:Av2, VsProv:VsProvN/1000, Vn:VnN/1000, phiVn,
@@ -2987,7 +2991,7 @@ function rcBeamDetailingDrawingV1414(d){
   <text x="1295" y="715" class="h2">STATUS</text><text x="1295" y="755" class="h1 ${pass?'green':'red'}">${esc(status)}</text><text x="1295" y="790" class="note">Calculation-linked drawing.</text><text x="1295" y="815" class="note">Issue for construction only after</text><text x="1295" y="840" class="note">all required checks are complete.</text><line x1="1270" y1="875" x2="1656" y2="875" class="thin"/>
   <text x="1295" y="920" class="h2">SHEET</text><text x="1295" y="955" class="txt">RC-BEAM-M${esc(d.id)}</text><text x="1295" y="985" class="txt">Scale: NTS</text><text x="1295" y="1020" class="small">SAPUDOM V1.41.6.1</text></svg>`;
   const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:100004;background:#0f172aF2;padding:12px;display:flex;flex-direction:column;gap:8px';
-  o.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;color:white"><div><b style="font-size:20px">RC Beam Construction Drawing — M${d.id}</b><div style="font-size:12px;opacity:.8">V1.41.6.1 • Vertical Fit Safety + Scaled Rebar Drawing</div></div><div style="display:flex;gap:8px"><button id="v1414print">Print / Save PDF</button><button id="v1414svg">Download SVG</button><button id="v1414close">Close</button></div></div><div style="background:#dbe3ec;flex:1;overflow:auto;border-radius:6px;padding:10px"><div style="background:#fff;box-shadow:0 4px 18px #0004;min-width:1100px">${svg}</div></div>`;
+  o.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;color:white"><div><b style="font-size:20px">RC Beam Construction Drawing — M${d.id}</b><div style="font-size:12px;opacity:.8">V1.41.6.2 • Manual Main Rebar + Class A Testability</div></div><div style="display:flex;gap:8px"><button id="v1414print">Print / Save PDF</button><button id="v1414svg">Download SVG</button><button id="v1414close">Close</button></div></div><div style="background:#dbe3ec;flex:1;overflow:auto;border-radius:6px;padding:10px"><div style="background:#fff;box-shadow:0 4px 18px #0004;min-width:1100px">${svg}</div></div>`;
   document.body.appendChild(o);o.querySelector('#v1414close').onclick=()=>o.remove();
   o.querySelector('#v1414svg').onclick=()=>{const blob=new Blob([svg],{type:'image/svg+xml'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`SAPUDOM-M${d.id}-RC-Beam-V1.41.6.1.svg`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)};
   o.querySelector('#v1414print').onclick=()=>{const pw=window.open('','_blank');if(!pw){toast('Allow pop-ups to print drawing');return}pw.document.write(`<html><head><title>RC Beam M${d.id}</title><style>@page{size:A3 landscape;margin:5mm}body{margin:0}svg{width:100%;height:auto}</style></head><body>${svg}</body></html>`);pw.document.close();setTimeout(()=>pw.print(),250)};
@@ -3041,9 +3045,9 @@ function rcBeamDesignCenterV141(){
   w.innerHTML=`<div style="width:min(1120px,96vw);max-height:93vh;background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 70px #0005">
     <header style="padding:18px 20px;background:#173b68;color:#fff;display:flex;justify-content:space-between"><div>
       <div style="font-size:22px;font-weight:900">RC Beam Design — 3D Governing Envelope</div>
-      <div style="font-size:13px;opacity:.84">V1.41.6.1 • Vertical Fit Safety + Scaled Rebar Drawing</div></div>
+      <div style="font-size:13px;opacity:.84">V1.41.6.2 • Manual Main Rebar + Class A Testability</div></div>
       <button id="v141x" style="width:40px;height:40px;color:#fff;background:#ffffff22;border:1px solid #ffffff55;border-radius:10px">×</button></header>
-    <div style="padding:10px 14px;background:#fff7ed;color:#9a3412;font-size:12px"><b>Engineering note:</b> V1.41.6.1 keeps automatic multi-layer reinforcement arrangement with centroid-aware effective depth and an automatic standard 90° hook solution when straight development is unavailable. Hook results are design-assist and still require project-specific support geometry, cover and confinement review. Seismic detailing, torsion, serviceability, splice-location/staggering and top reinforcement remain outside this verification.</div>
+    <div style="padding:10px 14px;background:#fff7ed;color:#9a3412;font-size:12px"><b>Engineering note:</b> V1.41.6.2 adds manual longitudinal-bar count while keeping automatic multi-layer reinforcement arrangement with centroid-aware effective depth and an automatic standard 90° hook solution when straight development is unavailable. Hook results are design-assist and still require project-specific support geometry, cover and confinement review. Seismic detailing, torsion, serviceability, splice-location/staggering and top reinforcement remain outside this verification.</div>
     <div style="padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:12px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
         <fieldset style="display:flex;gap:8px;align-items:end;border:1px solid #cbd5e1;border-radius:10px;padding:7px 9px">
@@ -3060,8 +3064,10 @@ function rcBeamDesignCenterV141(){
         <fieldset style="display:flex;gap:8px;align-items:end;border:1px solid #cbd5e1;border-radius:10px;padding:7px 9px">
           <legend style="padding:0 5px;color:#475569;font-weight:800">Reinforcement</legend>
           <label>Main Ø<br><input id="v141bar" type="number" value="${store.defaults.mainBarDia}" style="width:54px"></label>
+          <label>Main Mode<br><select id="v141bmode"><option value="auto" ${store.defaults.mainBarMode!=='manual'?'selected':''}>Auto</option><option value="manual" ${store.defaults.mainBarMode==='manual'?'selected':''}>Manual</option></select></label>
+          <label id="v141nbwrap" style="${store.defaults.mainBarMode==='manual'?'':'display:none'}">Main Bars<br><input id="v141nbars" type="number" min="2" step="1" value="${store.defaults.manualMainBars??5}" style="width:58px"> bars</label>
           <label>Stirrup Ø<br><input id="v141st" type="number" value="${store.defaults.stirrupDia}" style="width:54px"></label>
-          <label>Mode<br><select id="v141smode"><option value="auto" ${store.defaults.stirrupSpacingMode==='auto'?'selected':''}>Auto</option><option value="manual" ${store.defaults.stirrupSpacingMode==='manual'?'selected':''}>Manual</option></select></label>
+          <label>Stirrup Mode<br><select id="v141smode"><option value="auto" ${store.defaults.stirrupSpacingMode==='auto'?'selected':''}>Auto</option><option value="manual" ${store.defaults.stirrupSpacingMode==='manual'?'selected':''}>Manual</option></select></label>
           <label>Spacing<br><input id="v141spacing" type="number" min="25" step="25" value="${store.defaults.stirrupSpacing}" style="width:60px"> mm</label>
         </fieldset>
         <details style="border:1px solid #cbd5e1;border-radius:10px;padding:7px 9px">
@@ -3191,6 +3197,8 @@ function rcBeamDesignCenterV141(){
   });
   bindDetails();
 
+  const syncMainBarModeV14162=()=>{const manual=w.querySelector('#v141bmode').value==='manual';w.querySelector('#v141nbwrap').style.display=manual?'':'none';};
+  w.querySelector('#v141bmode').onchange=syncMainBarModeV14162;syncMainBarModeV14162();
   w.querySelector('#v141Apply').onclick=()=>{
     Object.assign(store.defaults,{
       b:+w.querySelector('#v141b').value||300,h:+w.querySelector('#v141h').value||500,
@@ -3198,6 +3206,8 @@ function rcBeamDesignCenterV141(){
       minCover:Math.max(0,+w.querySelector('#v141mincover').value||40),aggregateSize:Math.max(1,+w.querySelector('#v141agg').value||20),
       fc:+w.querySelector('#v141fc').value||28,
       fy:+w.querySelector('#v141fy').value||420,mainBarDia:+w.querySelector('#v141bar').value||20,
+      mainBarMode:w.querySelector('#v141bmode').value==='manual'?'manual':'auto',
+      manualMainBars:Math.max(2,Math.floor(+w.querySelector('#v141nbars').value||2)),
       stirrupDia:+w.querySelector('#v141st').value||10,
       stirrupSpacingMode:w.querySelector('#v141smode').value==='manual'?'manual':'auto',
       stirrupSpacing:Math.max(25,+w.querySelector('#v141spacing').value||250),
@@ -3210,13 +3220,13 @@ function rcBeamDesignCenterV141(){
       spliceProvided:Math.max(0,+w.querySelector('#v141slap').value||0),
       spliceBarsPercent:Math.min(100,Math.max(0,+w.querySelector('#v141spct').value||0))
     });
-    designs=rcBeamDesignV141();w.querySelector('#v141tbody').innerHTML=rows();bindDetails();toast('V1.41.6.1 RC Beam Design + Vertical Fit verification recalculated');
+    designs=rcBeamDesignV141();w.querySelector('#v141tbody').innerHTML=rows();bindDetails();toast('V1.41.6.2 RC Beam Design + Manual Main Rebar recalculated');
   };
 }
 
 function integrated3DWorkspaceV128(){
  if(integrated3dActiveV128){closeIntegrated3DV128();return}integrated3dActiveV128=true;document.querySelector('.workspace')?.classList.add('v130-3d-workspace');const center=document.querySelector('.center');[...center.children].forEach(x=>x.classList.add('v128-hide2d'));$('frame3dBtn').textContent='▣ 2D Frame';$('frame3dBtn').classList.add('active3d');
- const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.41.6.1</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.41.6.1 • Vertical Fit Safety + Scaled Rebar Drawing</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
+ const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.41.6.2</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.41.6.2 • Manual Main Rebar + Class A Testability</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
 }
 function closeIntegrated3DV128(){if(!integrated3dActiveV128)return;integrated3dActiveV128=false;integrated3dRefreshV128=null;document.querySelector('.workspace')?.classList.remove('v130-3d-workspace');document.querySelector('#integrated3dV128')?.remove();document.querySelectorAll('.v128-hide2d').forEach(x=>x.classList.remove('v128-hide2d'));$('frame3dBtn').textContent='◈ 3D Frame';$('frame3dBtn').classList.remove('active3d');resize();render();updateUI();renderResults()}
 function initIntegrated3DV128(host){
