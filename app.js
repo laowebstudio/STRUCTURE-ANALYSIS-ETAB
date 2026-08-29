@@ -1923,7 +1923,7 @@ function loadCombinationCenterV1362(){
     <header style="flex:0 0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 20px;background:linear-gradient(135deg,#0f2747,#173b68);color:#fff">
       <div>
         <div style="font-size:22px;font-weight:900;letter-spacing:.1px">3D Load Combinations</div>
-        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.41.6.2 • Manual Main Rebar + Class A Testability</div>
+        <div style="margin-top:4px;font-size:13px;opacity:.82">V1.42 • 3D RC Rebar Visualization Foundation</div>
       </div>
       <button id="v1362X" aria-label="Close"
         style="width:40px;height:40px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:22px;cursor:pointer">×</button>
@@ -2991,10 +2991,80 @@ function rcBeamDetailingDrawingV1414(d){
   <text x="1295" y="715" class="h2">STATUS</text><text x="1295" y="755" class="h1 ${pass?'green':'red'}">${esc(status)}</text><text x="1295" y="790" class="note">Calculation-linked drawing.</text><text x="1295" y="815" class="note">Issue for construction only after</text><text x="1295" y="840" class="note">all required checks are complete.</text><line x1="1270" y1="875" x2="1656" y2="875" class="thin"/>
   <text x="1295" y="920" class="h2">SHEET</text><text x="1295" y="955" class="txt">RC-BEAM-M${esc(d.id)}</text><text x="1295" y="985" class="txt">Scale: NTS</text><text x="1295" y="1020" class="small">SAPUDOM V1.41.6.1</text></svg>`;
   const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:100004;background:#0f172aF2;padding:12px;display:flex;flex-direction:column;gap:8px';
-  o.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;color:white"><div><b style="font-size:20px">RC Beam Construction Drawing — M${d.id}</b><div style="font-size:12px;opacity:.8">V1.41.6.2 • Manual Main Rebar + Class A Testability</div></div><div style="display:flex;gap:8px"><button id="v1414print">Print / Save PDF</button><button id="v1414svg">Download SVG</button><button id="v1414close">Close</button></div></div><div style="background:#dbe3ec;flex:1;overflow:auto;border-radius:6px;padding:10px"><div style="background:#fff;box-shadow:0 4px 18px #0004;min-width:1100px">${svg}</div></div>`;
-  document.body.appendChild(o);o.querySelector('#v1414close').onclick=()=>o.remove();
+  o.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;color:white"><div><b style="font-size:20px">RC Beam Construction Drawing — M${d.id}</b><div style="font-size:12px;opacity:.8">V1.42 • 3D RC Rebar Visualization Foundation</div></div><div style="display:flex;gap:8px"><button id="v142draw3d">3D Rebar</button><button id="v1414print">Print / Save PDF</button><button id="v1414svg">Download SVG</button><button id="v1414close">Close</button></div></div><div style="background:#dbe3ec;flex:1;overflow:auto;border-radius:6px;padding:10px"><div style="background:#fff;box-shadow:0 4px 18px #0004;min-width:1100px">${svg}</div></div>`;
+  document.body.appendChild(o);o.querySelector('#v1414close').onclick=()=>o.remove();o.querySelector('#v142draw3d').onclick=()=>rcBeamRebar3DViewerV142(d);
   o.querySelector('#v1414svg').onclick=()=>{const blob=new Blob([svg],{type:'image/svg+xml'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`SAPUDOM-M${d.id}-RC-Beam-V1.41.6.1.svg`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)};
   o.querySelector('#v1414print').onclick=()=>{const pw=window.open('','_blank');if(!pw){toast('Allow pop-ups to print drawing');return}pw.document.write(`<html><head><title>RC Beam M${d.id}</title><style>@page{size:A3 landscape;margin:5mm}body{margin:0}svg{width:100%;height:auto}</style></head><body>${svg}</body></html>`);pw.document.close();setTimeout(()=>pw.print(),250)};
+}
+
+
+
+// ===== V1.42 — 3D RC Rebar Visualization Foundation =====
+// Calculation-linked beam cage viewer. Phase 1 visualizes the currently verified bottom
+// longitudinal reinforcement, stirrups and automatic 90° anchorage hooks from RC Beam Design.
+// It is intentionally read-only: no design quantities are changed by this viewer.
+function rcBeamRebar3DViewerV142(d){
+  const m3=ensure3DLoadSystemV131();
+  const member=(m3.members||[]).find(x=>String(x.id)===String(d.id));
+  const ni=member&&(m3.nodes||[]).find(n=>n.id===member.i), nj=member&&(m3.nodes||[]).find(n=>n.id===member.j);
+  const L=Math.max(500,Math.round((ni&&nj?Math.hypot((nj.x-ni.x),(nj.y-ni.y),(nj.z-ni.z)):5)*1000));
+  const b=Number(d.cfg.b)||300,h=Number(d.cfg.h)||500,cover=Number(d.cfg.cover)||40;
+  const db=Number(d.cfg.mainBarDia)||20,sd=Number(d.cfg.stirrupDia)||10,ss=Math.max(50,Number(d.sReq)||250);
+  const counts=(d.detailing?.counts||[]).map(x=>Math.max(0,Math.floor(Number(x)||0))).filter(Boolean);
+  const centers=(d.detailing?.centers||[]).map(Number);
+  const insideW=Math.max(db,Number(d.detailing?.insideWidth)||b-2*(cover+sd));
+  const hookTail=Math.max(8*db,Number(d.development?.hookTail90)||12*db);
+  const hookI=d.development?.anchorIMethod==='90° HOOK',hookJ=d.development?.anchorJMethod==='90° HOOK';
+
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;z-index:100006;background:rgba(2,6,23,.94);display:flex;flex-direction:column;padding:10px;gap:8px';
+  modal.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;color:#fff;gap:12px;flex-wrap:wrap"><div><b style="font-size:20px">3D RC Rebar Viewer — M${d.id}</b><div style="font-size:12px;opacity:.78">V1.42 • Calculation-linked Rebar Visualization Foundation • Bottom steel phase</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><button id="v142fit">Fit</button><button id="v142iso">Isometric</button><label style="font-size:12px"><input id="v142conc" type="checkbox" checked> Concrete</label><label style="font-size:12px"><input id="v142st" type="checkbox" checked> Stirrups</label><label style="font-size:12px"><input id="v142bars" type="checkbox" checked> Main bars</label><button id="v142close">Close</button></div></div><div style="position:relative;flex:1;min-height:360px;background:#e8eef5;border-radius:8px;overflow:hidden"><canvas id="v142canvas" style="width:100%;height:100%;display:block;touch-action:none"></canvas><div id="v142info" style="position:absolute;left:12px;top:12px;background:rgba(255,255,255,.94);padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px #0002;font:12px Arial;line-height:1.55;color:#0f172a;max-width:360px"></div><div style="position:absolute;right:12px;bottom:10px;background:rgba(15,23,42,.86);color:white;padding:7px 10px;border-radius:7px;font:11px Arial">Drag: Rotate • Wheel: Zoom • V1.42 read-only viewer</div></div>`;
+  document.body.appendChild(modal);
+  const canvas=modal.querySelector('#v142canvas'),ctx=canvas.getContext('2d');let dpr=1;
+  const view={yaw:-32,pitch:24,scale:.13,ox:0,oy:0}, flags={concrete:true,stirrups:true,bars:true};
+  let drag=null;
+
+  function rotated(p){
+    const x=p[0]-L/2,y=p[1],z=p[2]-h/2,ya=view.yaw*Math.PI/180,pi=view.pitch*Math.PI/180;
+    const x1=Math.cos(ya)*x-Math.sin(ya)*y, y1=Math.sin(ya)*x+Math.cos(ya)*y;
+    const y2=Math.cos(pi)*y1-Math.sin(pi)*z, z2=Math.sin(pi)*y1+Math.cos(pi)*z;
+    return [x1,y2,z2];
+  }
+  function proj(p){const q=rotated(p);return [view.ox+q[0]*view.scale,view.oy-q[2]*view.scale,q[1]]}
+  function line(points,width=2,alpha=1){if(points.length<2)return;ctx.save();ctx.globalAlpha=alpha;ctx.lineWidth=width;ctx.beginPath();points.forEach((p,i)=>{const q=proj(p);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])});ctx.stroke();ctx.restore()}
+  function fit(){
+    const r=canvas.getBoundingClientRect(),corners=[];for(const x of [0,L])for(const y of [-b/2,b/2])for(const z of [0,h])corners.push(rotated([x,y,z]));
+    const xs=corners.map(q=>q[0]),zs=corners.map(q=>q[2]),w=Math.max(1,Math.max(...xs)-Math.min(...xs)),hh=Math.max(1,Math.max(...zs)-Math.min(...zs));
+    view.scale=Math.max(.03,Math.min(.5,Math.min((r.width-100)/w,(r.height-100)/hh)));view.ox=r.width/2-(Math.min(...xs)+Math.max(...xs))/2*view.scale;view.oy=r.height/2+(Math.min(...zs)+Math.max(...zs))/2*view.scale;draw();
+  }
+  function face(points,fill,stroke='rgba(30,41,59,.42)'){
+    ctx.save();ctx.fillStyle=fill;ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.beginPath();points.forEach((p,i)=>{const q=proj(p);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])});ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+  }
+  function barYPositions(n){if(n<=1)return[0];const avail=Math.max(0,insideW-db);return Array.from({length:n},(_,i)=>-avail/2+i*avail/(n-1))}
+  function draw(){
+    const r=canvas.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);ctx.fillStyle='#eef3f8';ctx.fillRect(0,0,r.width,r.height);
+    // floor/grid reference
+    ctx.strokeStyle='rgba(100,116,139,.18)';ctx.lineWidth=1;for(let x=-1000;x<=L+1000;x+=500)line([[x,-b,0],[x,b,0]],1,.45);for(let y=-1000;y<=1000;y+=250)line([[-500,y,0],[L+500,y,0]],1,.35);
+    if(flags.concrete){
+      const A=[0,-b/2,0],B=[L,-b/2,0],C=[L,b/2,0],D=[0,b/2,0],E=[0,-b/2,h],F=[L,-b/2,h],G=[L,b/2,h],H=[0,b/2,h];
+      const faces=[[A,B,F,E],[D,C,G,H],[E,F,G,H],[A,D,H,E],[B,C,G,F],[A,B,C,D]].map(ps=>({ps,dep:ps.reduce((a,p)=>a+rotated(p)[1],0)/4})).sort((a,b)=>a.dep-b.dep);
+      faces.forEach(x=>face(x.ps,'rgba(148,163,184,.10)','rgba(71,85,105,.35)'));
+    }
+    if(flags.stirrups){ctx.strokeStyle='#16a34a';const y0=-b/2+cover+sd/2,y1=b/2-cover-sd/2,z0=cover+sd/2,z1=h-cover-sd/2;for(let x=0;x<=L+1;x+=ss){line([[x,y0,z0],[x,y1,z0],[x,y1,z1],[x,y0,z1],[x,y0,z0]],Math.max(1.2,sd*view.scale*.65),.82)}}
+    if(flags.bars){ctx.strokeStyle='#dc2626';ctx.lineCap='round';counts.forEach((n,li)=>{const z=Number.isFinite(centers[li])?centers[li]:(cover+sd+db/2+li*(db+Math.max(25,db)));barYPositions(n).forEach(y=>{const pts=[];if(hookI)pts.push([0,y,Math.min(h-cover-sd-db/2,z+hookTail)]);pts.push([0,y,z],[L,y,z]);if(hookJ)pts.push([L,y,Math.min(h-cover-sd-db/2,z+hookTail)]);line(pts,Math.max(2.2,db*view.scale*.8),.96)})})}
+    // end labels / axes
+    ctx.fillStyle='#0f172a';ctx.font='700 12px Arial';const qi=proj([0,0,h+100]),qj=proj([L,0,h+100]);ctx.fillText('i',qi[0]-4,qi[1]);ctx.fillText('j',qj[0]-4,qj[1]);
+  }
+  function resize(){const r=canvas.getBoundingClientRect();dpr=Math.max(1,window.devicePixelRatio||1);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);fit()}
+  modal.querySelector('#v142info').innerHTML=`<b>M${d.id} • ${b}×${h} mm • L=${L} mm</b><br>Main: <b>${d.nBars||0}Ø${db}</b> • ${counts.map((n,i)=>`L${i+1}: ${n}Ø${db}`).join(' • ')||'No valid arrangement'}<br>Stirrups: <b>Ø${sd} @ ${ss} mm</b> • Cover ${cover} mm<br>Anchorage i: <b>${d.development?.anchorIMethod||'—'}</b> • j: <b>${d.development?.anchorJMethod||'—'}</b><br>Detailing: <b>${d.detailing?.status||'—'}</b> • Overall: <b>${d.overall?.status||'—'}</b><br><span style="color:#92400e">Top reinforcement remains outside V1.42 Phase 1 verification.</span>`;
+  modal.querySelector('#v142close').onclick=()=>modal.remove();
+  modal.querySelector('#v142fit').onclick=fit;modal.querySelector('#v142iso').onclick=()=>{view.yaw=-32;view.pitch=24;fit()};
+  modal.querySelector('#v142conc').onchange=e=>{flags.concrete=e.target.checked;draw()};modal.querySelector('#v142st').onchange=e=>{flags.stirrups=e.target.checked;draw()};modal.querySelector('#v142bars').onchange=e=>{flags.bars=e.target.checked;draw()};
+  canvas.onpointerdown=e=>{canvas.setPointerCapture?.(e.pointerId);drag={x:e.clientX,y:e.clientY,yaw:view.yaw,pitch:view.pitch}};
+  canvas.onpointermove=e=>{if(!drag)return;view.yaw=drag.yaw+(e.clientX-drag.x)*.35;view.pitch=Math.max(-80,Math.min(80,drag.pitch-(e.clientY-drag.y)*.3));draw()};
+  canvas.onpointerup=canvas.onpointercancel=()=>drag=null;
+  canvas.onwheel=e=>{e.preventDefault();const f=Math.exp(-e.deltaY*.001);view.scale=Math.max(.02,Math.min(1.2,view.scale*f));draw()};
+  const ro=window.ResizeObserver?new ResizeObserver(resize):null;ro?.observe(canvas.parentElement);setTimeout(resize,0);
 }
 
 function rcBeamDesignCenterV141(){
@@ -3045,9 +3115,9 @@ function rcBeamDesignCenterV141(){
   w.innerHTML=`<div style="width:min(1120px,96vw);max-height:93vh;background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 70px #0005">
     <header style="padding:18px 20px;background:#173b68;color:#fff;display:flex;justify-content:space-between"><div>
       <div style="font-size:22px;font-weight:900">RC Beam Design — 3D Governing Envelope</div>
-      <div style="font-size:13px;opacity:.84">V1.41.6.2 • Manual Main Rebar + Class A Testability</div></div>
+      <div style="font-size:13px;opacity:.84">V1.42 • 3D RC Rebar Visualization Foundation</div></div>
       <button id="v141x" style="width:40px;height:40px;color:#fff;background:#ffffff22;border:1px solid #ffffff55;border-radius:10px">×</button></header>
-    <div style="padding:10px 14px;background:#fff7ed;color:#9a3412;font-size:12px"><b>Engineering note:</b> V1.41.6.2 adds manual longitudinal-bar count while keeping automatic multi-layer reinforcement arrangement with centroid-aware effective depth and an automatic standard 90° hook solution when straight development is unavailable. Hook results are design-assist and still require project-specific support geometry, cover and confinement review. Seismic detailing, torsion, serviceability, splice-location/staggering and top reinforcement remain outside this verification.</div>
+    <div style="padding:10px 14px;background:#fff7ed;color:#9a3412;font-size:12px"><b>Engineering note:</b> V1.42 adds a read-only calculation-linked 3D RC Rebar Viewer for beam bottom longitudinal reinforcement, automatic layer arrangement, stirrups and selected 90° anchorage hooks. V1.41.6.2 design logic remains protected. Hook geometry is design-assist; project-specific support geometry, seismic detailing, torsion, serviceability, splice-location/staggering and top reinforcement remain outside this verification.</div>
     <div style="padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:12px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
         <fieldset style="display:flex;gap:8px;align-items:end;border:1px solid #cbd5e1;border-radius:10px;padding:7px 9px">
@@ -3192,8 +3262,8 @@ function rcBeamDesignCenterV141(){
         <b>Overall Beam Design:</b>
         <b style="color:${d.overall.pass?'#166534':'#b91c1c'};font-size:14px">${d.overall.status}</b>
       </div>
-      <footer style="padding:12px;text-align:right;display:flex;justify-content:flex-end;gap:8px"><button id="v1414drawing">RC Beam Detailing Drawing</button><button id="v141dclose">Close</button></footer></div>`;
-    document.body.appendChild(m);const dc=()=>m.remove();m.querySelector('#v141dx').onclick=dc;m.querySelector('#v141dclose').onclick=dc;m.querySelector('#v1414drawing').onclick=()=>rcBeamDetailingDrawingV1414(d);
+      <footer style="padding:12px;text-align:right;display:flex;justify-content:flex-end;gap:8px"><button id="v142rebar3d">3D Rebar Viewer</button><button id="v1414drawing">RC Beam Detailing Drawing</button><button id="v141dclose">Close</button></footer></div>`;
+    document.body.appendChild(m);const dc=()=>m.remove();m.querySelector('#v141dx').onclick=dc;m.querySelector('#v141dclose').onclick=dc;m.querySelector('#v142rebar3d').onclick=()=>rcBeamRebar3DViewerV142(d);m.querySelector('#v1414drawing').onclick=()=>rcBeamDetailingDrawingV1414(d);
   });
   bindDetails();
 
@@ -3220,13 +3290,13 @@ function rcBeamDesignCenterV141(){
       spliceProvided:Math.max(0,+w.querySelector('#v141slap').value||0),
       spliceBarsPercent:Math.min(100,Math.max(0,+w.querySelector('#v141spct').value||0))
     });
-    designs=rcBeamDesignV141();w.querySelector('#v141tbody').innerHTML=rows();bindDetails();toast('V1.41.6.2 RC Beam Design + Manual Main Rebar recalculated');
+    designs=rcBeamDesignV141();w.querySelector('#v141tbody').innerHTML=rows();bindDetails();toast('V1.42 RC Beam Design recalculated • 3D Rebar viewer ready');
   };
 }
 
 function integrated3DWorkspaceV128(){
  if(integrated3dActiveV128){closeIntegrated3DV128();return}integrated3dActiveV128=true;document.querySelector('.workspace')?.classList.add('v130-3d-workspace');const center=document.querySelector('.center');[...center.children].forEach(x=>x.classList.add('v128-hide2d'));$('frame3dBtn').textContent='▣ 2D Frame';$('frame3dBtn').classList.add('active3d');
- const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.41.6.2</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.41.6.2 • Manual Main Rebar + Class A Testability</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
+ const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.42</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.42 • 3D RC Rebar Visualization Foundation</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
 }
 function closeIntegrated3DV128(){if(!integrated3dActiveV128)return;integrated3dActiveV128=false;integrated3dRefreshV128=null;document.querySelector('.workspace')?.classList.remove('v130-3d-workspace');document.querySelector('#integrated3dV128')?.remove();document.querySelectorAll('.v128-hide2d').forEach(x=>x.classList.remove('v128-hide2d'));$('frame3dBtn').textContent='◈ 3D Frame';$('frame3dBtn').classList.remove('active3d');resize();render();updateUI();renderResults()}
 function initIntegrated3DV128(host){

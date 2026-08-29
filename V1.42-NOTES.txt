@@ -1,0 +1,20 @@
+SAPUDOM Structure Analysis V1.42 — 3D RC Rebar Visualization Foundation
+
+Added:
+- Calculation-linked 3D RC Beam Rebar Viewer available from RC Beam Design Details and RC Beam Construction Drawing.
+- Visualizes bottom longitudinal bars using the verified bar count and automatic layer arrangement.
+- Visualizes stirrups at the calculated/provided spacing.
+- Visualizes automatic 90° anchorage hooks at i/j ends when selected by Development/Anchorage verification.
+- Semi-transparent concrete beam envelope with member i/j labels.
+- Interactive Rotate, Zoom, Fit and Isometric controls.
+- Visibility toggles for Concrete, Stirrups and Main Bars.
+- Viewer is read-only and does not modify RC design quantities.
+
+Protected:
+- V1.41.6.2 Manual Main Rebar and Auto/Manual switching.
+- V1.41.6.1 vertical-fit safety and scaled 2D rebar drawing.
+- Development / anchorage / lap splice logic including automatic Class A/B verification.
+- Existing 2D and 3D analysis engines.
+
+Phase 1 limitation:
+- Top reinforcement, column cages, beam-column joints, slab reinforcement, splice staggering and full-building rebar federation are not yet generated.

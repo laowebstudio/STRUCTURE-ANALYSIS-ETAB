@@ -1,3 +1,9 @@
+# V1.42 — 3D RC Rebar Visualization Foundation
+- Added calculation-linked interactive 3D RC beam rebar viewer.
+- Main bars, layer arrangement, stirrups, cover envelope and 90° hooks are driven by current RC Beam Design results.
+- Added viewer launch buttons in Design Details and Construction Drawing.
+- Read-only visualization protects V1.41.6.2 design calculations and existing analysis engines.
+
 ## V1.41.5.1 — Drawing Readability + Automatic Lap Class Verification
 - Redesigned Final RC Beam Drawing for construction readability: larger elevation/sections, layer callouts, anchorage dimensions, compact bar/detail schedule, and simplified title block.
 - Added Bars Spliced (%) input and automatic Class A eligibility check. Requested Class A is automatically downgraded to Class B unless As(provided)/As(required) >= 2.0 and bars spliced <= 50%.
