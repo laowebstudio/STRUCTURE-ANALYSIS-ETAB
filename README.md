@@ -1,3 +1,9 @@
+# SAPUDOM Structure Analysis V1.44.1 — Demand-Linked Stirrup Zoning Fix
+
+V1.44.1 fixes the V1.44 Auto stirrup-zoning case where Support-i / Midspan / Support-j could all display the same spacing even after end shear increased. The local shear calculation is retained, and support zones that require meaningful stirrup contribution now receive a conservative support-detailing spacing cap, while midspan retains the normal local-demand spacing.
+
+The 3D Rebar Viewer now reports zone Vu values and the active support cap, making the zoning traceable during testing. Manual stirrup spacing is unchanged. The support densification cap is a conservative detailing-assist rule; full station-by-station shear envelopes and project-specific seismic detailing remain outside current code verification.
+
 # SAPUDOM Structure Analysis V1.44 — Beam Reinforcement Zoning
 
 V1.44 continues from V1.43.1 and adds calculation-linked beam reinforcement zoning. Automatic top reinforcement is now split into Support-i / Midspan / Support-j zones using negative end-moment envelope demand. Automatic stirrups are split into Support-i / Midspan / Support-j zones using end shear envelope demand, so stirrups can be denser near supports and wider in the middle when demand permits.

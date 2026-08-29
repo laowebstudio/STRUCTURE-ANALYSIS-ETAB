@@ -1,3 +1,10 @@
+## V1.44.1 — Demand-Linked Stirrup Zoning Fix
+- Fixed Auto stirrup zones staying visually uniform when d/2 controlled all zones.
+- Added demand-triggered conservative support-zone densification when Vu > phiVc.
+- Midspan retains local demand spacing.
+- Viewer now shows zone Vu and active support cap.
+- Manual mode unchanged.
+
 ## V1.44 — Beam Reinforcement Zoning
 - Added Support-i / Midspan / Support-j stirrup zones linked to shear envelope demand.
 - Added Support-i / Midspan / Support-j top reinforcement zones linked to negative end-moment envelope demand.

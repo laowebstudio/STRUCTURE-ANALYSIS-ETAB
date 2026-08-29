@@ -1,0 +1,15 @@
+SAPUDOM Structure Analysis V1.44.1 — Demand-Linked Stirrup Zoning Fix
+
+Fix target
+- V1.44 correctly split Support-i / Midspan / Support-j, but all three zones could still show the same spacing because the general d/2 maximum spacing controlled every zone.
+
+What changed
+- Auto stirrup zoning now keeps the local end-shear calculation for each support zone.
+- When local factored end shear exceeds phi*Vc, the support zone receives a conservative detailing-assist spacing cap of min(d/4, 150 mm), rounded down to the 25 mm spacing grid.
+- Midspan keeps the normal local demand/code spacing, allowing wider spacing when shear demand falls.
+- 3D viewer reports each zone's Vu and shows the support detailing cap when active.
+- Manual stirrup mode remains uniform and unchanged.
+
+Verification boundary
+- The support densification cap is a conservative detailing-assist rule, not a claim that d/4 is universally code-mandated.
+- Full station-by-station shear envelope and project-specific seismic detailing remain future verification work.
