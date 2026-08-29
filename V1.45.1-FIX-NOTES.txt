@@ -1,0 +1,14 @@
+SAPUDOM Structure Analysis V1.45.1
+Advanced Loads → RC Design Synchronization Fix
+
+BUG FIXED
+3D Moment/Shear diagrams responded to newly assigned Advanced Member Loads, but RC Beam Design / 3D Rebar Viewer could continue reading a cached pre-load-change V1.40 envelope. This left Support-i / Midspan / Support-j Vu and reinforcement zoning stale.
+
+FIX
+1. Advanced load assignment / clear invalidates derived envelope and RC result caches.
+2. Analyze 3D invalidates any older envelope after the new solve.
+3. RC Beam Design always rebuilds the governing load-combination envelope on open/recalculate.
+4. RC input settings and member overrides are preserved.
+
+TEST
+Use M28 with a Point Load near j, Analyze 3D, then open RC Beam Design and 3D Rebar Viewer. Vu and reinforcement zones must change when the solver/load-combination demand changes.

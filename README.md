@@ -1,29 +1,17 @@
-# SAPUDOM Structure Analysis V1.45 — Advanced Member Loads
+# SAPUDOM Structure Analysis V1.45.1 — Advanced Loads → RC Design Synchronization Fix
 
-V1.45 continues directly from V1.44.1 and adds advanced member loading inside the existing **3D Loads** panel. The 3D frame solver now accepts UDL, Point Load, Trapezoidal Load and Member Moment assignments, including single-member targeting for asymmetric load tests and practical structural analysis.
+V1.45.1 continues directly from V1.45. The Advanced Member Loads system remains inside **3D Loads** (UDL, Point Load, Trapezoidal Load, Member Moment), while this fix synchronizes those latest loads with RC Beam Design.
 
-Key additions: Point Load magnitude + x/L position; Trapezoidal w1/w2 + start/end x/L; Member Moment about Local 1/2/3 + x/L position; solver-consistent equivalent nodal loads; load audit support; and 3D load visualization. Existing V1.44.1 demand-linked stirrup zoning remains available for verification against asymmetric loads.
+## Synchronization fix
 
-# SAPUDOM Structure Analysis V1.44.1 — Demand-Linked Stirrup Zoning Fix
+- Every Advanced Member Load assignment or filtered clear invalidates the derived 3D envelope / RC design cache.
+- Every **Analyze 3D** marks the current 3D result as fresh and invalidates any older governing envelope.
+- **RC Beam Design no longer reuses a cached V1.40 envelope.** It regenerates the governing load-combination envelope on every design/recalculate pass.
+- Top support reinforcement zones and Support-i / Midspan / Support-j stirrup zones therefore read current end moments and shears after Point / Trapezoidal / Member Moment changes.
+- RC defaults and per-member overrides remain preserved while only stale derived results are cleared.
 
-V1.44.1 fixes the V1.44 Auto stirrup-zoning case where Support-i / Midspan / Support-j could all display the same spacing even after end shear increased. The local shear calculation is retained, and support zones that require meaningful stirrup contribution now receive a conservative support-detailing spacing cap, while midspan retains the normal local-demand spacing.
+## Regression target
 
-The 3D Rebar Viewer now reports zone Vu values and the active support cap, making the zoning traceable during testing. Manual stirrup spacing is unchanged. The support densification cap is a conservative detailing-assist rule; full station-by-station shear envelopes and project-specific seismic detailing remain outside current code verification.
+For M28, add or duplicate a Point Load near j (for example x/L = 0.90), run **Analyze 3D**, then reopen **RC Beam Design → 3D Rebar Viewer**. The displayed support `Vu`, top zones and stirrup zones must update from the latest solver/load-combination results rather than retaining the previous values.
 
-# SAPUDOM Structure Analysis V1.44 — Beam Reinforcement Zoning
-
-V1.44 continues from V1.43.1 and adds calculation-linked beam reinforcement zoning. Automatic top reinforcement is now split into Support-i / Midspan / Support-j zones using negative end-moment envelope demand. Automatic stirrups are split into Support-i / Midspan / Support-j zones using end shear envelope demand, so stirrups can be denser near supports and wider in the middle when demand permits.
-
-The V1.43.1 cage-fit / clear-spacing checks remain active. Bottom flexure, shear verification, development/anchorage/lap, 3D cage viewing, and End-i/End-j section cuts remain available. Support-zone cut-off lengths are still detailing-assist; full station-by-station moment/shear envelope, top anchorage/development, seismic detailing, torsion, serviceability, and splice staggering are not yet code-verified.
-
-# SAPUDOM Structure Analysis V1.43
-
-## Top Reinforcement + Full Beam Rebar Cage
-
-V1.43 extends the verified V1.42.2 beam 3D rebar viewer into a full beam reinforcement cage. The viewer now renders bottom longitudinal reinforcement, top longitudinal cage bars, stirrups and the selected bottom-bar anchorage solution together.
-
-Top reinforcement can be set to **Auto**, which provides two continuous construction bars for the current foundation phase, or **Manual**, which allows a user-specified top bar count and diameter. The same geometric bar-fit engine checks whether the top bars physically fit the beam section.
-
-The End-i and End-j true section cuts show both bottom and top layers. The 2D RC beam detailing drawing is also linked to the top cage input.
-
-Important: V1.43 does not yet claim code-verified top negative-moment design, top development/anchorage, curtailment, seismic joint detailing, torsion, or serviceability. The existing bottom flexural / shear / detailing / development logic remains protected.
+V1.44.1 demand-linked stirrup zoning and V1.43.1 cage-fit / clear-spacing logic are retained.
