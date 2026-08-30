@@ -1,0 +1,7 @@
+SAPUDOM Structure Analysis V1.46.1
+Whole Model Solve / Selected Member Display Fix
+
+Selected Member = display filter only.
+Analyze 3D = whole model only.
+All displayed member forces are recovered from the global displacement solution of the complete model.
+Selected member diagrams use the same whole-model scale as Whole Model view.

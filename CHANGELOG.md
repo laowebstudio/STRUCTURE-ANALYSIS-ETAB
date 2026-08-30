@@ -1,3 +1,11 @@
+# V1.46.1 — Whole Model Solve / Selected Member Display Fix
+
+- Locked 3D solver semantics to Whole Model analysis.
+- Converted Selected Member to a pure visualization filter.
+- Preserved Whole Model diagram scaling while a member is selected.
+- Added explicit Analysis Source / Display Filter information to result legend.
+- Updated viewer status text so member selection cannot be mistaken for member-only analysis.
+
 # Changelog
 
 ## V1.45.2 — Rebar Viewer Live Solver Results Fix
