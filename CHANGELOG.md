@@ -1,3 +1,15 @@
+# V1.46.1.2 — Practical RC Beam Detailing + Constructability Optimization
+
+- Continued directly from V1.46.1.1.
+- Added practical bar-size optimization to avoid awkward high-count layouts where a larger standard bar diameter provides a simpler cage.
+- Added continuous base bars plus development-extended extra reinforcement zones.
+- Added practical minimum extra-zone length and 50 mm cutoff rounding.
+- Merges overlapping/short extra zones to reduce unnecessary detailing complexity.
+- Updated 3D Rebar Viewer to display actual practical continuous/extra bar zoning.
+- Added Practical Detailing toggle to RC Beam Design Center.
+- Preserved Whole Model -> Station Envelope -> RC Beam Design workflow.
+- Updated browser cache version to `app.js?v=1.46.1.2`.
+
 # V1.46.1.1 — RC Beam Station-Based Auto Design + Economical Reinforcement Zoning
 
 - Added full-member station force recovery from the current Whole Model solution path.

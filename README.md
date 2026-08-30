@@ -1,46 +1,20 @@
-# SAPUDOM Structure Analysis V1.46.1.1
+# SAPUDOM Structure Analysis V1.46.1.2
 
-## RC Beam Station-Based Auto Design + Economical Reinforcement Zoning
+## Practical RC Beam Detailing + Constructability Optimization
 
-V1.46.1.1 is developed directly from V1.46.1 and preserves its Whole Model solve / Selected Member display-only behavior.
+V1.46.1.2 is developed from V1.46.1.1 and preserves the Whole Model solve and station-envelope RC beam design path.
 
-### New RC beam workflow
-- Whole Model Analysis → Load Cases / Combinations → station force recovery → station envelope → automatic RC beam design.
-- Configurable 21–101 stations per beam (default 41).
-- Station envelopes for P/N, V2, V3, T, M2 and M3 with governing analysis trace.
-- Bottom and top longitudinal reinforcement are zoned from positive/negative station moment demand.
-- Automatic stirrup spacing is zoned from the actual station shear envelope; the previous assumed midspan shear is not used for auto zoning.
-- Every station is checked against the reinforcement zone actually provided there.
-- Extra longitudinal reinforcement zones are extended by calculated development length.
-- Economical zoning compares zoned longitudinal steel against uniform maximum reinforcement and reports an indicative reduction.
+### Added in V1.46.1.2
+- Practical longitudinal bar-diameter optimization using common beam bar sizes (16, 20, 25, 28, 32 mm) with penalties for excessive bar count and multi-layer congestion.
+- Two continuous longitudinal base bars are maintained through the beam in Auto Practical mode.
+- Additional longitudinal bars are created only where station moment demand requires them.
+- Extra-bar zones are extended by development length and a practical minimum zone length, rounded to 50 mm detailing increments.
+- Adjacent/overlapping short extra zones are merged to avoid impractical reinforcement stair-steps.
+- 3D Rebar Viewer now distinguishes continuous bars from extra zoned bars instead of drawing the governing maximum cage continuously for the full beam.
+- Practical Detailing can be enabled/disabled in the RC Beam Design Center.
+- Existing station-by-station moment and shear verification remains active.
 
-### Protected V1.46.1 behavior
-- Analyze 3D always solves the complete structural model.
-- Selected Member remains a display filter only and never isolates/re-solves the member.
-- Whole Model diagram scaling semantics remain protected.
+### Design-use warning
+This software is a design-assist tool. Construction drawings still require project-specific engineering review for support geometry, seismic detailing, torsion, serviceability, splice locations, anchorage, local code requirements and final bar bending schedule.
 
-### Engineering scope
-Torsion reinforcement design, seismic special-frame detailing, serviceability/crack control, splice staggering and final construction BBS optimization are not completed in this version. Final construction design requires independent project-specific code verification.
-
-See `V1.46.1.1-NOTES.txt` for the detailed test checklist.
-
----
-
-# SAPUDOM Structure Analysis V1.46.1
-
-## Whole Model Solve / Selected Member Display Fix
-
-V1.46.1 preserves the V1.46 Whole Model Analysis → RC Design integration and fixes the 3D result viewing semantics.
-
-- **Analyze 3D always solves the complete structural model.** Global stiffness K and load vector F are assembled from every 3D node/member, including restraints, diaphragm constraints, member loads, and nodal loads.
-- **Selected Member is now display-only.** Clicking M32 does not isolate M32 and does not trigger a separate solve. It only hides the other result diagrams.
-- Selected-member diagrams retain the **Whole Model diagram scale**, so switching from Whole Model to M32 cannot visually re-normalize the force diagram and suggest an isolated-member analysis.
-- The result legend explicitly reports **Analysis Source: WHOLE MODEL SOLUTION** and **Display Filter: Selected Member Mxx**.
-- Member end forces and RC design demand remain the forces recovered for that member from the same Whole Model displacement solution.
-
-### Test
-1. Analyze the 3D model.
-2. Show Moment M2 with `Whole Model`.
-3. Click M32 / select `Selected Member (Display Only)`.
-4. Only M32 should remain visible, but its diagram shape/magnitude and scale relative to the Whole Model solution must be unchanged.
-5. Switch back to Whole Model; no re-analysis should occur and the result set must be identical.
+See `V1.46.1.2-NOTES.txt` for the test checklist.

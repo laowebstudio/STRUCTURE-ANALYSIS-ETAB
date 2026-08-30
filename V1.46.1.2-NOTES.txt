@@ -1,0 +1,19 @@
+SAPUDOM Structure Analysis V1.46.1.2
+Practical RC Beam Detailing + Constructability Optimization
+
+PRIMARY REGRESSION CASE: M28 from V1.46.1.1 screenshot.
+
+T1  Whole Model solve remains unchanged.
+T2  Station moment/shear envelope remains unchanged.
+T3  Auto Practical mode avoids an awkward 7-bar cage when a simpler verified standard-bar option is available.
+T4  Minimum two bottom bars remain continuous for the full span.
+T5  Minimum two top bars remain continuous for the full span.
+T6  Extra bottom bars occur only in required positive-moment regions and are development-extended.
+T7  Extra top bars occur only in required negative-moment/support regions and are development-extended.
+T8  No short reinforcement staircase: overlapping/nearby extra zones merge.
+T9  3D viewer shows continuous bars separately from extra zone bars.
+T10 Station-by-station shear checks remain PASS/FAIL linked to actual provided stirrup zone spacing.
+T11 Cage clear spacing / cover / multi-layer fit checks remain active.
+T12 Overall PASS is not granted unless flexure, top flexure, shear, detailing and development checks pass.
+
+IMPORTANT: Final construction use still requires engineer review of project-specific code, seismic, torsion, serviceability, splice and anchorage conditions.

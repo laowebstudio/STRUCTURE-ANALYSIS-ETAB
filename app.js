@@ -2697,6 +2697,7 @@ function storeCompatV14121(store){
   if(!(Number(store.defaults.stationCount)>=21)) store.defaults.stationCount=41;
   store.defaults.stationCount=Math.max(21,Math.min(101,Math.round(Number(store.defaults.stationCount)||41)));
   if(typeof store.defaults.economicalZoning!=='boolean') store.defaults.economicalZoning=true;
+  if(typeof store.defaults.practicalDetailing!=='boolean') store.defaults.practicalDetailing=true;
 }
 
 
@@ -2927,11 +2928,65 @@ function wholeModelDesignEnvelopeV146(){
 // Backward-compatible entry point used by older V1.45 UI code.
 function envelopeV1452Live(){ return wholeModelDesignEnvelopeV146(); }
 
+
+// ===== V1.46.1.2 — Practical RC Beam Detailing + Constructability Optimization =====
+function rcBeamPracticalBarChoiceV14612({mu,b,h,cover,minCover,stirrupDia,aggregateSize,fc,fy,preferredDia,phiTarget=.90}){
+  const demand=Math.max(0,Number(mu)||0);
+  const dias=[16,20,25,28,32].filter((v,i,a)=>a.indexOf(v)===i);
+  if(!dias.includes(Number(preferredDia))) dias.push(Number(preferredDia)||20);
+  const choices=[];
+  for(const dia0 of dias.sort((a,b)=>a-b)){
+    const dia=Math.max(10,Number(dia0)||20),area=Math.PI*dia*dia/4;
+    for(let n=2;n<=12;n++){
+      const arr=rcBeamRebarArrangementV1416({b,h,cover,minCover,stirrupDia,mainBarDia:dia,aggregateSize,nBars:n});
+      if(!arr.pass||!Number.isFinite(arr.dEff))continue;
+      const d=Math.max(50,arr.dEff),As=n*area,AsMin=Math.max(0.25*Math.sqrt(fc)/fy*b*d,1.4/fy*b*d);
+      const beta1=Math.max(0.65,Math.min(0.85,0.85-0.05*Math.max(0,fc-28)/7));
+      const a=As*fy/(0.85*fc*b),c=a/beta1,epsT=c>0?0.003*(d-c)/c:Infinity;
+      const phi=epsT>=0.005?0.90:(epsT<=0.002?0.65:0.65+(epsT-0.002)*(0.25/0.003));
+      const Mn=As*fy*(d-a/2)/1e6,phiMn=phi*Mn;
+      if(As+1e-9<AsMin||phiMn+1e-9<demand||epsT<0.005)continue;
+      const reqRatio=demand>1e-9?phiMn/demand:1;
+      const layers=Math.max(1,arr.layers||1);
+      const excessiveBars=Math.max(0,n-6);
+      const awkwardOdd=(n>=7&&n%2)?1:0;
+      const lowDistributionPenalty=demand>1e-9?(n===2?24:(n===3?4:0)):0;
+      const score=(reqRatio-1)*55 + n*1.6 + (layers-1)*18 + excessiveBars*12 + awkwardOdd*10 + lowDistributionPenalty + Math.abs(dia-(Number(preferredDia)||20))*.12;
+      choices.push({dia,nBars:n,arrangement:arr,d,As,AsMin,phiMn,epsT,score});
+    }
+  }
+  choices.sort((a,b)=>a.score-b.score || a.As-b.As || a.nBars-b.nBars);
+  return choices[0]||null;
+}
+
+function rcBeamPracticalFaceZonesV14612(items,key,Lmm,ld,mode='auto'){
+  if(!items?.length)return[];
+  if(mode==='manual'){const n=Math.max(2,Number(items[0][key])||2);return[{name:'Continuous',role:'CONTINUOUS',x0:0,x1:Lmm,[key]:n,extraBars:0,developmentExtension:0}]}
+  const baseline=2, zones=[{name:'Continuous',role:'CONTINUOUS',x0:0,x1:Lmm,[key]:baseline,extraBars:0,developmentExtension:0}];
+  let start=-1;
+  const runs=[];
+  const close=(end)=>{if(start<0)return;const seg=items.slice(start,end+1),n=Math.max(...seg.map(x=>Math.max(baseline,Number(x[key])||baseline)));runs.push({i0:start,i1:end,n});start=-1;};
+  for(let i=0;i<items.length;i++){const active=(Number(items[i][key])||baseline)>baseline;if(active&&start<0)start=i;if(!active&&start>=0)close(Math.max(start,i-1));}
+  if(start>=0)close(items.length-1);
+  const minLen=Math.max(600,Math.min(Lmm,Math.max(Number(ld)||0,0.12*Lmm)));
+  for(const r of runs){
+    let x0=Math.max(0,(Number(items[r.i0].x)||0)*1000-(Number(ld)||0));
+    let x1=Math.min(Lmm,(Number(items[r.i1].x)||0)*1000+(Number(ld)||0));
+    if(x1-x0<minLen){const c=(x0+x1)/2;x0=Math.max(0,c-minLen/2);x1=Math.min(Lmm,x0+minLen);x0=Math.max(0,x1-minLen)}
+    x0=Math.max(0,Math.floor(x0/50)*50);x1=Math.min(Lmm,Math.ceil(x1/50)*50);
+    zones.push({name:`Extra-${zones.length}`,role:'EXTRA',x0,x1,[key]:r.n,extraBars:Math.max(0,r.n-baseline),developmentExtension:Number(ld)||0});
+  }
+  // Merge overlapping extra zones so the bar schedule does not become a short, impractical staircase.
+  const base=zones[0],extras=zones.slice(1).sort((a,b)=>a.x0-b.x0),merged=[];
+  for(const z of extras){const last=merged[merged.length-1];if(last&&z.x0<=last.x1+100){last.x1=Math.max(last.x1,z.x1);last[key]=Math.max(last[key],z[key]);last.extraBars=Math.max(last.extraBars,z.extraBars)}else merged.push({...z});}
+  return [base,...merged];
+}
+
 function rcBeamDesignV141(){
   const m3=ensure3DLoadSystemV131();
   // V1.46 Whole Model integration: RC demand is regenerated from the current full 3D model.
   const env=wholeModelDesignEnvelopeV146();
-  m3.rcBeamDesignV141 ||= {defaults:{b:300,h:500,cover:40,minCover:40,aggregateSize:20,stirrupDia:10,stirrupSpacingMode:'auto',stirrupSpacing:250,mainBarMode:'auto',manualMainBars:5,mainBarDia:20,topBarMode:'auto',manualTopBars:2,topBarDia:20,topSupportZoneFraction:.25,fc:28,fy:420,phiFlexure:.90,phiShear:.75,devCastPosition:'other',devCoating:'uncoated',devLambda:1,devKtr:0,anchorI:600,anchorJ:600,spliceEnabled:false,spliceClass:'B',spliceProvided:0,spliceBarsPercent:100},memberOverrides:{}};
+  m3.rcBeamDesignV141 ||= {defaults:{b:300,h:500,cover:40,minCover:40,aggregateSize:20,stirrupDia:10,stirrupSpacingMode:'auto',stirrupSpacing:250,mainBarMode:'auto',manualMainBars:5,mainBarDia:20,topBarMode:'auto',manualTopBars:2,topBarDia:20,topSupportZoneFraction:.25,fc:28,fy:420,phiFlexure:.90,phiShear:.75,devCastPosition:'other',devCoating:'uncoated',devLambda:1,devKtr:0,anchorI:600,anchorJ:600,spliceEnabled:false,spliceClass:'B',spliceProvided:0,spliceBarsPercent:100,practicalDetailing:true},memberOverrides:{}};
   storeCompatV14121(m3.rcBeamDesignV141);
   const store=m3.rcBeamDesignV141;
   const getMember=id=>(m3.members||[]).find(x=>x.id===id);
@@ -2941,7 +2996,7 @@ function rcBeamDesignV141(){
   const designOne=e=>{
     const cfg={...store.defaults,...(store.memberOverrides[e.id]||{})};
     const b=Math.max(100,+cfg.b||300),h=Math.max(150,+cfg.h||500),cover=Math.max(20,+cfg.cover||40);
-    const stirrupDia=Math.max(6,+cfg.stirrupDia||10),mainBarDia=Math.max(10,+cfg.mainBarDia||20),topBarDia=Math.max(10,+cfg.topBarDia||mainBarDia);
+    const stirrupDia=Math.max(6,+cfg.stirrupDia||10); let mainBarDia=Math.max(10,+cfg.mainBarDia||20),topBarDia=Math.max(10,+cfg.topBarDia||mainBarDia);
     const stirrupSpacingMode=String(cfg.stirrupSpacingMode||'auto').toLowerCase()==='manual'?'manual':'auto';
     const manualStirrupSpacing=Math.max(25,+cfg.stirrupSpacing||250);
     const mainBarMode=String(cfg.mainBarMode||'auto').toLowerCase()==='manual'?'manual':'auto';
@@ -2956,7 +3011,7 @@ function rcBeamDesignV141(){
     const devKtr=Math.max(0,+cfg.devKtr||0),anchorI=Math.max(0,+cfg.anchorI||0),anchorJ=Math.max(0,+cfg.anchorJ||0);
     const spliceEnabled=!!cfg.spliceEnabled,spliceClass=String(cfg.spliceClass||'B').toUpperCase()==='A'?'A':'B',spliceProvided=Math.max(0,+cfg.spliceProvided||0),spliceBarsPercent=Math.min(100,Math.max(0,+cfg.spliceBarsPercent||0));
     const phiF=Math.min(.95,Math.max(.5,+cfg.phiFlexure||.90)),phiV=Math.min(.95,Math.max(.5,+cfg.phiShear||.75));
-    const dNominal=Math.max(50,h-cover-stirrupDia-mainBarDia/2);
+    let dNominal=Math.max(50,h-cover-stirrupDia-mainBarDia/2);
 
     const ms=[
       {axis:'M2',end:'i',...absGov(e.v[4])},{axis:'M3',end:'i',...absGov(e.v[5])},
@@ -2991,9 +3046,20 @@ function rcBeamDesignV141(){
     const memberObj=getMember(e.id), nI=(m3.nodes||[]).find(n=>n.id===memberObj?.i), nJ=(m3.nodes||[]).find(n=>n.id===memberObj?.j);
     const Lmm=(nI&&nJ)?Math.max(500,Math.hypot((+nJ.x||0)-(+nI.x||0),(+nJ.y||0)-(+nI.y||0),(+nJ.z||0)-(+nI.z||0))*1000):5000;
 
-    const d0=dNominal;
     const MuBottom=stationDemand.length?Math.max(0,...stationDemand.map(x=>x.Mpos)):Mu;
     const MuTop=stationDemand.length?Math.max(0,...stationDemand.map(x=>x.Mneg)):Math.max(MnegI,MnegJ);
+    const practicalDetailing=cfg.practicalDetailing!==false;
+    let practicalBottomChoice=null,practicalTopChoice=null;
+    if(practicalDetailing&&mainBarMode!=='manual'){
+      practicalBottomChoice=rcBeamPracticalBarChoiceV14612({mu:MuBottom,b,h,cover,minCover,stirrupDia,aggregateSize,fc,fy,preferredDia:mainBarDia,phiTarget:phiF});
+      if(practicalBottomChoice)mainBarDia=practicalBottomChoice.dia;
+    }
+    if(practicalDetailing&&topBarMode!=='manual'){
+      practicalTopChoice=rcBeamPracticalBarChoiceV14612({mu:MuTop,b,h,cover,minCover,stirrupDia,aggregateSize,fc,fy,preferredDia:topBarDia,phiTarget:phiF});
+      if(practicalTopChoice)topBarDia=practicalTopChoice.dia;
+    }
+    dNominal=Math.max(50,h-cover-stirrupDia-mainBarDia/2);
+    const d0=dNominal;
     const A=phiF*fy*fy/(2*.85*fc*b),B=-phiF*fy*d0,C=MuBottom*1e6,disc=B*B-4*A*C;
     let AsReq=0,flexureStatus='OK';
     if(MuBottom>1e-9){
@@ -3013,7 +3079,7 @@ function rcBeamDesignV141(){
     const AsMin=Math.max(AsMin1,AsMin2);
     const AsDesign=Number.isFinite(AsReq)?Math.max(AsReq,AsMin):NaN;
     const barArea=Math.PI*mainBarDia*mainBarDia/4;
-    let nBars=mainBarMode==='manual'?manualMainBars:(Number.isFinite(AsDesign)?Math.max(2,Math.ceil(AsDesign/barArea)):null);
+    let nBars=mainBarMode==='manual'?manualMainBars:(practicalBottomChoice?.nBars||(Number.isFinite(AsDesign)?Math.max(2,Math.ceil(AsDesign/barArea)):null));
     let arrangement=rcBeamRebarArrangementV1416({b,h,cover,minCover,stirrupDia,mainBarDia,aggregateSize,nBars});
     let d=Number.isFinite(arrangement.dEff)?Math.max(50,arrangement.dEff):d0;
     // If the centroid shift from multi-layer steel reduces capacity, add bars until strength demand is recovered.
@@ -3041,7 +3107,9 @@ function rcBeamDesignV141(){
       const AA=phiF*fy*fy/(2*.85*fc*b),BB=-phiF*fy*dd,CC=mu*1e6,DD=BB*BB-4*AA*CC;
       if(DD<0)return Math.max(2,Math.ceil(asMin/area));
       const roots=[(-BB-Math.sqrt(DD))/(2*AA),(-BB+Math.sqrt(DD))/(2*AA)].filter(x=>x>0),asR=roots.length?Math.min(...roots):0;
-      return Math.max(2,Math.ceil(Math.max(asR,asMin)/area));
+      let nn=Math.max(2,Math.ceil(Math.max(asR,asMin)/area));
+      if(practicalDetailing&&nn>=7&&nn%2)nn++;
+      return nn;
     };
     const groupStationZones=(items,key,labelPrefix)=>{
       if(!items.length)return[];const zones=[];let cur=Number(items[0][key]),i0=0;
@@ -3064,7 +3132,7 @@ function rcBeamDesignV141(){
     const topNI=stationRebar.length?stationRebar[0].topBars:flexBarsForMoment(MnegI,topBarDia,topBarMode,manualTopBars);
     const topNJ=stationRebar.length?stationRebar[stationRebar.length-1].topBars:flexBarsForMoment(MnegJ,topBarDia,topBarMode,manualTopBars);
     const topNMid=stationRebar.length?stationRebar[Math.floor(stationRebar.length/2)].topBars:(topBarMode==='manual'?manualTopBars:2);
-    const topNBars=Math.max(2,topNI,topNJ,topNMid,...(stationRebar.map(x=>x.topBars)));
+    const topNBars=Math.max(2,practicalTopChoice?.nBars||0,topNI,topNJ,topNMid,...(stationRebar.map(x=>x.topBars)));
     const topArrangementI=rcBeamRebarArrangementV1416({b,h,cover,minCover,stirrupDia,mainBarDia:topBarDia,aggregateSize,nBars:topNI});
     const topArrangementJ=rcBeamRebarArrangementV1416({b,h,cover,minCover,stirrupDia,mainBarDia:topBarDia,aggregateSize,nBars:topNJ});
     const topArrangementMid=rcBeamRebarArrangementV1416({b,h,cover,minCover,stirrupDia,mainBarDia:topBarDia,aggregateSize,nBars:topNMid});
@@ -3196,17 +3264,19 @@ function rcBeamDesignV141(){
       {actualClear,barFitPass},nBars);
     const developmentPass=development.pass;
     const ldZone=Math.max(0,Number(development?.ld)||0),extendZones=(zs,key)=>zs.map(z=>({...z,requiredX0:z.x0,requiredX1:z.x1,x0:Number(z[key])>2?Math.max(0,z.x0-ldZone):z.x0,x1:Number(z[key])>2?Math.min(Lmm,z.x1+ldZone):z.x1,developmentExtension:Number(z[key])>2?ldZone:0}));
-    const bottomDetailZones=extendZones(bottomZones,'bottomBars'),topDetailZones=extendZones(topZones,'topBars');
-    const zonedBarMm=[...bottomZones.map(z=>(z.x1-z.x0)*Number(z.bottomBars||0)),...topZones.map(z=>(z.x1-z.x0)*Number(z.topBars||0))].reduce((a,b)=>a+b,0);
+    const bottomDetailZones=practicalDetailing?rcBeamPracticalFaceZonesV14612(stationRebar,'bottomBars',Lmm,ldZone,mainBarMode):extendZones(bottomZones,'bottomBars');
+    const topDetailZones=practicalDetailing?rcBeamPracticalFaceZonesV14612(stationRebar,'topBars',Lmm,ldZone,topBarMode):extendZones(topZones,'topBars');
+    const zoneQty=(zs,key)=>zs.reduce((sum,z)=>sum+(z.role==='EXTRA'?(z.x1-z.x0)*Math.max(0,Number(z.extraBars)||0):(z.x1-z.x0)*Number(z[key]||0)),0);
+    const zonedBarMm=zoneQty(bottomDetailZones,'bottomBars')+zoneQty(topDetailZones,'topBars');
     const uniformBarMm=Lmm*(Number(nBars||0)+Number(topNBars||0)),savingPct=uniformBarMm>1e-9?Math.max(0,Math.min(100,(1-zonedBarMm/uniformBarMm)*100)):0;
-    const economy={enabled:economicalZoning,uniformBarMm,zonedBarMm,estimatedLongitudinalSavingPct:savingPct,note:'Comparison uses required station zones before development extension; final BBS quantity must include anchorage, laps and constructability.'};
+    const economy={enabled:economicalZoning,practicalDetailing,uniformBarMm,zonedBarMm,estimatedLongitudinalSavingPct:savingPct,note:'V1.46.1.2 quantity uses continuous base bars plus development-extended extra bars; final BBS still requires project-specific splice and anchorage review.'};
     const governingStationM=stationDemand.reduce((a,x)=>!a||x.Mu>a.Mu?x:a,null),governingStationV=stationDemand.reduce((a,x)=>!a||x.Vu>a.Vu?x:a,null);
     const overallBeamPass=flexureCodePass&&topFlexurePass&&shearStatus==='PASS'&&detailingPass&&developmentPass;
     const overallBeamStatus=overallBeamPass?'PASS':'REVIEW / NOT VERIFIED';
 
     return {
       id:e.id,i:e.i,j:e.j,
-      cfg:{b,h,cover,stirrupDia,stirrupSpacingMode,stirrupSpacing:manualStirrupSpacing,mainBarMode,manualMainBars,topBarMode,manualTopBars,aggregateSize,minCover,mainBarDia,topBarDia,fc,fy,phiF,phiV,d,dNominal,devCastPosition,devCoating,devLambda,devKtr,anchorI,anchorJ,spliceEnabled,spliceClass,spliceProvided,spliceBarsPercent,stationCount:Number(cfg.stationCount)||41,economicalZoning},
+      cfg:{b,h,cover,stirrupDia,stirrupSpacingMode,stirrupSpacing:manualStirrupSpacing,mainBarMode,manualMainBars,topBarMode,manualTopBars,aggregateSize,minCover,mainBarDia,topBarDia,fc,fy,phiF,phiV,d,dNominal,devCastPosition,devCoating,devLambda,devKtr,anchorI,anchorJ,spliceEnabled,spliceClass,spliceProvided,spliceBarsPercent,stationCount:Number(cfg.stationCount)||41,economicalZoning,practicalDetailing},
       govM,govV,governingStationM,governingStationV,Pu,Tu,Mu,Vu,AsReq,AsDesign,nBars,AsProv,phiVc,sReq,flexureStatus,
       shear:{
         Av:Av2, VsProv:VsProvN/1000, Vn:VnN/1000, phiVn,
@@ -3222,7 +3292,8 @@ function rcBeamDesignV141(){
       detailing:{...arrangement,clearMin,insideStirrupWidth,barsPerLayer,layers,actualClear,barFitPass,clearSpacingPass,coverPass,singleLayerPass,cageVerticalClear,cageClearMin,cageSeparationPass,cageFitPass,status:detailingStatus,pass:detailingPass},
       topRebar:{nBars:topNBars,dia:topBarDia,AsProv:topAsProv,mode:topBarMode,arrangement:topArrangement,pass:topArrangement.pass,status:topArrangement.pass?'PASS':topArrangement.status,
         zones:{i:{nBars:topNI,Mu:MnegI,length:topZoneLenI,arrangement:topArrangementI},mid:{nBars:topNMid,length:Math.max(0,Lmm-topZoneLenI-topZoneLenJ),arrangement:topArrangementMid},j:{nBars:topNJ,Mu:MnegJ,length:topZoneLenJ,arrangement:topArrangementJ}},stationZones:topDetailZones},
-      stationDesign:{count:stationDemand.length,demands:stationDemand,rebar:stationRebar,bottomZones:bottomDetailZones,topZones:topDetailZones,source:'WHOLE MODEL STATION ENVELOPE'},
+      stationDesign:{count:stationDemand.length,demands:stationDemand,rebar:stationRebar,bottomZones:bottomDetailZones,topZones:topDetailZones,source:'WHOLE MODEL STATION ENVELOPE',detailingMode:practicalDetailing?'PRACTICAL CONSTRUCTABLE':'RAW ECONOMICAL'},
+      practical:{enabled:practicalDetailing,bottomChoice:practicalBottomChoice,topChoice:practicalTopChoice,rule:'continuous base bars + development-extended extra zones + practical diameter optimization'},
       economy,stirrupZones,Lmm,development,
       overall:{status:overallBeamStatus,pass:overallBeamPass}
     };
@@ -3349,7 +3420,7 @@ function rcBeamRebar3DViewerV142(d){
 
   const modal=document.createElement('div');
   modal.style.cssText='position:fixed;inset:0;z-index:100006;background:rgba(2,6,23,.94);display:flex;flex-direction:column;padding:10px;gap:8px';
-  modal.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;color:#fff;gap:12px;flex-wrap:wrap"><div><b style="font-size:20px">3D RC Rebar Viewer — M${d.id}</b><div style="font-size:12px;opacity:.78">V1.46.1.1 • Whole Model → Station Envelope → Auto RC Design</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><button id="v142fit">Fit</button><button id="v142iso">Isometric</button><button id="v142side">Side</button><button id="v142top">Top</button><button id="v142endi">End-i</button><button id="v142endj">End-j</button><label style="font-size:12px"><input id="v142conc" type="checkbox" checked> Concrete</label><label style="font-size:12px"><input id="v142st" type="checkbox" checked> Stirrups</label><label style="font-size:12px"><input id="v142bars" type="checkbox" checked> Bottom bars</label><label style="font-size:12px"><input id="v143topbars" type="checkbox" checked> Top bars</label><button id="v142close">Close</button></div></div><div style="position:relative;flex:1;min-height:360px;background:#e8eef5;border-radius:8px;overflow:hidden"><canvas id="v142canvas" style="width:100%;height:100%;display:block;touch-action:none"></canvas><div id="v142info" style="position:absolute;left:12px;top:12px;background:rgba(255,255,255,.94);padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px #0002;font:12px Arial;line-height:1.55;color:#0f172a;max-width:360px"></div><div style="position:absolute;right:12px;bottom:10px;background:rgba(15,23,42,.86);color:white;padding:7px 10px;border-radius:7px;font:11px Arial">Drag: Rotate • Wheel: Zoom • V1.46.1.1 station-based RC zoning viewer</div></div>`;
+  modal.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;color:#fff;gap:12px;flex-wrap:wrap"><div><b style="font-size:20px">3D RC Rebar Viewer — M${d.id}</b><div style="font-size:12px;opacity:.78">V1.46.1.2 • Whole Model → Station Envelope → Practical RC Detailing</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><button id="v142fit">Fit</button><button id="v142iso">Isometric</button><button id="v142side">Side</button><button id="v142top">Top</button><button id="v142endi">End-i</button><button id="v142endj">End-j</button><label style="font-size:12px"><input id="v142conc" type="checkbox" checked> Concrete</label><label style="font-size:12px"><input id="v142st" type="checkbox" checked> Stirrups</label><label style="font-size:12px"><input id="v142bars" type="checkbox" checked> Bottom bars</label><label style="font-size:12px"><input id="v143topbars" type="checkbox" checked> Top bars</label><button id="v142close">Close</button></div></div><div style="position:relative;flex:1;min-height:360px;background:#e8eef5;border-radius:8px;overflow:hidden"><canvas id="v142canvas" style="width:100%;height:100%;display:block;touch-action:none"></canvas><div id="v142info" style="position:absolute;left:12px;top:12px;background:rgba(255,255,255,.94);padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px #0002;font:12px Arial;line-height:1.55;color:#0f172a;max-width:360px"></div><div style="position:absolute;right:12px;bottom:10px;background:rgba(15,23,42,.86);color:white;padding:7px 10px;border-radius:7px;font:11px Arial">Drag: Rotate • Wheel: Zoom • V1.46.1.2 practical constructability viewer</div></div>`;
   document.body.appendChild(modal);
   const canvas=modal.querySelector('#v142canvas'),ctx=canvas.getContext('2d');let dpr=1;
   const view={yaw:-32,pitch:24,scale:.13,ox:0,oy:0,sectionCut:null}, flags={concrete:true,stirrups:true,bars:true,topBars:true};
@@ -3373,6 +3444,15 @@ function rcBeamRebar3DViewerV142(d){
     ctx.save();ctx.fillStyle=fill;ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.beginPath();points.forEach((p,i)=>{const q=proj(p);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])});ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
   }
   function barYPositions(n,width=insideW,dia=db){if(n<=1)return[0];const avail=Math.max(0,width-dia);return Array.from({length:n},(_,i)=>-avail/2+i*avail/(n-1))}
+  function arrangementCoords(arr,dia,fromTop=false){
+    const cs=(arr?.counts||[]).map(x=>Math.max(0,Math.floor(Number(x)||0))).filter(Boolean),ct=(arr?.centers||[]).map(Number),iw=Math.max(dia,Number(arr?.insideWidth)||b-2*(cover+sd));
+    const out=[];cs.forEach((n,li)=>{const c=Number.isFinite(ct[li])?ct[li]:(cover+sd+dia/2+li*(dia+Math.max(25,dia)));const z=fromTop?h-c:c;barYPositions(n,iw,dia).forEach(y=>out.push({y,z,layer:li}))});return out;
+  }
+  function practicalCoordSplit(arr,dia,fromTop=false){
+    const all=arrangementCoords(arr,dia,fromTop);if(all.length<=2)return{base:all,extra:[]};
+    const first=all.filter(q=>q.layer===0);let base=[];if(first.length>=2)base=[first[0],first[first.length-1]];else base=all.slice(0,2);
+    const extra=all.filter(q=>!base.includes(q));return{base,extra};
+  }
   function drawSectionCut(end){
     const r=canvas.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);ctx.fillStyle='#eef3f8';ctx.fillRect(0,0,r.width,r.height);
     const margin=90, aw=Math.max(1,r.width-2*margin), ah=Math.max(1,r.height-2*margin);
@@ -3402,17 +3482,31 @@ function rcBeamRebar3DViewerV142(d){
       faces.forEach(x=>face(x.ps,'rgba(148,163,184,.10)','rgba(71,85,105,.35)'));
     }
     if(flags.stirrups){ctx.strokeStyle='#16a34a';const y0=-b/2+cover+sd/2,y1=b/2-cover-sd/2,z0=cover+sd/2,z1=h-cover-sd/2;const zones=d.stirrupZones?.length?d.stirrupZones:[{x0:0,x1:L,spacing:ss}];zones.forEach(z=>{const a=Math.max(0,Math.min(L,z.x0)),bb=Math.max(a,Math.min(L,z.x1)),sp=Math.max(50,Number(z.spacing)||ss);for(let x=a;x<=bb+1;x+=sp){line([[x,y0,z0],[x,y1,z0],[x,y1,z1],[x,y0,z1],[x,y0,z0]],Math.max(1.2,sd*view.scale*.65),.82)}})}
-    if(flags.bars){ctx.strokeStyle='#dc2626';ctx.lineCap='round';counts.forEach((n,li)=>{const z=Number.isFinite(centers[li])?centers[li]:(cover+sd+db/2+li*(db+Math.max(25,db)));barYPositions(n).forEach(y=>{const pts=[];if(hookI)pts.push([0,y,Math.min(h-cover-sd-db/2,z+hookTail)]);pts.push([0,y,z],[L,y,z]);if(hookJ)pts.push([L,y,Math.min(h-cover-sd-db/2,z+hookTail)]);line(pts,Math.max(2.2,db*view.scale*.8),.96)})})}
+    if(flags.bars){ctx.strokeStyle='#dc2626';ctx.lineCap='round';
+      const pz=d.stationDesign?.bottomZones||[];
+      if(d.practical?.enabled&&pz.length){
+        const split=practicalCoordSplit(d.detailing,db,false);
+        split.base.forEach(q=>{const pts=[];if(hookI)pts.push([0,q.y,Math.min(h-cover-sd-db/2,q.z+hookTail)]);pts.push([0,q.y,q.z],[L,q.y,q.z]);if(hookJ)pts.push([L,q.y,Math.min(h-cover-sd-db/2,q.z+hookTail)]);line(pts,Math.max(2.2,db*view.scale*.8),.96)});
+        pz.filter(z=>z.role==='EXTRA'&&z.extraBars>0).forEach(z=>{split.extra.slice(0,Math.min(split.extra.length,Number(z.extraBars)||0)).forEach(q=>{const a=Math.max(0,Number(z.x0)||0),bb=Math.min(L,Number(z.x1)||L),pts=[];if(a<=1&&hookI)pts.push([0,q.y,Math.min(h-cover-sd-db/2,q.z+hookTail)]);pts.push([a,q.y,q.z],[bb,q.y,q.z]);if(bb>=L-1&&hookJ)pts.push([L,q.y,Math.min(h-cover-sd-db/2,q.z+hookTail)]);line(pts,Math.max(2.2,db*view.scale*.8),.96)})});
+      }else counts.forEach((n,li)=>{const z=Number.isFinite(centers[li])?centers[li]:(cover+sd+db/2+li*(db+Math.max(25,db)));barYPositions(n).forEach(y=>{const pts=[];if(hookI)pts.push([0,y,Math.min(h-cover-sd-db/2,z+hookTail)]);pts.push([0,y,z],[L,y,z]);if(hookJ)pts.push([L,y,Math.min(h-cover-sd-db/2,z+hookTail)]);line(pts,Math.max(2.2,db*view.scale*.8),.96)})});
+    }
     if(flags.topBars){ctx.strokeStyle='#2563eb';ctx.lineCap='round';
-      const drawTopZone=(zone,x0,x1)=>{const arr=zone?.arrangement||d.topRebar?.arrangement,cs=arr?.counts||[],ct=arr?.centers||[];cs.forEach((n,li)=>{const c=Number.isFinite(ct[li])?ct[li]:(cover+sd+tdb/2+li*(tdb+Math.max(25,tdb)));const z=h-c;barYPositions(n,topInsideW,tdb).forEach(y=>line([[x0,y,z],[x1,y,z]],Math.max(2.2,tdb*view.scale*.8),.96))})};
-      const zi=Math.min(L/2,Number(d.topRebar?.zones?.i?.length)||0),zj=Math.min(L/2,Number(d.topRebar?.zones?.j?.length)||0);
-      drawTopZone(d.topRebar?.zones?.i,0,zi); drawTopZone(d.topRebar?.zones?.mid,zi,Math.max(zi,L-zj)); drawTopZone(d.topRebar?.zones?.j,Math.max(zi,L-zj),L);
+      const pz=d.stationDesign?.topZones||[];
+      if(d.practical?.enabled&&pz.length){
+        const split=practicalCoordSplit(d.topRebar?.arrangement,tdb,true);
+        split.base.forEach(q=>line([[0,q.y,q.z],[L,q.y,q.z]],Math.max(2.2,tdb*view.scale*.8),.96));
+        pz.filter(z=>z.role==='EXTRA'&&z.extraBars>0).forEach(z=>{split.extra.slice(0,Math.min(split.extra.length,Number(z.extraBars)||0)).forEach(q=>line([[Math.max(0,Number(z.x0)||0),q.y,q.z],[Math.min(L,Number(z.x1)||L),q.y,q.z]],Math.max(2.2,tdb*view.scale*.8),.96))});
+      }else{
+        const drawTopZone=(zone,x0,x1)=>{const arr=zone?.arrangement||d.topRebar?.arrangement,cs=arr?.counts||[],ct=arr?.centers||[];cs.forEach((n,li)=>{const c=Number.isFinite(ct[li])?ct[li]:(cover+sd+tdb/2+li*(tdb+Math.max(25,tdb)));const z=h-c;barYPositions(n,topInsideW,tdb).forEach(y=>line([[x0,y,z],[x1,y,z]],Math.max(2.2,tdb*view.scale*.8),.96))})};
+        const zi=Math.min(L/2,Number(d.topRebar?.zones?.i?.length)||0),zj=Math.min(L/2,Number(d.topRebar?.zones?.j?.length)||0);
+        drawTopZone(d.topRebar?.zones?.i,0,zi); drawTopZone(d.topRebar?.zones?.mid,zi,Math.max(zi,L-zj)); drawTopZone(d.topRebar?.zones?.j,Math.max(zi,L-zj),L);
+      }
     }
     // end labels / axes
     ctx.fillStyle='#0f172a';ctx.font='700 12px Arial';const qi=proj([0,0,h+100]),qj=proj([L,0,h+100]);ctx.fillText('i',qi[0]-4,qi[1]);ctx.fillText('j',qj[0]-4,qj[1]);
   }
   function resize(){const r=canvas.getBoundingClientRect();dpr=Math.max(1,window.devicePixelRatio||1);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);fit()}
-  modal.querySelector('#v142info').innerHTML=`<b>M${d.id} • ${b}×${h} mm • L=${L} mm</b><br>Bottom: <b>${d.nBars||0}Ø${db}</b> • ${counts.map((n,i)=>`L${i+1}: ${n}Ø${db}`).join(' • ')||'No valid arrangement'}<br>Top zones: <b>i ${d.topRebar?.zones?.i?.nBars||0}Ø${tdb}</b> • mid <b>${d.topRebar?.zones?.mid?.nBars||0}Ø${tdb}</b> • j <b>${d.topRebar?.zones?.j?.nBars||0}Ø${tdb}</b> • ${String(d.topRebar?.mode||'auto').toUpperCase()}<br>Stirrup zones: ${(d.stirrupZones||[]).map(z=>`${z.name} Ø${sd}@${Math.round(z.spacing)} • Vu ${Number(z.Vu||0).toFixed(1)} kN${Number.isFinite(z.supportCap)?` • cap ${Math.round(z.supportCap)} mm`:''} (${Math.round(z.x0)}-${Math.round(z.x1)} mm)`).join(' • ')||`Ø${sd}@${ss}`} • Cover ${cover} mm<br>Bottom anchorage i: <b>${d.development?.anchorIMethod||'—'}</b> • j: <b>${d.development?.anchorJMethod||'—'}</b><br>Cage fit: <b>${d.detailing?.status||'—'}</b> • Overall: <b>${d.overall?.status||'—'}</b><br>Top↔Bottom clear: <b>${Number.isFinite(d.detailing?.cageVerticalClear)?d.detailing.cageVerticalClear.toFixed(1)+' mm':'—'}</b> • Required ≥ ${Number.isFinite(d.detailing?.cageClearMin)?d.detailing.cageClearMin.toFixed(1):'—'} mm<br><span style="color:#92400e">V1.46 RC demand is rebuilt from the current WHOLE MODEL 3D solver, load cases and governing combinations whenever the Rebar Viewer opens. Support top bars remain calculation-linked to negative end-moment envelopes; zone cut-off lengths remain detailing-assist.</span>`;
+  modal.querySelector('#v142info').innerHTML=`<b>M${d.id} • ${b}×${h} mm • L=${L} mm</b><br><b>V1.46.1.2 Practical Detailing</b> • ${d.practical?.enabled?'ON':'OFF'}<br>Bottom governing cage: <b>${d.nBars||0}Ø${db}</b> • ${counts.map((n,i)=>`L${i+1}: ${n}Ø${db}`).join(' • ')||'No valid arrangement'}<br>Bottom schedule: ${(d.stationDesign?.bottomZones||[]).map(z=>z.role==='EXTRA'?`+${z.extraBars}Ø${db} extra ${Math.round(z.x0)}–${Math.round(z.x1)} mm`:`${z.bottomBars}Ø${db} continuous`).join(' • ')||'—'}<br>Top schedule: ${(d.stationDesign?.topZones||[]).map(z=>z.role==='EXTRA'?`+${z.extraBars}Ø${tdb} extra ${Math.round(z.x0)}–${Math.round(z.x1)} mm`:`${z.topBars}Ø${tdb} continuous`).join(' • ')||'—'}<br>Stirrup zones: ${(d.stirrupZones||[]).map(z=>`${z.name} Ø${sd}@${Math.round(z.spacing)} (${Math.round(z.x0)}-${Math.round(z.x1)} mm)`).join(' • ')||`Ø${sd}@${ss}`} • Cover ${cover} mm<br>Bottom anchorage i: <b>${d.development?.anchorIMethod||'—'}</b> • j: <b>${d.development?.anchorJMethod||'—'}</b><br>Cage fit: <b>${d.detailing?.status||'—'}</b> • Overall: <b>${d.overall?.status||'—'}</b><br>Top↔Bottom clear: <b>${Number.isFinite(d.detailing?.cageVerticalClear)?d.detailing.cageVerticalClear.toFixed(1)+' mm':'—'}</b> • Required ≥ ${Number.isFinite(d.detailing?.cageClearMin)?d.detailing.cageClearMin.toFixed(1):'—'} mm<br><span style="color:#92400e">Continuous base bars are kept through the span. Extra bars follow the station envelope and are extended beyond theoretical cut-off by the development/detailing length. Final project drawings still require engineer review for seismic, splice, support geometry and local code conditions.</span>`;
   modal.querySelector('#v142close').onclick=()=>modal.remove();
   modal.querySelector('#v142fit').onclick=fit;
   function preset(yaw,pitch){view.sectionCut=null;view.yaw=yaw;view.pitch=pitch;fit()}
@@ -3477,9 +3571,9 @@ function rcBeamDesignCenterV141(){
   w.innerHTML=`<div style="width:min(1120px,96vw);max-height:93vh;background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 70px #0005">
     <header style="padding:18px 20px;background:#173b68;color:#fff;display:flex;justify-content:space-between"><div>
       <div style="font-size:22px;font-weight:900">RC Beam Design — Station-Based Governing Envelope</div>
-      <div style="font-size:13px;opacity:.84">V1.46.1.1 • Station-Based RC Zoning</div></div>
+      <div style="font-size:13px;opacity:.84">V1.46.1.2 • Practical RC Beam Detailing</div></div>
       <button id="v141x" style="width:40px;height:40px;color:#fff;background:#ffffff22;border:1px solid #ffffff55;border-radius:10px">×</button></header>
-    <div style="padding:10px 14px;background:#ecfdf5;color:#166534;font-size:12px"><b>V1.46.1.1 Station-Based Auto Design:</b> RC Beam Design rebuilds the current WHOLE MODEL analysis, recovers P/N, V2, V3, T, M2 and M3 at stations along every beam for all active load cases/combinations, forms station envelopes, then sizes bottom/top bars and stirrup zones from those envelopes. Economical zoning keeps continuous bars and adds extra reinforcement only where demand requires it; cut-off zones are extended by the calculated development length. Torsion, seismic special-frame detailing, serviceability/crack control and final construction BBS still require separate verification.</div>
+    <div style="padding:10px 14px;background:#ecfdf5;color:#166534;font-size:12px"><b>V1.46.1.2 Practical Auto Detailing:</b> RC Beam Design rebuilds the current WHOLE MODEL station envelopes, selects practical longitudinal bar sizes, keeps continuous base bars through the span, and adds development-extended extra bars only where moment demand requires them. Short/overlapping extra zones are merged to avoid impractical reinforcement stair-steps. Station-based shear design remains active. Torsion, seismic special-frame detailing, serviceability/crack control and final construction BBS still require separate verification.</div>
     <div style="padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:12px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
         <fieldset style="display:flex;gap:8px;align-items:end;border:1px solid #cbd5e1;border-radius:10px;padding:7px 9px">
@@ -3531,6 +3625,7 @@ function rcBeamDesignCenterV141(){
           <legend style="padding:0 5px;color:#166534;font-weight:800">V1.46.1.1 Auto Zoning</legend>
           <label>Stations<br><input id="v14611stations" type="number" min="21" max="101" step="10" value="${store.defaults.stationCount||41}" style="width:64px"></label>
           <label style="display:flex;gap:5px;align-items:center;height:34px"><input id="v14611economy" type="checkbox" ${store.defaults.economicalZoning!==false?'checked':''}> Economical zones</label>
+          <label style="display:flex;gap:5px;align-items:center;height:34px"><input id="v14612practical" type="checkbox" ${store.defaults.practicalDetailing!==false?'checked':''}> Practical detailing</label>
         </fieldset>
         <button id="v141Apply" class="primary" style="height:36px;white-space:nowrap">Apply & Recalculate</button>
       </div>
@@ -3604,10 +3699,10 @@ function rcBeamDesignCenterV141(){
           Vu/φVn = ${d.shear.DCR.toFixed(3)}<br>
           Use Ø${d.cfg.stirrupDia} @ ${d.sReq} mm (${d.cfg.stirrupSpacingMode==='manual'?'Manual':'Auto'})
         </div>
-        <div style="padding:10px;border:1px solid #86efac;border-radius:10px;background:#f0fdf4;grid-column:1/-1"><b>V1.46.1.1 Station-Based Reinforcement Zones</b><br>
+        <div style="padding:10px;border:1px solid #86efac;border-radius:10px;background:#f0fdf4;grid-column:1/-1"><b>V1.46.1.2 Practical Reinforcement Zones</b><br>
           Stations = <b>${d.stationDesign?.count||0}</b> • Economy mode = <b>${d.economy?.enabled?'ON':'OFF'}</b> • Estimated longitudinal reduction vs uniform-max = <b>${Number(d.economy?.estimatedLongitudinalSavingPct||0).toFixed(1)}%</b><br>
-          Bottom: ${(d.stationDesign?.bottomZones||[]).map(z=>`${z.bottomBars}Ø${d.cfg.mainBarDia} @ ${Math.round(z.x0)}–${Math.round(z.x1)} mm${z.developmentExtension?` (ld +${Math.round(z.developmentExtension)} mm)`:''}`).join(' • ')||'—'}<br>
-          Top: ${(d.stationDesign?.topZones||[]).map(z=>`${z.topBars}Ø${d.cfg.topBarDia} @ ${Math.round(z.x0)}–${Math.round(z.x1)} mm${z.developmentExtension?` (ld +${Math.round(z.developmentExtension)} mm)`:''}`).join(' • ')||'—'}<br>
+          Bottom: ${(d.stationDesign?.bottomZones||[]).map(z=>`${z.role==='EXTRA'?`+${z.extraBars} extra (${z.bottomBars} total)`:`${z.bottomBars} continuous`}Ø${d.cfg.mainBarDia} @ ${Math.round(z.x0)}–${Math.round(z.x1)} mm${z.developmentExtension?` (ld ${Math.round(z.developmentExtension)} mm)`:''}`).join(' • ')||'—'}<br>
+          Top: ${(d.stationDesign?.topZones||[]).map(z=>`${z.role==='EXTRA'?`+${z.extraBars} extra (${z.topBars} total)`:`${z.topBars} continuous`}Ø${d.cfg.topBarDia} @ ${Math.round(z.x0)}–${Math.round(z.x1)} mm${z.developmentExtension?` (ld ${Math.round(z.developmentExtension)} mm)`:''}`).join(' • ')||'—'}<br>
           Stirrups: ${(d.stirrupZones||[]).map(z=>`Ø${d.cfg.stirrupDia}@${Math.round(z.spacing)} @ ${Math.round(z.x0)}–${Math.round(z.x1)} mm • Vu=${Number(z.Vu||0).toFixed(1)} kN`).join(' • ')||'—'}
         </div>
         <div style="padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;grid-column:1/-1"><b>Development / Anchorage / Lap Splice — Straight Tension Bar</b><br>
@@ -3663,6 +3758,7 @@ function rcBeamDesignCenterV141(){
       stirrupSpacing:Math.max(25,+w.querySelector('#v141spacing').value||250),
       stationCount:Math.max(21,Math.min(101,Math.round(+w.querySelector('#v14611stations').value||41))),
       economicalZoning:!!w.querySelector('#v14611economy').checked,
+      practicalDetailing:!!w.querySelector('#v14612practical').checked,
       devCastPosition:w.querySelector('#v141cast').value==='top'?'top':'other',
       devCoating:w.querySelector('#v141coat').value==='epoxy'?'epoxy':'uncoated',
       devLambda:Number(w.querySelector('#v141lambda').value)||1,
@@ -3672,13 +3768,13 @@ function rcBeamDesignCenterV141(){
       spliceProvided:Math.max(0,+w.querySelector('#v141slap').value||0),
       spliceBarsPercent:Math.min(100,Math.max(0,+w.querySelector('#v141spct').value||0))
     });
-    designs=rcBeamDesignV141();w.querySelector('#v141tbody').innerHTML=rows();bindDetails();toast('V1.46.1.1 recalculated • Whole Model → Station Envelope → Economical RC Zoning');
+    designs=rcBeamDesignV141();w.querySelector('#v141tbody').innerHTML=rows();bindDetails();toast('V1.46.1.2 recalculated • Station Envelope → Practical RC Detailing + Constructability Optimization');
   };
 }
 
 function integrated3DWorkspaceV128(){
  if(integrated3dActiveV128){closeIntegrated3DV128();return}integrated3dActiveV128=true;document.querySelector('.workspace')?.classList.add('v130-3d-workspace');const center=document.querySelector('.center');[...center.children].forEach(x=>x.classList.add('v128-hide2d'));$('frame3dBtn').textContent='▣ 2D Frame';$('frame3dBtn').classList.add('active3d');
- const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.46</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member (Display Only)</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.46.1.1 • Whole Model Solve • Station-Based RC Design</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
+ const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.46</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member (Display Only)</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.46.1.2 • Whole Model Solve • Practical RC Detailing</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
 }
 function closeIntegrated3DV128(){if(!integrated3dActiveV128)return;integrated3dActiveV128=false;integrated3dRefreshV128=null;document.querySelector('.workspace')?.classList.remove('v130-3d-workspace');document.querySelector('#integrated3dV128')?.remove();document.querySelectorAll('.v128-hide2d').forEach(x=>x.classList.remove('v128-hide2d'));$('frame3dBtn').textContent='◈ 3D Frame';$('frame3dBtn').classList.remove('active3d');resize();render();updateUI();renderResults()}
 function initIntegrated3DV128(host){
