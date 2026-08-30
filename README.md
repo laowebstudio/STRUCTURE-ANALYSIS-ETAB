@@ -1,3 +1,7 @@
+# V1.47.1.1 — Realistic Physical Building Geometry & Rendering
+
+Physical rendering upgrade from V1.47.1.
+
 # V1.47.1 — True Physical Building Model
 
 True physical 3D rendering layer linked to the existing whole-building analysis model. RC Design remains frozen and slab shell FEM is intentionally deferred.

@@ -1,3 +1,8 @@
+# V1.47.1.1 — Realistic Physical Building Geometry & Rendering
+
+- Upgraded physical member renderer to projected solid prisms.
+- Improved concrete face shading, slab/footing depth cues and viewport rendering.
+
 # V1.47.1 — True Physical Building Model
 
 True physical 3D rendering layer linked to the existing whole-building analysis model. RC Design remains frozen and slab shell FEM is intentionally deferred.

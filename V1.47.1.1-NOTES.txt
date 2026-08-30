@@ -1,0 +1,10 @@
+SAPUDOM Structure Analysis V1.47.1.1 — Realistic Physical Building Geometry & Rendering
+
+- Continues directly from V1.47.1.
+- Replaces screen-width member strips with projected 3D rectangular prisms.
+- Beam geometry uses section width/depth reconstructed from A/I properties.
+- Column geometry renders as full solid rectangular/square prisms.
+- Slabs and isolated footings use concrete-toned face shading, outlines and depth.
+- Adds soft canvas shadow/depth cues and a cleaner engineering viewport.
+- Physical and Analysis modes remain linked to the same nodes/members.
+- RC Design remains frozen; Slab Shell FEM is not introduced in this release.
