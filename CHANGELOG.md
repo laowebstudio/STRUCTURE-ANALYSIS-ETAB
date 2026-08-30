@@ -49,3 +49,11 @@ True physical 3D rendering layer linked to the existing whole-building analysis 
 
 ### Explicit limitation
 Slabs are tributary load-transfer panels in V1.47, not shell/plate bending finite elements. Footings are physical demand objects, not soil-foundation FE elements.
+
+## V1.47.2.1 — Easy Slab Input + Validation Fix
+- Changed slab DL/LL entry to positive downward magnitudes.
+- Solver applies slab gravity loads internally in Global -Z.
+- Added live self-weight / Total DL / LL preview.
+- Added slab thickness, material, Poisson ratio, unit-weight, and load validation.
+- Story-height list now auto-synchronizes with Number of stories.
+- Kept V1.47.2 Q4 shell/plate FEM and whole-building solver architecture.

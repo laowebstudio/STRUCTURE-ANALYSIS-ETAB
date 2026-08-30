@@ -1,0 +1,20 @@
+SAPUDOM Structure Analysis V1.47.2.1
+Easy Slab Input + Validation Fix
+
+Changes
+- Slab DL and LL are entered as positive downward magnitudes.
+- Solver applies slab gravity in Global -Z automatically.
+- Backward-compatible with old saved negative slab loads by using load magnitude internally.
+- Live slab-load preview shows self-weight, total DL, LL, and direction.
+- Slab thickness validation: 80-500 mm.
+- Concrete E validation: 10,000-60,000 MPa.
+- Poisson ratio validation: 0 <= nu < 0.5.
+- Concrete unit weight and non-negative DL/LL validation.
+- Story-height list automatically expands/trims to match Number of stories.
+- Slab shell/plate FEM from V1.47.2 remains unchanged except gravity sign handling.
+
+Example
+150 mm slab, gamma=24 kN/m3, superimposed DL=4.5 kN/m2, LL=2.0 kN/m2:
+Self-weight = 3.60 kN/m2
+Total DL = 8.10 kN/m2 downward
+LL = 2.00 kN/m2 downward
