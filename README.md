@@ -1,3 +1,31 @@
+# SAPUDOM Structure Analysis V1.46.1.1
+
+## RC Beam Station-Based Auto Design + Economical Reinforcement Zoning
+
+V1.46.1.1 is developed directly from V1.46.1 and preserves its Whole Model solve / Selected Member display-only behavior.
+
+### New RC beam workflow
+- Whole Model Analysis → Load Cases / Combinations → station force recovery → station envelope → automatic RC beam design.
+- Configurable 21–101 stations per beam (default 41).
+- Station envelopes for P/N, V2, V3, T, M2 and M3 with governing analysis trace.
+- Bottom and top longitudinal reinforcement are zoned from positive/negative station moment demand.
+- Automatic stirrup spacing is zoned from the actual station shear envelope; the previous assumed midspan shear is not used for auto zoning.
+- Every station is checked against the reinforcement zone actually provided there.
+- Extra longitudinal reinforcement zones are extended by calculated development length.
+- Economical zoning compares zoned longitudinal steel against uniform maximum reinforcement and reports an indicative reduction.
+
+### Protected V1.46.1 behavior
+- Analyze 3D always solves the complete structural model.
+- Selected Member remains a display filter only and never isolates/re-solves the member.
+- Whole Model diagram scaling semantics remain protected.
+
+### Engineering scope
+Torsion reinforcement design, seismic special-frame detailing, serviceability/crack control, splice staggering and final construction BBS optimization are not completed in this version. Final construction design requires independent project-specific code verification.
+
+See `V1.46.1.1-NOTES.txt` for the detailed test checklist.
+
+---
+
 # SAPUDOM Structure Analysis V1.46.1
 
 ## Whole Model Solve / Selected Member Display Fix

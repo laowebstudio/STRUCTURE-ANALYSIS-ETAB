@@ -1,0 +1,38 @@
+SAPUDOM Structure Analysis V1.46.1.1
+RC Beam Station-Based Auto Design + Economical Reinforcement Zoning
+
+BASE
+- Developed directly from V1.46.1 Whole Model Solve / Selected Member Display Fix.
+- Whole Model solve semantics remain protected. Member selection remains display-only.
+
+NEW RC BEAM DESIGN PIPELINE
+1. Re-solves the current complete 3D model for active load combinations, load cases and active pattern.
+2. Recovers member actions at configurable stations along each beam (default 41, range 21-101).
+3. Builds station envelopes for P/N, V2, V3, T, M2 and M3 with governing analysis labels.
+4. RC beam demand is taken from the station envelope, not only member end forces.
+5. Positive station bending demand drives bottom longitudinal reinforcement zoning.
+6. Negative station bending demand drives top longitudinal reinforcement zoning.
+7. Shear station envelope drives variable stirrup spacing zones; the old assumed Midspan Vu = 25% end shear is removed from auto zoning.
+8. Every shear station is checked against the stirrup zone actually provided at that station.
+9. Top and bottom flexural capacities are checked independently.
+10. Extra longitudinal-bar cut-off zones are extended by calculated development length.
+11. Economical zoning can be toggled. It retains minimum continuous bars and adds extra bars only where station demand requires them.
+12. RC Design Details reports station count, governing station, bottom/top zones, stirrup zones and an indicative longitudinal steel reduction versus uniform maximum reinforcement.
+
+IMPORTANT ENGINEERING SCOPE
+- Torsion design is not yet included in RC beam reinforcement design even though T is recovered in the station envelope.
+- Seismic special moment-frame detailing, serviceability/crack control, deflection design, splice staggering and final BBS optimization remain outside this version.
+- Estimated steel saving is a zoning comparison before final anchorage/lap/BBS quantities and must not be treated as a final project cost quantity.
+- Final construction design still requires project-specific code verification by a qualified engineer.
+
+BASIC TESTS
+T1 Whole Model protection: Analyze 3D, select one member; no member-only re-solve occurs.
+T2 Station count: RC Design default should report 41 stations; changing to 61 should rebuild 61 stations.
+T3 UDL beam: station moment envelope must show an interior bending peak rather than only end demand.
+T4 Point load: station shear/moment should change at the load position and zoning should follow it.
+T5 Combination envelope: governing station labels should trace to a load combination/case/pattern.
+T6 Bottom zoning: positive moment peak should add bottom bars locally instead of forcing max bottom bars along the full span.
+T7 Top zoning: negative support moment should increase top bars in the support region.
+T8 Stirrup zoning: spacing should follow station Vu; no artificial 25% midspan shear assumption.
+T9 Development: extra-bar zones should extend beyond their demand cut-off by calculated ld.
+T10 Station shear verification: each station should PASS only when the local provided stirrup zone capacity/spacing passes.
