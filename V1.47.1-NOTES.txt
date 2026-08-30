@@ -1,0 +1,11 @@
+SAPUDOM Structure Analysis V1.47.1 — True Physical Building Model
+
+Scope
+- True Physical Model is the default 3D Building view.
+- Beam and column section sizes are reconstructed from A/Iy/Iz and rendered as physical-width members.
+- Slabs render with physical thickness and visible side faces.
+- Isolated footings render as full-depth 3D blocks.
+- Physical Model / Analysis Model toggle added.
+- Physical view suppresses node/member/load labels for a clean building view.
+- Analysis Model remains linked to the same nodes/members and retains load/result workflows.
+- RC Design remains frozen; Slab Shell FEM is not introduced in this release.
