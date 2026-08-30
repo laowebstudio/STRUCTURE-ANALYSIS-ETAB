@@ -31,3 +31,11 @@
 - RC design envelope now includes a fresh direct solve of the active 3D Load Pattern in addition to governing load combinations.
 - Opening 3D RC Rebar Viewer automatically rebuilds the selected member design from the live solver path.
 - Updated synchronization/version feedback in RC Design and Rebar Viewer.
+
+## V1.46.3.2 — Reinforcement Zoning Consistency Fix
+- Added independent Support-i / Support-j top-rebar design records.
+- Added centroid-aware multi-layer top-rebar capacity iteration.
+- Added top-zone As required/min/provided and DCR trace to RC Details and 3D Viewer.
+- Added final stirrup-zone local Vu / φVn / DCR / spacing verification.
+- Overall beam PASS now includes top-zone and final stirrup-zone verification.
+- Updated build/cache identification to V1.46.3.2.

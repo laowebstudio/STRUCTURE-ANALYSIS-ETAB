@@ -1,23 +1,15 @@
+# SAPUDOM Structure Analysis V1.46.3.2
 
-## V1.46.3.1 — RC Beam Design Dialog Runtime Fix
-- Forced browser/GitHub Pages cache refresh with `app.js?v=1.46.3.1`.
-- Guarded RC Beam Design button/dialog runtime path; no silent failure.
-- Defensive RC design table rendering for incomplete/non-finite result rows.
-- Keeps V1.46.3 Whole Model / Strength Combination / 41-station envelope calculation policy unchanged.
-# SAPUDOM Structure Analysis V1.46.3
+## Reinforcement Zoning Consistency Fix
 
-## Station Demand Runtime + Trace Integrity Fix
-
-V1.46.3 continues from V1.46.2 and fixes the station-demand runtime and trace integrity issues found during retesting.
+This build keeps the V1.46.3.1 Whole Model → Strength Combination → Station Envelope RC-design flow and makes final reinforcement zoning auditable and consistent between RC Design Details and the 3D Rebar Viewer.
 
 ### Main fixes
-- Fixed the `MposMid` runtime initialization error in RC Beam Design.
-- Added Load Combination classification: **Strength / Service / Other**.
-- RC Strength Design governing envelope uses **Strength combinations only**.
-- Service and Other combinations remain available for analysis but cannot govern Strength RC design.
-- P/N and T now use the same 41-station whole-model envelope used by M2/M3 and V2/V3.
-- RC Details reports axis, x/L, signed value, and governing combination for Mu+, Mu− support zones, Vu, Pu, and Tu.
-- Whole Model solution remains the source; selecting a member only filters display.
+- Support-i and Support-j top reinforcement are sized independently from their own negative station moments.
+- Multi-layer top steel is rechecked with its actual centroid/effective depth; Auto mode adds bars until the zone capacity passes.
+- Details reports As(req), As(min), As(provided), Mu/φMn and status for both support zones.
+- Final stirrup zones are checked against their own local Vu and displayed with φVn and DCR.
+- The former single `Use Ø...@...` shear line is now identified as the base demand-spacing reference; final detailing is the zone table.
+- Overall PASS now requires final top-zone and final stirrup-zone checks to pass.
 
-### Design-assist limits
-Station reconstruction, reinforcement zoning, anchorage assistance, and trace reporting are engineering-assist features. Full torsion interaction, axial-flexure interaction, seismic detailing, serviceability, and project-code verification still require engineer review.
+See `V1.46.3.2-FIX-NOTES.txt` for details.

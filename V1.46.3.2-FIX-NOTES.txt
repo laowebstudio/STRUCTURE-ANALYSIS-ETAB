@@ -1,0 +1,21 @@
+SAPUDOM Structure Analysis V1.46.3.2
+Reinforcement Zoning Consistency Fix
+
+Changes
+1. Top support reinforcement is independently designed at Support-i and Support-j from each zone's negative station moment.
+2. Auto top-bar sizing now rechecks flexural capacity using the actual centroid/effective depth of multi-layer top reinforcement.
+3. RC Details shows As required, As minimum, As provided, Mu/phiMn and PASS/REVIEW for each top support zone.
+4. 3D Rebar Viewer reads the same final zone objects used by RC Design Details.
+5. Final stirrup zones are verified zone-by-zone using local Vu, final spacing, phiVn, DCR and spacing limits.
+6. RC Details distinguishes the base governing-demand spacing from the final zoned stirrup detailing.
+7. Overall Beam Design now requires both top support zones and all final stirrup zones to pass.
+8. Cache/build identifier updated to V1.46.3.2.
+
+M28 reference from the supplied screenshots
+- Mu+ midspan = 167.742 kN-m -> 3-D20 remains consistent.
+- Mu- Support-i = 491.488 kN-m: V1.46.3.2 rechecks multi-layer effective depth; 9-D20 is not accepted if phiMn falls below Mu and Auto adds bars until PASS.
+- Mu- Support-j = 115.176 kN-m: independent zone sizing gives minimum-steel-governed reinforcement (typically 3-D20 for the shown 400x600, fc'=25, fy=420 input).
+
+Boundary
+- Zone cut-off lengths remain detailing-assist.
+- Axial/torsion are traceable but full P-M/torsion interaction design is not claimed.
