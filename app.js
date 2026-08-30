@@ -2225,16 +2225,18 @@ function ensureLoadCombosV139(){
   const looksOld=old.some(c=>(c.terms||[]).some(t=>t.pattern && !t.caseName));
   if(!old.length || looksOld){
     m3.loadCombinations=[
-      {name:'1.4DEAD',type:'Linear Add',terms:[{caseName:'DEAD',factor:1.4}]},
-      {name:'1.2DEAD+1.6LIVE',type:'Linear Add',terms:[{caseName:'DEAD',factor:1.2},{caseName:'LIVE',factor:1.6}]},
-      {name:'1.2DEAD+1.0LIVE+1.0WIND-X',type:'Linear Add',terms:[{caseName:'DEAD',factor:1.2},{caseName:'LIVE',factor:1.0},{caseName:'WIND-X',factor:1.0}]},
-      {name:'1.2DEAD+1.0LIVE+1.0WIND-Y',type:'Linear Add',terms:[{caseName:'DEAD',factor:1.2},{caseName:'LIVE',factor:1.0},{caseName:'WIND-Y',factor:1.0}]}
+      {name:'1.4DEAD',type:'Linear Add',designClass:'Strength',terms:[{caseName:'DEAD',factor:1.4}]},
+      {name:'1.2DEAD+1.6LIVE',type:'Linear Add',designClass:'Strength',terms:[{caseName:'DEAD',factor:1.2},{caseName:'LIVE',factor:1.6}]},
+      {name:'1.2DEAD+1.0LIVE+1.0WIND-X',type:'Linear Add',designClass:'Strength',terms:[{caseName:'DEAD',factor:1.2},{caseName:'LIVE',factor:1.0},{caseName:'WIND-X',factor:1.0}]},
+      {name:'1.2DEAD+1.0LIVE+1.0WIND-Y',type:'Linear Add',designClass:'Strength',terms:[{caseName:'DEAD',factor:1.2},{caseName:'LIVE',factor:1.0},{caseName:'WIND-Y',factor:1.0}]}
     ];
   }
   // Remove invalid dangling case names only when the case list is known.
   const names=new Set(cases.map(c=>c.name));
   for(const c of m3.loadCombinations){
     c.type ||= 'Linear Add';
+    // V1.46.3: classify combinations for design. Legacy names containing SERV/SERVICE/SLS migrate to Service; all others to Strength.
+    c.designClass ||= /SERV|SERVICE|SLS/i.test(String(c.name||'')) ? 'Service' : 'Strength';
     c.terms ||= [];
     for(const t of c.terms){
       t.caseName ||= t.case || t.pattern || 'DEAD';
@@ -2425,6 +2427,11 @@ function loadCombinationCenterV139(){
         <select data-v139-type="${ci}" style="height:40px;border:1px solid #cbd5e1;border-radius:9px;padding:0 10px">
           <option>Linear Add</option>
         </select>
+        <select data-v139-class="${ci}" title="Design classification" style="height:40px;border:1px solid #cbd5e1;border-radius:9px;padding:0 10px;font-weight:700">
+          <option value="Strength" ${String(c.designClass||'Strength')==='Strength'?'selected':''}>Strength</option>
+          <option value="Service" ${String(c.designClass||'')==='Service'?'selected':''}>Service</option>
+          <option value="Other" ${String(c.designClass||'')==='Other'?'selected':''}>Other</option>
+        </select>
         <button data-v139-run="${ci}" class="primary" style="height:40px;padding:0 14px;border-radius:9px;font-weight:800">▶ Analyze Combo</button>
         <button data-v139-del="${ci}" style="height:40px;padding:0 12px;border:1px solid #fecaca;background:#fff;color:#b91c1c;border-radius:9px;font-weight:700">Delete</button>
       </div>
@@ -2480,6 +2487,9 @@ function loadCombinationCenterV139(){
     wrap.querySelectorAll('[data-v139-type]').forEach(x=>{
       combos[+x.dataset.v139Type].type=x.value;
     });
+    wrap.querySelectorAll('[data-v139-class]').forEach(x=>{
+      combos[+x.dataset.v139Class].designClass=x.value;
+    });
     wrap.querySelectorAll('[data-v139-case]').forEach(x=>{
       const [ci,ti]=x.dataset.v139Case.split(':').map(Number);
       combos[ci].terms[ti].caseName=x.value;
@@ -2500,7 +2510,7 @@ function loadCombinationCenterV139(){
 
   wrap.querySelector('#v139Add').onclick=()=>{
     harvest();
-    combos.push({name:`COMBO${combos.length+1}`,type:'Linear Add',terms:[{caseName:caseNames[0]||'DEAD',factor:1}]});
+    combos.push({name:`COMBO${combos.length+1}`,type:'Linear Add',designClass:'Strength',terms:[{caseName:caseNames[0]||'DEAD',factor:1}]});
     close(); loadCombinationCenterV139();
   };
 
@@ -2807,7 +2817,7 @@ function mark3DAnalysisFreshV1451(result){
 }
 
 
-// ===== V1.46.2 — Station Envelope + Design Combination Integration Fix =====
+// ===== V1.46.3 — Station Demand Runtime + Trace Integrity Fix Fix =====
 function v1462PatternFactorsForCandidate(candidate){
   if(candidate?.effectivePatternTerms) return candidate.effectivePatternTerms.map(t=>({pattern:t.pattern,factor:Number(t.factor)||0}));
   if(candidate?.caseTerms){
@@ -2868,15 +2878,18 @@ function v1462StationEnvelope(candidates){
 
 function wholeModelDesignEnvelopeV146(){
   const m3=ensure3DLoadSystemV131(),combos=ensureLoadCombosV139(),cases=ensureLoadCasesV138(),candidates=[];
-  // V1.46.2 DESIGN POLICY: strength/design combinations govern RC design. Raw cases/patterns
+  // V1.46.3 DESIGN POLICY: strength/design combinations govern RC design. Raw cases/patterns
   // are trace/reference only and are used as fallback only when no valid combination exists.
-  for(const c of combos){try{const r=solveLoadCombinationV139(c);if(r)candidates.push({name:c.name,kind:'DESIGN COMBINATION',result:r})}catch(e){console.warn('V1.46.2 combo skipped',c.name,e)}}
-  if(!candidates.length)for(const lc of cases){try{const r=solveLoadCaseV138(lc);if(r)candidates.push({name:`CASE:${lc.name}`,kind:'FALLBACK LOAD CASE',result:r})}catch(e){}}
+  const strengthCombos=combos.filter(c=>String(c.designClass||'Strength').toLowerCase()==='strength');
+  for(const c of strengthCombos){try{const r=solveLoadCombinationV139(c);if(r)candidates.push({name:c.name,kind:'STRENGTH COMBINATION',designClass:'Strength',result:r})}catch(e){console.warn('V1.46.3 strength combo skipped',c.name,e)}}
+  // No Service/Other combination may govern Strength RC design. Cases are emergency fallback only
+  // for legacy/incomplete models that contain no valid Strength combination.
+  if(!candidates.length)for(const lc of cases){try{const r=solveLoadCaseV138(lc);if(r)candidates.push({name:`CASE:${lc.name}`,kind:'FALLBACK LOAD CASE',designClass:'Fallback',result:r})}catch(e){}}
   const stationMap=v1462StationEnvelope(candidates),map=new Map();
   const upd=(q,v,name)=>{v=Number(v)||0;if(v>q.max){q.max=v;q.maxCombo=name}if(v<q.min){q.min=v;q.minCombo=name}};
   for(const c of candidates)for(const f of (c.result?.memberForces||[])){if(!map.has(f.id))map.set(f.id,{id:f.id,i:f.i,j:f.j,v:Array.from({length:12},()=>({max:-Infinity,min:Infinity,maxCombo:'',minCombo:''})),sources:[]});const row=map.get(f.id);row.sources.push(c.name);(f.local||[]).forEach((v,k)=>upd(row.v[k],v,c.name));}
   for(const row of map.values())row.stationEnvelope=stationMap.get(row.id)?.stations||[];
-  const env={combos:candidates.map(x=>x.name),members:[...map.values()],livePattern:m3.activeLoadPattern||'DL',source:'V1.46.2 WHOLE MODEL → DESIGN COMBINATIONS → STATION ENVELOPE → RC DESIGN',analysisRevision:Number(m3.analysisRevisionV1451)||0,generatedAt:Date.now(),forceComponents:['P/N','V2','V3','T','M2','M3'],designPolicy:'COMBINATIONS GOVERN; CASES FALLBACK ONLY'};
+  const env={combos:candidates.map(x=>x.name),members:[...map.values()],livePattern:m3.activeLoadPattern||'DL',source:'V1.46.3 WHOLE MODEL → STRENGTH COMBINATIONS → STATION ENVELOPE → RC DESIGN',analysisRevision:Number(m3.analysisRevisionV1451)||0,generatedAt:Date.now(),forceComponents:['P/N','V2','V3','T','M2','M3'],designPolicy:'STRENGTH COMBINATIONS GOVERN; SERVICE/OTHER EXCLUDED; CASES FALLBACK ONLY'};
   m3.envelopeV140=env;m3.wholeModelDesignEnvelopeV146={source:env.source,generatedAt:env.generatedAt,analysisRevision:env.analysisRevision,candidateCount:candidates.length,memberCount:env.members.length,designPolicy:env.designPolicy};return env;
 }
 // Backward-compatible entry point used by older V1.45 UI code.
@@ -2914,23 +2927,18 @@ function rcBeamDesignV141(){
     const dNominal=Math.max(50,h-cover-stirrupDia-mainBarDia/2);
 
     const st=e.stationEnvelope||[];
-    const stationGov=(keys,mode='abs')=>{let best={value:0,combo:'—',axis:keys[0],xRatio:0};for(const p of st)for(const key of keys){const q=p[key]||{};for(const side of ['min','max']){const v=Number(q[side])||0,score=mode==='positive'?v:mode==='negative'?-v:Math.abs(v);if(score>Math.max(0,mode==='abs'?Math.abs(best.value):(mode==='positive'?best.value:-best.value))){best={value:v,combo:q[side+'Combo']||'—',axis:key,xRatio:p.xRatio}}}}return best};
-    const govM=stationGov(['M2','M3'],'abs'), govV=stationGov(['V2','V3'],'abs');
-    govM.end=govM.xRatio<=.5?'i':'j'; govV.end=govV.xRatio<=.5?'i':'j'; govM.control='STATION'; govV.control='STATION';
-    const ns=[{axis:'P/N',end:'i',...absGov(e.v[0])},{axis:'P/N',end:'j',...absGov(e.v[6])}];
-    const ts=[{axis:'T',end:'i',...absGov(e.v[3])},{axis:'T',end:'j',...absGov(e.v[9])}];
-    const govN=ns.reduce((a,b)=>Math.abs(b.value)>Math.abs(a.value)?b:a),govT=ts.reduce((a,b)=>Math.abs(b.value)>Math.abs(a.value)?b:a);
-    const Pu=Math.abs(govN.value),Tu=Math.abs(govT.value),MuGov=Math.abs(govM.value),Mu=Math.max(MposMid||0,0),Vu=Math.abs(govV.value),MuNmm=Mu*1e6;
-    // V1.44 — end-zone demand extraction.  Top support steel uses the negative envelope at each end.
-    const qv=k=>e.v?.[k]||{};
-    const negMomentAt=idxs=>Math.max(0,...idxs.map(k=>Math.max(0,-Number(qv(k).min||0))));
-    const absShearAt=idxs=>Math.max(0,...idxs.map(k=>Math.max(Math.abs(Number(qv(k).min||0)),Math.abs(Number(qv(k).max||0)))));
+    const stationGov=(keys,mode='abs',pts=st)=>{let best={value:0,combo:'—',axis:keys[0],xRatio:0,side:'—',control:'STATION'};for(const p of pts)for(const key of keys){const q=p[key]||{};for(const side of ['min','max']){const v=Number(q[side]);if(!Number.isFinite(v))continue;const current=mode==='positive'?Math.max(0,best.value):mode==='negative'?Math.max(0,-best.value):Math.abs(best.value);const score=mode==='positive'?v:mode==='negative'?-v:Math.abs(v);if(score>current+1e-12){best={value:v,combo:q[side+'Combo']||'—',axis:key,xRatio:Number(p.xRatio)||0,side:side.toUpperCase(),control:'STATION'}}}}return best};
     const supportPtsI=st.filter(p=>p.xRatio<=.30), supportPtsJ=st.filter(p=>p.xRatio>=.70), midPts=st.filter(p=>p.xRatio>=.30&&p.xRatio<=.70);
-    const maxNeg=(pts)=>Math.max(0,...pts.flatMap(p=>['M2','M3'].map(k=>Math.max(0,-Number(p[k]?.min||0)))));
-    const maxPos=(pts)=>Math.max(0,...pts.flatMap(p=>['M2','M3'].map(k=>Math.max(0,Number(p[k]?.max||0)))));
-    const maxAbsShear=(pts)=>Math.max(0,...pts.flatMap(p=>['V2','V3'].flatMap(k=>[Math.abs(Number(p[k]?.min||0)),Math.abs(Number(p[k]?.max||0))])));
-    const MnegI=maxNeg(supportPtsI), MnegJ=maxNeg(supportPtsJ), MposMid=maxPos(midPts.length?midPts:st);
-    const VuI=maxAbsShear(supportPtsI), VuJ=maxAbsShear(supportPtsJ), VuMid=maxAbsShear(midPts);
+    const govM=stationGov(['M2','M3'],'abs'), govV=stationGov(['V2','V3'],'abs');
+    const govN=stationGov(['N'],'abs'), govT=stationGov(['T'],'abs');
+    const govMposMid=stationGov(['M2','M3'],'positive',midPts.length?midPts:st);
+    const govMnegI=stationGov(['M2','M3'],'negative',supportPtsI.length?supportPtsI:st);
+    const govMnegJ=stationGov(['M2','M3'],'negative',supportPtsJ.length?supportPtsJ:st);
+    const govVI=stationGov(['V2','V3'],'abs',supportPtsI.length?supportPtsI:st), govVJ=stationGov(['V2','V3'],'abs',supportPtsJ.length?supportPtsJ:st), govVMid=stationGov(['V2','V3'],'abs',midPts.length?midPts:st);
+    for(const g of [govM,govV,govN,govT,govMposMid,govMnegI,govMnegJ,govVI,govVJ,govVMid])g.end=g.xRatio<=.5?'i':'j';
+    const MnegI=Math.max(0,-govMnegI.value), MnegJ=Math.max(0,-govMnegJ.value), MposMid=Math.max(0,govMposMid.value);
+    const VuI=Math.abs(govVI.value), VuJ=Math.abs(govVJ.value), VuMid=Math.abs(govVMid.value);
+    const Pu=Math.abs(govN.value),Tu=Math.abs(govT.value),MuGov=Math.abs(govM.value),Mu=MposMid,Vu=Math.abs(govV.value),MuNmm=Mu*1e6;
     const memberObj=getMember(e.id), nI=(m3.nodes||[]).find(n=>n.id===memberObj?.i), nJ=(m3.nodes||[]).find(n=>n.id===memberObj?.j);
     const Lmm=(nI&&nJ)?Math.max(500,Math.hypot((+nJ.x||0)-(+nI.x||0),(+nJ.y||0)-(+nI.y||0),(+nJ.z||0)-(+nI.z||0))*1000):5000;
 
@@ -3120,7 +3128,7 @@ function rcBeamDesignV141(){
     return {
       id:e.id,i:e.i,j:e.j,
       cfg:{b,h,cover,stirrupDia,stirrupSpacingMode,stirrupSpacing:manualStirrupSpacing,mainBarMode,manualMainBars,topBarMode,manualTopBars,aggregateSize,minCover,mainBarDia,topBarDia,fc,fy,phiF,phiV,d,dNominal,devCastPosition,devCoating,devLambda,devKtr,anchorI,anchorJ,spliceEnabled,spliceClass,spliceProvided,spliceBarsPercent},
-      govM,govV,Pu,Tu,Mu,MuGov,Vu,AsReq,AsDesign,nBars,AsProv,phiVc,sReq,flexureStatus,stationEnvelope:e.stationEnvelope||[],
+      govM,govV,govN,govT,govMposMid,govMnegI,govMnegJ,govVI,govVMid,govVJ,Pu,Tu,Mu,MuGov,Vu,AsReq,AsDesign,nBars,AsProv,phiVc,sReq,flexureStatus,stationEnvelope:e.stationEnvelope||[],
       shear:{
         Av:Av2, VsProv:VsProvN/1000, Vn:VnN/1000, phiVn,
         DCR:shearDCR, AvOverSReq, AvOverSProv,
@@ -3261,7 +3269,7 @@ function rcBeamRebar3DViewerV142(d){
 
   const modal=document.createElement('div');
   modal.style.cssText='position:fixed;inset:0;z-index:100006;background:rgba(2,6,23,.94);display:flex;flex-direction:column;padding:10px;gap:8px';
-  modal.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;color:#fff;gap:12px;flex-wrap:wrap"><div><b style="font-size:20px">3D RC Rebar Viewer — M${d.id}</b><div style="font-size:12px;opacity:.78">V1.46.2 • Station Envelope + Design Combination Integration</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><button id="v142fit">Fit</button><button id="v142iso">Isometric</button><button id="v142side">Side</button><button id="v142top">Top</button><button id="v142endi">End-i</button><button id="v142endj">End-j</button><label style="font-size:12px"><input id="v142conc" type="checkbox" checked> Concrete</label><label style="font-size:12px"><input id="v142st" type="checkbox" checked> Stirrups</label><label style="font-size:12px"><input id="v142bars" type="checkbox" checked> Bottom bars</label><label style="font-size:12px"><input id="v143topbars" type="checkbox" checked> Top bars</label><button id="v142close">Close</button></div></div><div style="position:relative;flex:1;min-height:360px;background:#e8eef5;border-radius:8px;overflow:hidden"><canvas id="v142canvas" style="width:100%;height:100%;display:block;touch-action:none"></canvas><div id="v142info" style="position:absolute;left:12px;top:12px;background:rgba(255,255,255,.94);padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px #0002;font:12px Arial;line-height:1.55;color:#0f172a;max-width:360px"></div><div style="position:absolute;right:12px;bottom:10px;background:rgba(15,23,42,.86);color:white;padding:7px 10px;border-radius:7px;font:11px Arial">Drag: Rotate • Wheel: Zoom • V1.46.2 station-envelope RC zoning viewer</div></div>`;
+  modal.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;color:#fff;gap:12px;flex-wrap:wrap"><div><b style="font-size:20px">3D RC Rebar Viewer — M${d.id}</b><div style="font-size:12px;opacity:.78">V1.46.3 • Station Demand Runtime + Trace Integrity Fix</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><button id="v142fit">Fit</button><button id="v142iso">Isometric</button><button id="v142side">Side</button><button id="v142top">Top</button><button id="v142endi">End-i</button><button id="v142endj">End-j</button><label style="font-size:12px"><input id="v142conc" type="checkbox" checked> Concrete</label><label style="font-size:12px"><input id="v142st" type="checkbox" checked> Stirrups</label><label style="font-size:12px"><input id="v142bars" type="checkbox" checked> Bottom bars</label><label style="font-size:12px"><input id="v143topbars" type="checkbox" checked> Top bars</label><button id="v142close">Close</button></div></div><div style="position:relative;flex:1;min-height:360px;background:#e8eef5;border-radius:8px;overflow:hidden"><canvas id="v142canvas" style="width:100%;height:100%;display:block;touch-action:none"></canvas><div id="v142info" style="position:absolute;left:12px;top:12px;background:rgba(255,255,255,.94);padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px #0002;font:12px Arial;line-height:1.55;color:#0f172a;max-width:360px"></div><div style="position:absolute;right:12px;bottom:10px;background:rgba(15,23,42,.86);color:white;padding:7px 10px;border-radius:7px;font:11px Arial">Drag: Rotate • Wheel: Zoom • V1.46.3 station-envelope RC zoning viewer</div></div>`;
   document.body.appendChild(modal);
   const canvas=modal.querySelector('#v142canvas'),ctx=canvas.getContext('2d');let dpr=1;
   const view={yaw:-32,pitch:24,scale:.13,ox:0,oy:0,sectionCut:null}, flags={concrete:true,stirrups:true,bars:true,topBars:true};
@@ -3324,7 +3332,7 @@ function rcBeamRebar3DViewerV142(d){
     ctx.fillStyle='#0f172a';ctx.font='700 12px Arial';const qi=proj([0,0,h+100]),qj=proj([L,0,h+100]);ctx.fillText('i',qi[0]-4,qi[1]);ctx.fillText('j',qj[0]-4,qj[1]);
   }
   function resize(){const r=canvas.getBoundingClientRect();dpr=Math.max(1,window.devicePixelRatio||1);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);fit()}
-  modal.querySelector('#v142info').innerHTML=`<b>M${d.id} • ${b}×${h} mm • L=${L} mm</b><br>Bottom midspan: <b>${d.bottomRebar?.zones?.mid?.nBars||d.nBars||0}Ø${db}</b> • Mu+ ${Number(d.bottomRebar?.Mu||0).toFixed(1)} kN·m<br>Top zones: <b>i ${d.topRebar?.zones?.i?.nBars||0}Ø${tdb}</b> • mid <b>${d.topRebar?.zones?.mid?.nBars||0}Ø${tdb}</b> • j <b>${d.topRebar?.zones?.j?.nBars||0}Ø${tdb}</b> • ${String(d.topRebar?.mode||'auto').toUpperCase()}<br>Stirrup zones: ${(d.stirrupZones||[]).map(z=>`${z.name} Ø${sd}@${Math.round(z.spacing)} • Vu ${Number(z.Vu||0).toFixed(1)} kN${Number.isFinite(z.supportCap)?` • cap ${Math.round(z.supportCap)} mm`:''} (${Math.round(z.x0)}-${Math.round(z.x1)} mm)`).join(' • ')||`Ø${sd}@${ss}`} • Cover ${cover} mm<br>Bottom anchorage i: <b>${d.development?.anchorIMethod||'—'}</b> • j: <b>${d.development?.anchorJMethod||'—'}</b><br>Cage fit: <b>${d.detailing?.status||'—'}</b> • Overall: <b>${d.overall?.status||'—'}</b><br>Top↔Bottom clear: <b>${Number.isFinite(d.detailing?.cageVerticalClear)?d.detailing.cageVerticalClear.toFixed(1)+' mm':'—'}</b> • Required ≥ ${Number.isFinite(d.detailing?.cageClearMin)?d.detailing.cageClearMin.toFixed(1):'—'} mm<br><span style="color:#92400e">V1.46.2 RC demand uses WHOLE MODEL station envelopes governed by Design Combinations. Negative station moments size top support steel; positive midspan station moments size bottom steel; stirrup zones use station shear demand. Zone cut-off lengths remain detailing-assist.</span>`;
+  modal.querySelector('#v142info').innerHTML=`<b>M${d.id} • ${b}×${h} mm • L=${L} mm</b><br>Bottom midspan: <b>${d.bottomRebar?.zones?.mid?.nBars||d.nBars||0}Ø${db}</b> • Mu+ ${Number(d.bottomRebar?.Mu||0).toFixed(1)} kN·m<br>Top zones: <b>i ${d.topRebar?.zones?.i?.nBars||0}Ø${tdb}</b> • mid <b>${d.topRebar?.zones?.mid?.nBars||0}Ø${tdb}</b> • j <b>${d.topRebar?.zones?.j?.nBars||0}Ø${tdb}</b> • ${String(d.topRebar?.mode||'auto').toUpperCase()}<br>Stirrup zones: ${(d.stirrupZones||[]).map(z=>`${z.name} Ø${sd}@${Math.round(z.spacing)} • Vu ${Number(z.Vu||0).toFixed(1)} kN${Number.isFinite(z.supportCap)?` • cap ${Math.round(z.supportCap)} mm`:''} (${Math.round(z.x0)}-${Math.round(z.x1)} mm)`).join(' • ')||`Ø${sd}@${ss}`} • Cover ${cover} mm<br>Bottom anchorage i: <b>${d.development?.anchorIMethod||'—'}</b> • j: <b>${d.development?.anchorJMethod||'—'}</b><br>Cage fit: <b>${d.detailing?.status||'—'}</b> • Overall: <b>${d.overall?.status||'—'}</b><br>Top↔Bottom clear: <b>${Number.isFinite(d.detailing?.cageVerticalClear)?d.detailing.cageVerticalClear.toFixed(1)+' mm':'—'}</b> • Required ≥ ${Number.isFinite(d.detailing?.cageClearMin)?d.detailing.cageClearMin.toFixed(1):'—'} mm<br><span style="color:#92400e">V1.46.3 RC demand uses WHOLE MODEL station envelopes governed by Design Combinations. Negative station moments size top support steel; positive midspan station moments size bottom steel; stirrup zones use station shear demand. Zone cut-off lengths remain detailing-assist.</span>`;
   modal.querySelector('#v142close').onclick=()=>modal.remove();
   modal.querySelector('#v142fit').onclick=fit;
   function preset(yaw,pitch){view.sectionCut=null;view.yaw=yaw;view.pitch=pitch;fit()}
@@ -3389,9 +3397,9 @@ function rcBeamDesignCenterV141(){
   w.innerHTML=`<div style="width:min(1120px,96vw);max-height:93vh;background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 70px #0005">
     <header style="padding:18px 20px;background:#173b68;color:#fff;display:flex;justify-content:space-between"><div>
       <div style="font-size:22px;font-weight:900">RC Beam Design — 3D Governing Envelope</div>
-      <div style="font-size:13px;opacity:.84">V1.46.2 • Station Envelope + Design Combination Integration</div></div>
+      <div style="font-size:13px;opacity:.84">V1.46.3 • Station Demand Runtime + Trace Integrity Fix</div></div>
       <button id="v141x" style="width:40px;height:40px;color:#fff;background:#ffffff22;border:1px solid #ffffff55;border-radius:10px">×</button></header>
-    <div style="padding:10px 14px;background:#fff7ed;color:#9a3412;font-size:12px"><b>Engineering note:</b> V1.46.2 makes the WHOLE MODEL station-force envelope the RC Design demand source. Design Combinations govern; raw Load Cases are fallback/trace only. P/N, V2, V3, T, M2 and M3 are sampled along each member. Negative station moments size top support reinforcement, positive midspan moments size bottom reinforcement, and station shear controls stirrup zones. Anchorage, seismic detailing, torsion design interaction, serviceability and splice staggering remain outside full code verification.</div>
+    <div style="padding:10px 14px;background:#fff7ed;color:#9a3412;font-size:12px"><b>Engineering note:</b> V1.46.3 makes the WHOLE MODEL station-force envelope the RC Design demand source. Strength Combinations govern; raw Load Cases are fallback/trace only. P/N, V2, V3, T, M2 and M3 are sampled along each member. Negative station moments size top support reinforcement, positive midspan moments size bottom reinforcement, and station shear controls stirrup zones. Anchorage, seismic detailing, torsion design interaction, serviceability and splice staggering remain outside full code verification.</div>
     <div style="padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:12px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
         <fieldset style="display:flex;gap:8px;align-items:end;border:1px solid #cbd5e1;border-radius:10px;padding:7px 9px">
@@ -3483,8 +3491,11 @@ function rcBeamDesignCenterV141(){
       <div style="padding:14px 16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;font-size:13px">
         <div style="padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff"><b>Section</b><br>${d.cfg.b} × ${d.cfg.h} mm<br>d=${d.cfg.d.toFixed(1)} mm</div>
         <div style="padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff"><b>Materials</b><br>fc'=${d.cfg.fc} MPa<br>fy=${d.cfg.fy} MPa</div>
-        <div style="padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff"><b>Governing Moment</b><br>${d.govM.axis}-${d.govM.end}=${d.Mu.toFixed(3)} kN·m<br>${d.govM.combo}</div>
-        <div style="padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff"><b>Governing Shear</b><br>${d.govV.axis}-${d.govV.end}=${d.Vu.toFixed(3)} kN<br>${d.govV.combo}</div>
+        <div style="padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff"><b>Bottom Flexure Demand (Mu+)</b><br>${d.govMposMid.axis} @ x/L=${d.govMposMid.xRatio.toFixed(3)} = ${d.Mu.toFixed(3)} kN·m<br>${d.govMposMid.combo}<br><span style="color:#64748b">Absolute station max: ${d.govM.value.toFixed(3)} kN·m @ x/L=${d.govM.xRatio.toFixed(3)}</span></div>
+        <div style="padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff"><b>Governing Shear</b><br>${d.govV.axis} @ x/L=${d.govV.xRatio.toFixed(3)} = ${d.govV.value.toFixed(3)} kN<br>|Vu|=${d.Vu.toFixed(3)} kN • ${d.govV.combo}</div>
+        <div style="padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff"><b>Axial Station Trace</b><br>${d.govN.axis} @ x/L=${d.govN.xRatio.toFixed(3)} = ${d.govN.value.toFixed(3)} kN<br>|Pu|=${d.Pu.toFixed(3)} kN • ${d.govN.combo}</div>
+        <div style="padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff"><b>Torsion Station Trace</b><br>${d.govT.axis} @ x/L=${d.govT.xRatio.toFixed(3)} = ${d.govT.value.toFixed(3)} kN·m<br>|Tu|=${d.Tu.toFixed(3)} kN·m • ${d.govT.combo}</div>
+        <div style="grid-column:1/-1;padding:10px;border:1px solid #bae6fd;border-radius:10px;background:#f0f9ff"><b>Moment Zoning Trace</b><br>Top-i Mu−=${d.topRebar.zones.i.Mu.toFixed(3)} kN·m • ${d.govMnegI.axis} @ x/L=${d.govMnegI.xRatio.toFixed(3)} • ${d.govMnegI.combo}<br>Bottom-mid Mu+=${d.Mu.toFixed(3)} kN·m • ${d.govMposMid.axis} @ x/L=${d.govMposMid.xRatio.toFixed(3)} • ${d.govMposMid.combo}<br>Top-j Mu−=${d.topRebar.zones.j.Mu.toFixed(3)} kN·m • ${d.govMnegJ.axis} @ x/L=${d.govMnegJ.xRatio.toFixed(3)} • ${d.govMnegJ.combo}</div>
         <div style="padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff"><b>Flexural Reinforcement</b><br>
           As req=${Number.isFinite(d.AsReq)?d.AsReq.toFixed(0):'REVIEW'} mm²<br>
           As min=${Number.isFinite(d.flexure.AsMin)?d.flexure.AsMin.toFixed(0):'—'} mm²<br>
@@ -3571,13 +3582,13 @@ function rcBeamDesignCenterV141(){
       spliceProvided:Math.max(0,+w.querySelector('#v141slap').value||0),
       spliceBarsPercent:Math.min(100,Math.max(0,+w.querySelector('#v141spct').value||0))
     });
-    designs=rcBeamDesignV141();w.querySelector('#v141tbody').innerHTML=rows();bindDetails();toast('V1.46.2 recalculated • Whole Model → Design Combos → Station Envelope → RC Design → Rebar Viewer');
+    designs=rcBeamDesignV141();w.querySelector('#v141tbody').innerHTML=rows();bindDetails();toast('V1.46.3 recalculated • Whole Model → Strength Combos → Station Envelope → RC Design → Rebar Viewer');
   };
 }
 
 function integrated3DWorkspaceV128(){
  if(integrated3dActiveV128){closeIntegrated3DV128();return}integrated3dActiveV128=true;document.querySelector('.workspace')?.classList.add('v130-3d-workspace');const center=document.querySelector('.center');[...center.children].forEach(x=>x.classList.add('v128-hide2d'));$('frame3dBtn').textContent='▣ 2D Frame';$('frame3dBtn').classList.add('active3d');
- const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.46.2</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member (Display Only)</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.46.2 • Station Envelope • Design Combos • Member Display Filter</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
+ const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>3D Workspace — V1.46.3</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn">▦ RC Beam Design</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member (Display Only)</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.46.3 • Station Trace • Strength Combos • Member Display Filter</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
 }
 function closeIntegrated3DV128(){if(!integrated3dActiveV128)return;integrated3dActiveV128=false;integrated3dRefreshV128=null;document.querySelector('.workspace')?.classList.remove('v130-3d-workspace');document.querySelector('#integrated3dV128')?.remove();document.querySelectorAll('.v128-hide2d').forEach(x=>x.classList.remove('v128-hide2d'));$('frame3dBtn').textContent='◈ 3D Frame';$('frame3dBtn').classList.remove('active3d');resize();render();updateUI();renderResults()}
 function initIntegrated3DV128(host){

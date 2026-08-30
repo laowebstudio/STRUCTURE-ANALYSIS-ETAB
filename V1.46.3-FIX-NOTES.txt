@@ -1,0 +1,15 @@
+SAPUDOM Structure Analysis V1.46.3 — Station Demand Runtime + Trace Integrity Fix
+
+Fixes from V1.46.2 retest:
+1. Runtime ordering fixed: MposMid is computed before it is used by RC flexure design.
+2. RC Strength Design now uses only Load Combinations classified as Strength. Service/Other combinations are excluded from strength governing envelopes.
+3. Legacy combinations are migrated automatically: names containing SERV/SERVICE/SLS become Service; others default to Strength.
+4. Define Load Combinations UI now includes Strength / Service / Other classification.
+5. P/N and T governing demand now come from the 41-station envelope, not member-end-force-only values.
+6. Mu+, Mu- support-i, Mu- support-j, Vu, Pu and Tu carry station x/L + axis + governing combination trace.
+7. RC Design Details shows numerical demand trace and moment zoning trace.
+8. Selected Member remains a display-only filter; whole-model solution remains the analysis source.
+
+Engineering boundary:
+- Station reconstruction is a design-assist layer based on solved whole-model end forces plus member-load particular response.
+- Full torsion interaction, axial-flexure interaction, seismic detailing, serviceability, and code-specific combination generation remain outside full verification.

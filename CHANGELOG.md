@@ -1,3 +1,15 @@
+# Changelog
+
+## V1.46.3 — Station Demand Runtime + Trace Integrity Fix
+- Fixed RC Design runtime ordering for `MposMid`.
+- Added Strength / Service / Other combination classification.
+- Strength RC design excludes Service/Other combinations from governing candidates.
+- Migrated legacy combinations safely.
+- Changed Pu and Tu from end-force-only tracing to station-envelope tracing.
+- Added x/L, axis, signed value, and governing-combination trace to RC Design Details.
+- Added separate Mu+ midspan and Mu− support-i/support-j trace.
+- Preserved Whole Model solve and Selected Member display-only behavior.
+
 # V1.46.1 — Whole Model Solve / Selected Member Display Fix
 
 - Locked 3D solver semantics to Whole Model analysis.
