@@ -1,3 +1,9 @@
+
+## V1.46.3.1 — RC Beam Design Dialog Runtime Fix
+- Forced browser/GitHub Pages cache refresh with `app.js?v=1.46.3.1`.
+- Guarded RC Beam Design button/dialog runtime path; no silent failure.
+- Defensive RC design table rendering for incomplete/non-finite result rows.
+- Keeps V1.46.3 Whole Model / Strength Combination / 41-station envelope calculation policy unchanged.
 # Changelog
 
 ## V1.46.3 — Station Demand Runtime + Trace Integrity Fix

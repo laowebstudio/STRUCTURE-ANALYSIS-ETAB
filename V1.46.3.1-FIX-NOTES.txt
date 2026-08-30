@@ -1,0 +1,11 @@
+SAPUDOM Structure Analysis V1.46.3.1
+RC Beam Design Dialog Runtime Fix
+
+Fixes
+1. Cache-bust app.js with ?v=1.46.3.1 so GitHub Pages/Safari cannot keep using the V1.46.2/V1.46.3 cached script under the old ?v=1.45 URL.
+2. RC Beam Design button now uses a guarded click handler.
+3. RC Beam Design calculation errors no longer fail silently; an on-screen runtime diagnostic dialog is shown.
+4. Main RC Beam Design table formatting is defensive so one incomplete/non-finite row cannot prevent the whole dialog from opening.
+5. Visible 3D/RC build labels updated to V1.46.3.1.
+
+Engineering calculation policy remains V1.46.3: Whole Model -> Strength Combinations -> 41-station envelope -> RC Beam Design.
