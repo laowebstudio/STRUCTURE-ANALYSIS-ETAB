@@ -1,3 +1,13 @@
+## V1.47.2 — Slab Shell/Plate Analysis Engine
+- Added solver-linked Q4 shell/plate slab stiffness.
+- Added membrane + Mindlin bending/shear formulation.
+- Added direct slab area loading and optional slab self-weight.
+- Removed legacy tributary slab UDLs from analysis to avoid double loading.
+- Added slab w / M11 / M22 / M12 / V13 / V23 results.
+- Added simplified slab input fields to 3D Building Generator.
+- Preserved V1.47.1.3 WebGL physical model and accurate member picking.
+- RC Design remains frozen.
+
 ## V1.47.1.3 — Accurate WebGL Member Picking + Selection Mapping Fix
 
 - Fixed wrong-member selection in WebGL Physical Model.

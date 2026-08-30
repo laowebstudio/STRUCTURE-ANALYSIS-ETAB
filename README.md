@@ -1,14 +1,15 @@
-## V1.47.1.3 — Accurate WebGL Member Picking + Selection Mapping Fix
+## V1.47.2 — Slab Shell/Plate Analysis Engine
 
-This release continues from V1.47.1.2 and fixes the selection mismatch in the True Solid Physical Model. Physical-mode clicks now use a camera ray through the cursor and intersect the actual oriented solid volume of every Beam/Column. The nearest visible hit maps directly to the original `m3.members` object and Member ID.
+SAPUDOM V1.47.2 continues from V1.47.1.3 and adds a solver-integrated floor slab finite-element layer while preserving the WebGL Physical Model and 3D frame solver workflow.
 
-### What changed
-- WebGL 3D ray picking in Physical Model.
-- Same camera projection/view matrix for render and selection.
-- Oriented bounding-box intersection for real member width/depth/length.
-- Correct nearest-visible-member selection when members overlap on screen.
-- CSS mouse coordinates are normalized from `getBoundingClientRect()`; no erroneous double Retina/DPR scaling.
-- Physical Object ↔ Member ID ↔ Analysis Member remains 1:1.
-- Analysis Model hit-testing is kept separate to protect the existing analysis workflow.
+### What is new
+- 4-node Q4 shell/plate element per structural bay.
+- Plane-stress membrane stiffness + Mindlin-Reissner plate bending/shear stiffness.
+- Slab and frame share the same global nodes and global stiffness matrix.
+- Slab area load and optional self-weight enter the global load vector directly.
+- Legacy V1.47 tributary slab-to-beam UDLs are automatically removed from the solve path to prevent double loading.
+- Slab Results table: deflection w, M11, M22, M12, V13, V23.
+- Simplified 3D Building slab input: thickness, E, Poisson ratio, superimposed DL, LL, unit weight and self-weight toggle.
 
-RC Beam Design remains frozen at V1.46.1.2. Slab FEM is still deferred until the Physical Building workflow passes verification.
+### Current verification boundary
+This release establishes the slab FEM analysis foundation. It uses one compatible Q4 element per bay and reports element-center forces. Refined automatic meshing, design strips, punching checks and RC slab reinforcement design are not claimed in V1.47.2. Validate against benchmark models before construction use.

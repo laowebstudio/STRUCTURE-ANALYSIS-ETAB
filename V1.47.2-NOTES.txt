@@ -1,0 +1,24 @@
+SAPUDOM Structure Analysis V1.47.2 — Slab Shell/Plate Analysis Engine
+
+Scope
+- Adds solver-linked 4-node Q4 shell/plate elements for horizontal floor slabs.
+- Membrane formulation: plane-stress Q4.
+- Plate formulation: Mindlin-Reissner bending + transverse shear with reduced shear integration.
+- Slab DOFs are assembled into the same global 6-DOF frame nodes: Ux, Uy, Uz, Rx, Ry.
+- Gravity area loads are applied directly to slab finite elements, not converted to perimeter-beam tributary UDLs.
+- Slab self-weight can be included automatically in DL.
+- Reports center-point w, M11, M22, M12, V13 and V23 for each slab panel.
+- Load Cases and linear Load Combinations carry slab results through the existing whole-model solve path.
+
+Easy input
+- Generate + analyze floor slabs checkbox
+- Thickness
+- Concrete E
+- Poisson ratio
+- Superimposed DL
+- LL
+- Concrete unit weight + self-weight checkbox
+- Mesh is automatically compatible 1x1 per structural bay in this release.
+
+Engineering limitation
+V1.47.2 is a first solver-integrated slab FEM foundation. The current compatible mesh is one Q4 element per bay and the reported shell actions are element-center values. It is not yet a production-grade refined mesh/design-strip engine, and RC slab reinforcement design remains frozen/out of scope. Benchmark verification is required before construction design use.
