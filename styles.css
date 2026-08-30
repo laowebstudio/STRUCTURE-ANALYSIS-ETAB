@@ -750,3 +750,9 @@ body:has(#integrated3dV128.v128-fullscreen-model){overflow:hidden!important}
 
 /* V1.33 — Story Response & Drift */
 .v133-story-summary{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px;margin-bottom:14px}.v133-story-summary>div{border:1px solid #dbe4ef;border-radius:12px;padding:14px;background:#f8fbff}.v133-story-summary b{display:block;color:#5c6f82;font-size:12px;margin-bottom:5px}.v133-story-summary strong{font-size:20px;color:#123b66}.v133-story-note{padding:10px 12px;margin-bottom:12px;border-radius:10px;background:#fff8df;color:#66541a;font-size:12px}.v133-story-table{width:100%;border-collapse:collapse}.v133-story-table th,.v133-story-table td{padding:9px 10px;border:1px solid #dfe6ee;text-align:right;white-space:nowrap}.v133-story-table th:first-child,.v133-story-table td:first-child{text-align:left}.v133-story-table tr:hover{background:#eef6ff}@media(max-width:850px){.v133-story-summary{grid-template-columns:repeat(2,1fr)}}
+/* V1.47.1.2 — WebGL True Solid Physical Model Engine */
+#integrated3dV128 .v128-view{overflow:hidden;background:#f7fafc}
+#integrated3dV128 #v14712GLCanvas,#integrated3dV128 #v128Canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#integrated3dV128 #v14712GLCanvas{z-index:1;background:#f7fafc;pointer-events:none}
+#integrated3dV128 #v128Canvas{z-index:2;background:transparent}
+#integrated3dV128 #v128Canvas.v14712-overlay{background:transparent!important}

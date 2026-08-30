@@ -1,3 +1,10 @@
+## V1.47.1.2 — WebGL True Solid Physical Model Engine
+
+- True WebGL physical renderer with depth buffering and perspective camera.
+- Solid Beam, Column, Slab and Footing geometry generated from the same structural model data.
+- Concrete face lighting, edge lines and ground grid.
+- Analysis renderer and solver remain protected; RC Beam stays frozen.
+
 # V1.47.1.1 — Realistic Physical Building Geometry & Rendering
 
 - Upgraded physical member renderer to projected solid prisms.

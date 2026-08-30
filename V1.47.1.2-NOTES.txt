@@ -1,0 +1,16 @@
+SAPUDOM Structure Analysis V1.47.1.2 — WebGL True Solid Physical Model Engine
+
+Scope
+- Replaces the Physical Model display path with a true WebGL depth-buffered solid renderer.
+- Beam and Column are rendered as actual 3D rectangular prisms from the same analysis Member data.
+- Beam top is aligned to the generated floor elevation for a more realistic RC frame representation.
+- Slabs are rendered as solid plates with actual thickness.
+- Isolated footings are rendered as solid foundation blocks below base nodes.
+- Perspective camera, depth test, face lighting, concrete tones, edges and ground grid are rendered by WebGL.
+- Physical and Analysis views remain linked to the same Node / Member / Slab / Foundation IDs.
+- Analysis Model remains on the established 2D canvas path for loads/results.
+
+Not in this release
+- Slab shell/plate FEM.
+- Soil spring / raft / pile FE analysis.
+- New RC design development (RC Beam remains frozen at V1.46.1.2).
