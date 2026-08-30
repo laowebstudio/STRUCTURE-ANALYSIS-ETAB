@@ -1,0 +1,16 @@
+SAPUDOM Structure Analysis V1.46 — Whole Model Analysis → RC Design Integration
+
+Core change
+- RC Beam Design now rebuilds its demand from the current WHOLE 3D MODEL solver.
+- Single pipeline: 3D model → solver → load cases → load combinations → governing member envelope → RC Design → Rebar Viewer.
+- All 3D members are processed in the same envelope pass; design is not sourced from a viewer/member-only cache.
+- Demand trace carries P/N, V2, V3, T, M2 and M3 end-force components and controlling analysis name.
+- Current load cases and combinations are re-solved before RC design/rebar viewer refresh.
+- Active load pattern is retained as an auditable candidate using the same whole-model solver.
+- Advanced 3D member loads (UDL, Point, Trapezoidal, Member Moment), node loads, supports and diaphragm constraints participate through the solver.
+- Any load/model change invalidates the derived RC envelope/design cache.
+
+Engineering boundary
+- V1.46 integrates whole-model analyzed demand into the existing RC beam strength/detailing workflow.
+- Existing V1.44/V1.45 reinforcement zoning remains; zone cut-off lengths are still detailing-assist rather than a full station-by-station code-verified curtailment engine.
+- Torsion and axial demand are now carried/traceable but are not yet claimed as full ACI beam axial-torsion interaction design checks.
