@@ -1,3 +1,13 @@
+## V1.47.1.3 — Accurate WebGL Member Picking + Selection Mapping Fix
+
+- Fixed wrong-member selection in WebGL Physical Model.
+- Replaced projected 2D nearest-member hit test with true 3D camera-ray picking.
+- Added oriented solid member intersection using the same geometry dimensions and beam offset as the renderer.
+- Selects the nearest visible intersection when several members overlap in the viewport.
+- Selection maps directly to the original model Member ID and Whole Model result display filter.
+- Picking remains correct after orbit, pitch, zoom, Fit, resize and fullscreen because camera matrices are rebuilt from current view state.
+- Protected Analysis Model selection path and Whole Model solver.
+
 ## V1.47.1.2 — WebGL True Solid Physical Model Engine
 
 - True WebGL physical renderer with depth buffering and perspective camera.

@@ -1,0 +1,22 @@
+SAPUDOM Structure Analysis
+V1.47.1.3 — Accurate WebGL Member Picking + Selection Mapping Fix
+
+Scope
+- Continue directly from V1.47.1.2 WebGL True Solid Physical Model Engine.
+- Fix Physical Model member selection only; preserve Whole Model analysis and frozen RC Beam branch.
+
+Changes
+1. Replaced legacy 2D nearest-line picking in Physical Model with WebGL camera-ray picking.
+2. Mouse position is converted from CSS/client coordinates to normalized device coordinates using the live canvas bounding rectangle.
+3. The same perspective/view matrix used to render the physical building is reused for picking.
+4. Each frame member is tested against its actual oriented solid bounding box (OBB), including beam vertical offset used by the renderer.
+5. When several solids overlap in screen space, the nearest positive ray intersection is selected.
+6. The picked solid returns the exact original m3 member object/ID; highlight and analysis display filter therefore map 1:1.
+7. Analysis Model retains the legacy analysis hit-test so existing 2D/analysis workflows are protected.
+8. Rotate, pitch, zoom, Fit and fullscreen automatically use the current camera for picking; no stale projection cache is used.
+9. Retina/devicePixelRatio is intentionally not multiplied into client click coordinates, preventing double-DPR selection offsets.
+
+Acceptance test
+- In Physical Model, rotate to an oblique view. Click several top-story beams, lower-story beams and columns. The red highlight must appear on the solid directly under the cursor every time.
+- Repeat after Zoom/Fit/Rotate and fullscreen.
+- Clicking overlapping projected members must select the closest visible solid.
