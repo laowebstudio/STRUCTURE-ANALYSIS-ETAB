@@ -1,0 +1,19 @@
+SAPUDOM Structure Analysis V1.47
+Full Building Structural Model & Analysis
+
+CORE FLOW
+Physical Slab Loads -> Beam Members -> Columns -> Base Supports -> Foundation Reactions
+
+NEW
+1. Full Building Generator creates physical slabs and isolated footings.
+2. Slab DL/LL area loads are transferred into 3D member loads automatically.
+3. Whole Building frame solver uses the existing verified 6-DOF/node, 12x12 member stiffness assembly.
+4. Slab Load Path and Foundation result tabs are available after Analyze 3D.
+5. Main 3D model displays translucent floor panels and footing pads.
+
+BOUNDARY
+- Slab shell/plate bending FEM: NOT CLAIMED in V1.47.
+- Soil springs / raft / pile group interaction: NOT CLAIMED in V1.47.
+- RC Beam detailing remains frozen at V1.46.1.2.
+
+This boundary is intentional so V1.47 can be tested as a stable whole-building model/load-path foundation before adding shell and foundation finite elements.

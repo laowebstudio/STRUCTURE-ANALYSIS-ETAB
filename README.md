@@ -1,20 +1,20 @@
-# SAPUDOM Structure Analysis V1.46.1.2
+# SAPUDOM Structure Analysis V1.47
 
-## Practical RC Beam Detailing + Constructability Optimization
+## Full Building Structural Model & Analysis
 
-V1.46.1.2 is developed from V1.46.1.1 and preserves the Whole Model solve and station-envelope RC beam design path.
+V1.47 continues from V1.46.1.2 while freezing the RC-beam detailing prototype. The 3D workspace now supports a physical full-building model with beams, columns, floor slabs and isolated footings.
 
-### Added in V1.46.1.2
-- Practical longitudinal bar-diameter optimization using common beam bar sizes (16, 20, 25, 28, 32 mm) with penalties for excessive bar count and multi-layer congestion.
-- Two continuous longitudinal base bars are maintained through the beam in Auto Practical mode.
-- Additional longitudinal bars are created only where station moment demand requires them.
-- Extra-bar zones are extended by development length and a practical minimum zone length, rounded to 50 mm detailing increments.
-- Adjacent/overlapping short extra zones are merged to avoid impractical reinforcement stair-steps.
-- 3D Rebar Viewer now distinguishes continuous bars from extra zoned bars instead of drawing the governing maximum cage continuously for the full beam.
-- Practical Detailing can be enabled/disabled in the RC Beam Design Center.
-- Existing station-by-station moment and shear verification remains active.
+### Implemented in V1.47
+- Physical 3D Beam + Column + Slab + Foundation model
+- Whole-building 12x12 space-frame stiffness solve using all frame nodes/members
+- Rigid diaphragm support retained
+- Slab area-load panels with solver-linked gravity transfer to perimeter beams
+- DL and LL slab load transfer included automatically in the same 3D load system
+- Foundation objects mapped to solved support reactions
+- Result tabs for Slab Load Path and Foundation reactions
+- Physical floor/footing rendering in the integrated 3D workspace
+- JSON persistence through the existing model3d project snapshot
+- RC Beam design remains available but marked Frozen from the V1.46.1.2 prototype
 
-### Design-use warning
-This software is a design-assist tool. Construction drawings still require project-specific engineering review for support geometry, seismic detailing, torsion, serviceability, splice locations, anchorage, local code requirements and final bar bending schedule.
-
-See `V1.46.1.2-NOTES.txt` for the test checklist.
+### Engineering boundary
+The V1.47 slab model is a physical load-transfer panel model. It does **not** claim shell/plate bending FEM or slab reinforcement design. Foundation objects report frame support demands; soil-structure interaction and footing design are not yet claimed. These are deliberate boundaries so numerical results are not presented as capabilities the engine does not yet possess.
