@@ -1,21 +1,3 @@
-
-## V1.46.3.1 — RC Beam Design Dialog Runtime Fix
-- Forced browser/GitHub Pages cache refresh with `app.js?v=1.46.3.1`.
-- Guarded RC Beam Design button/dialog runtime path; no silent failure.
-- Defensive RC design table rendering for incomplete/non-finite result rows.
-- Keeps V1.46.3 Whole Model / Strength Combination / 41-station envelope calculation policy unchanged.
-# Changelog
-
-## V1.46.3 — Station Demand Runtime + Trace Integrity Fix
-- Fixed RC Design runtime ordering for `MposMid`.
-- Added Strength / Service / Other combination classification.
-- Strength RC design excludes Service/Other combinations from governing candidates.
-- Migrated legacy combinations safely.
-- Changed Pu and Tu from end-force-only tracing to station-envelope tracing.
-- Added x/L, axis, signed value, and governing-combination trace to RC Design Details.
-- Added separate Mu+ midspan and Mu− support-i/support-j trace.
-- Preserved Whole Model solve and Selected Member display-only behavior.
-
 # V1.46.1 — Whole Model Solve / Selected Member Display Fix
 
 - Locked 3D solver semantics to Whole Model analysis.
@@ -31,11 +13,3 @@
 - RC design envelope now includes a fresh direct solve of the active 3D Load Pattern in addition to governing load combinations.
 - Opening 3D RC Rebar Viewer automatically rebuilds the selected member design from the live solver path.
 - Updated synchronization/version feedback in RC Design and Rebar Viewer.
-
-## V1.46.3.2 — Reinforcement Zoning Consistency Fix
-- Added independent Support-i / Support-j top-rebar design records.
-- Added centroid-aware multi-layer top-rebar capacity iteration.
-- Added top-zone As required/min/provided and DCR trace to RC Details and 3D Viewer.
-- Added final stirrup-zone local Vu / φVn / DCR / spacing verification.
-- Overall beam PASS now includes top-zone and final stirrup-zone verification.
-- Updated build/cache identification to V1.46.3.2.
