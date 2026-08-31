@@ -1437,7 +1437,7 @@ function building3dCenterV130(){
   m3.building ||= {stories:3,baysX:2,baysY:2,storyHeights:'3.5,3.5,3.5',bayWidthsX:'5,5',bayWidthsY:'6,6',fixedBase:true};
   const b=m3.building;
   const wrap=document.createElement('div'); wrap.className='eng-dialog v130-building-modal';
-  wrap.innerHTML=`<div class="eng-card v130-building-card"><div class="section-db-head"><div><h2>Full Building Generator — V1.47.2.2</h2><small>Physical Beam + Column + Slab + Foundation model • whole-building frame solve • 2D model protected</small></div><button class="ml-close">×</button></div>
+  wrap.innerHTML=`<div class="eng-card v130-building-card"><div class="section-db-head"><div><h2>Full Building Generator — V1.47.2.3</h2><small>Physical Beam + Column + Slab + Foundation model • whole-building frame solve • 2D model protected</small></div><button class="ml-close">×</button></div>
   <div class="v130-building-grid">
    <section><h3>Grid X / Y</h3>
     <label>Bays X<input id="v130Bx" type="number" min="1" max="30" value="${b.baysX||2}"></label>
@@ -1471,7 +1471,7 @@ function building3dCenterV130(){
   </div>
   <div id="v130Preview" class="v130-building-preview"></div>
   <div class="v130-building-actions"><button id="v130Generate" class="primary">▦ Generate 3D Building</button><button id="v130Cancel">Cancel</button></div>
-  <div class="engineering-note"><b>V1.47.2.2:</b> Replace Current Geometry now performs a full model + analysis-result reset before regeneration. New Nodes/Members/Slabs/Footings and all result tables are rebuilt from the current inputs only.</div></div>`;
+  <div class="engineering-note"><b>V1.47.2.3:</b> Full regeneration integrity is preserved. Slab bending now uses a 2×2 internal Q4 recovery patch condensed to the four frame corner joints, so M11/M22/M12 and V13/V23 can be recovered under symmetric gravity loading.</div></div>`;
   document.body.appendChild(wrap);
   const q=id=>wrap.querySelector('#'+id);
   const parseSeries=(txt,n,name)=>{let a=String(txt||'').split(',').map(x=>Number(x.trim())).filter(x=>Number.isFinite(x)&&x>0);if(a.length===1&&n>1)a=Array(n).fill(a[0]);if(a.length!==n)throw new Error(`${name} requires ${n} positive value(s).`);return a};
@@ -1498,10 +1498,10 @@ function building3dCenterV130(){
     for(let k=1;k<=stories;k++){for(let iy=0;iy<=by;iy++)for(let ix=0;ix<bx;ix++)add(map.get(`${ix},${iy},${k}`),map.get(`${ix+1},${iy},${k}`),'Beam-X',bp);for(let ix=0;ix<=bx;ix++)for(let iy=0;iy<by;iy++)add(map.get(`${ix},${iy},${k}`),map.get(`${ix},${iy+1},${k}`),'Beam-Y',bp)}
     m3.slabs=[];m3.foundations=[];
     const generateSlabs=!!q('v147Slabs').checked,slabThicknessMm=Number(q('v147SlabT').value),slabDL=Math.abs(Number(q('v147SlabDL').value)||0),slabLL=Math.abs(Number(q('v147SlabLL').value)||0),slabE_MPa=Number(q('v147SlabE')?.value),slabNu=Number(q('v147SlabNu')?.value),slabGamma=Number(q('v147SlabGamma')?.value),slabSelfWeight=!!q('v147SlabSW')?.checked;
-    if(generateSlabs){let sid=1;for(let k=1;k<=stories;k++)for(let iy=0;iy<by;iy++)for(let ix=0;ix<bx;ix++)m3.slabs.push({id:sid++,story:k,nodes:[map.get(`${ix},${iy},${k}`),map.get(`${ix+1},${iy},${k}`),map.get(`${ix+1},${iy+1},${k}`),map.get(`${ix},${iy+1},${k}`)],thicknessMm:slabThicknessMm,dl:slabDL,ll:slabLL,analysisType:'Q4_SHELL_PLATE',E_MPa:slabE_MPa,nu:slabNu,gamma:slabGamma,selfWeight:slabSelfWeight,mesh:{nx:1,ny:1,compatible:true},source:'V1.47.2.2_SHELL_PLATE'})}
+    if(generateSlabs){let sid=1;for(let k=1;k<=stories;k++)for(let iy=0;iy<by;iy++)for(let ix=0;ix<bx;ix++)m3.slabs.push({id:sid++,story:k,nodes:[map.get(`${ix},${iy},${k}`),map.get(`${ix+1},${iy},${k}`),map.get(`${ix+1},${iy+1},${k}`),map.get(`${ix},${iy+1},${k}`)],thicknessMm:slabThicknessMm,dl:slabDL,ll:slabLL,analysisType:'Q4_SHELL_PLATE',E_MPa:slabE_MPa,nu:slabNu,gamma:slabGamma,selfWeight:slabSelfWeight,mesh:{nx:2,ny:2,compatible:true,internal:true,condensed:true},source:'V1.47.2.3_SHELL_PLATE_RECOVERY'})}
     const generateFootings=!!q('v147Footings').checked,footingB=Math.max(.3,+q('v147FootB').value||1.8),footingL=Math.max(.3,+q('v147FootL').value||1.8),footingT=Math.max(.15,+q('v147FootT').value||.45);
     if(generateFootings){let fid=1;for(let iy=0;iy<=by;iy++)for(let ix=0;ix<=bx;ix++)m3.foundations.push({id:fid++,nodeId:map.get(`${ix},${iy},0`),type:'Isolated Footing',B:footingB,L:footingL,t:footingT,source:'V1.47_FULL_BUILDING'})}
-    m3.nextNode=nid;m3.nextMember=mid;m3.building={stories,baysX:bx,baysY:by,storyHeights:hs.join(','),bayWidthsX:wx.join(','),bayWidthsY:wy.join(','),fixedBase:fixed,baseZ:zs[0],generateSlabs,slabThicknessMm,slabDL,slabLL,slabE_MPa,slabNu,slabGamma,slabSelfWeight,generateFootings,footingB,footingL,footingT,supportPersistenceVersion:'V1.47.2.2'};
+    m3.nextNode=nid;m3.nextMember=mid;m3.building={stories,baysX:bx,baysY:by,storyHeights:hs.join(','),bayWidthsX:wx.join(','),bayWidthsY:wy.join(','),fixedBase:fixed,baseZ:zs[0],generateSlabs,slabThicknessMm,slabDL,slabLL,slabE_MPa,slabNu,slabGamma,slabSelfWeight,generateFootings,footingB,footingL,footingT,supportPersistenceVersion:'V1.47.2.3'};
     // Results must never survive geometry regeneration.
     m3.results=null;m3.loadCaseResults={};m3.comboResults={};m3.envelopeV140=null;m3.wholeModelDesignEnvelopeV146=null;
     const integrity=current3DModelIntegrityV14722(m3);if(!integrity.ok)throw new Error('Generated model integrity check failed.');
@@ -1543,7 +1543,7 @@ function slabLoadPathHtmlV147(m3){
  const by=new Map(rr.map(x=>[String(x.id),x]));
  const maxW=rr.length?Math.max(...rr.map(x=>Math.abs(Number(x.w)||0))):0;
  const maxM=rr.length?Math.max(...rr.flatMap(x=>[Math.abs(Number(x.M11)||0),Math.abs(Number(x.M22)||0),Math.abs(Number(x.M12)||0)])):0;
- return `<div class="engineering-note"><b>V1.47.2 Slab FEM:</b> Each bay is a compatible 4-node shell/plate element sharing frame corner nodes. Membrane + Mindlin bending/shear stiffness is assembled directly into the Whole Building global matrix. M11/M22/M12 are plate moments per metre width.</div><div class="v128-summary"><div><b>Shell/Plate Elements</b><strong>${ss.length}</strong></div><div><b>Max |w|</b><strong>${(maxW*1000).toFixed(3)} mm</strong></div><div><b>Max |M|</b><strong>${maxM.toFixed(3)} kN·m/m</strong></div><div><b>Mesh</b><strong>1×1 / bay</strong></div></div><table><tr><th>Slab</th><th>Story</th><th>t mm</th><th>w mm</th><th>M11</th><th>M22</th><th>M12</th><th>V13</th><th>V23</th></tr>${ss.map(x=>{const r=by.get(String(x.id));return `<tr><td>S${x.id}</td><td>${x.story}</td><td>${Number(x.thicknessMm||0)}</td><td>${r?(Number(r.w)*1000).toFixed(3):'—'}</td><td>${r?Number(r.M11).toFixed(3):'—'}</td><td>${r?Number(r.M22).toFixed(3):'—'}</td><td>${r?Number(r.M12).toFixed(3):'—'}</td><td>${r?Number(r.V13).toFixed(3):'—'}</td><td>${r?Number(r.V23).toFixed(3):'—'}</td></tr>`}).join('')}</table>`}
+ return `<div class="engineering-note"><b>V1.47.2.3 Slab FEM:</b> Each bay uses a 2×2 solver-internal Q4 shell/plate patch. Internal slab DOFs are statically condensed to the four frame corner joints, then recovered after the whole-building solve. M11/M22/M12 are plate moments per metre width; V13/V23 are transverse shears per metre.</div><div class="v128-summary"><div><b>Shell/Plate Elements</b><strong>${ss.length}</strong></div><div><b>Max |w|</b><strong>${(maxW*1000).toFixed(3)} mm</strong></div><div><b>Max |M|</b><strong>${maxM.toFixed(3)} kN·m/m</strong></div><div><b>Mesh</b><strong>2×2 internal / bay</strong></div></div><table><tr><th>Slab</th><th>Story</th><th>t mm</th><th>w mm</th><th>M11</th><th>M22</th><th>M12</th><th>V13</th><th>V23</th></tr>${ss.map(x=>{const r=by.get(String(x.id));return `<tr><td>S${x.id}</td><td>${x.story}</td><td>${Number(x.thicknessMm||0)}</td><td>${r?(Number(r.w)*1000).toFixed(3):'—'}</td><td>${r?Number(r.M11).toFixed(3):'—'}</td><td>${r?Number(r.M22).toFixed(3):'—'}</td><td>${r?Number(r.M12).toFixed(3):'—'}</td><td>${r?Number(r.V13).toFixed(3):'—'}</td><td>${r?Number(r.V23).toFixed(3):'—'}</td></tr>`}).join('')}</table>`}
 
 function foundationHtmlV147(m3,res){const rows=foundationReactionRowsV147(m3,res);if(!rows.length)return '<div class="empty">No foundations generated.</div>';return `<div class="engineering-note"><b>Foundation demand:</b> support reactions from the solved Whole Building Frame are mapped directly to each footing node.</div><table><tr><th>Footing</th><th>Node</th><th>B×L×t m</th><th>Rx kN</th><th>Ry kN</th><th>Rz kN</th><th>Mx</th><th>My</th></tr>${rows.map(f=>`<tr><td>F${f.id}</td><td>N${f.nodeId}</td><td>${f.B}×${f.L}×${f.t}</td><td>${f.fx.toFixed(2)}</td><td>${f.fy.toFixed(2)}</td><td>${f.fz.toFixed(2)}</td><td>${f.mx.toFixed(2)}</td><td>${f.my.toFixed(2)}</td></tr>`).join('')}</table>`}
 
@@ -1918,23 +1918,71 @@ function v1472AddBtDB(K,B,D,scale){
   for(let i=0;i<D.length;i++)for(let j=0;j<B[0].length;j++)for(let k=0;k<D[0].length;k++)DB[i][j]+=D[i][k]*B[k][j];
   for(let i=0;i<K.length;i++)for(let j=0;j<K.length;j++){let v=0;for(let k=0;k<B.length;k++)v+=B[k][i]*DB[k][j];K[i][j]+=v*scale}
 }
+function v14723MembraneElement(coords,pr){
+  const {t,E,nu}=pr,den=1-nu*nu,Dm=[[E*t/den,E*t*nu/den,0],[E*t*nu/den,E*t/den,0],[0,0,E*t*(1-nu)/(2*den)]],Ke=zeros(8,8),g=1/Math.sqrt(3);
+  for(const xi of [-g,g])for(const eta of [-g,g]){
+    const b=v1472BAt(coords,xi,eta),Bm=zeros(3,8);
+    for(let i=0;i<4;i++){const o=i*2;Bm[0][o]=b.dx[i];Bm[1][o+1]=b.dy[i];Bm[2][o]=b.dy[i];Bm[2][o+1]=b.dx[i]}
+    v1472AddBtDB(Ke,Bm,Dm,b.det);
+  }
+  return Ke;
+}
+function v14723BendingSubElement(coords,pr,q0){
+  const {t,E,nu}=pr,G=E/(2*(1+nu)),den=1-nu*nu;
+  const cb=E*t*t*t/(12*den),Db=[[cb,cb*nu,0],[cb*nu,cb,0],[0,0,cb*(1-nu)/2]],cs=(5/6)*G*t,Ds=[[cs,0],[0,cs]],Ke=zeros(12,12),fe=Array(12).fill(0),g=1/Math.sqrt(3);
+  for(const xi of [-g,g])for(const eta of [-g,g]){
+    const b=v1472BAt(coords,xi,eta),Bb=zeros(3,12);
+    for(let i=0;i<4;i++){const o=i*3;Bb[0][o+1]=b.dx[i];Bb[1][o+2]=b.dy[i];Bb[2][o+1]=b.dy[i];Bb[2][o+2]=b.dx[i];if(q0)fe[o]+=b.N[i]*q0*b.det}
+    v1472AddBtDB(Ke,Bb,Db,b.det);
+  }
+  // Selective shear integration: dominant reduced-integration Mindlin shear plus
+  // a very small full-integration stabilization term. This suppresses hourglass
+  // modes without re-introducing severe shear locking for ordinary floor slabs.
+  const hs=0.001;
+  {const b=v1472BAt(coords,0,0),Bs=zeros(2,12);for(let i=0;i<4;i++){const o=i*3;Bs[0][o]=b.dx[i];Bs[0][o+1]=b.N[i];Bs[1][o]=b.dy[i];Bs[1][o+2]=b.N[i]}v1472AddBtDB(Ke,Bs,Ds,b.det*4*(1-hs))}
+  for(const xi of [-g,g])for(const eta of [-g,g]){const b=v1472BAt(coords,xi,eta),Bs=zeros(2,12);for(let i=0;i<4;i++){const o=i*3;Bs[0][o]=b.dx[i];Bs[0][o+1]=b.N[i];Bs[1][o]=b.dy[i];Bs[1][o+2]=b.N[i]}v1472AddBtDB(Ke,Bs,Ds,b.det*hs)}
+  return {Ke,fe,Db,Ds};
+}
+function v14723InterpQuad(corners,u,v){
+  const N=[(1-u)*(1-v),u*(1-v),u*v,(1-u)*v];
+  return {x:N.reduce((a,n,i)=>a+n*Number(corners[i].x),0),y:N.reduce((a,n,i)=>a+n*Number(corners[i].y),0),z:N.reduce((a,n,i)=>a+n*Number(corners[i].z),0)};
+}
+function v14723SolveColumns(A,B){
+  if(!A.length)return [];const cols=B[0]?.length||0,X=zeros(A.length,cols);
+  for(let j=0;j<cols;j++){const rhs=B.map(r=>r[j]),x=solveLinear(A.map(r=>r.slice()),rhs.slice());for(let i=0;i<x.length;i++)X[i][j]=x[i]}
+  return X;
+}
+function v14723StaticCondense(K,F,retain){
+  const n=K.length,rset=new Set(retain),internal=[];for(let i=0;i<n;i++)if(!rset.has(i))internal.push(i);
+  const Krr=retain.map(i=>retain.map(j=>K[i][j])),Fr=retain.map(i=>F[i]);if(!internal.length)return {Kc:Krr,Fc:Fr,internal,Kii:[],Kir:[],Fi:[]};
+  const Kri=retain.map(i=>internal.map(j=>K[i][j])),Kir=internal.map(i=>retain.map(j=>K[i][j])),Kii=internal.map(i=>internal.map(j=>K[i][j])),Fi=internal.map(i=>F[i]);
+  // Small numerical stabilization only on solver-internal bending DOFs.
+  const diagMax=Math.max(1,...Kii.map((r,i)=>Math.abs(r[i]||0))),eps=diagMax*1e-11;for(let i=0;i<Kii.length;i++)Kii[i][i]+=eps;
+  const X=v14723SolveColumns(Kii,Kir),y=solveLinear(Kii.map(r=>r.slice()),Fi.slice());
+  const Kc=Krr.map((row,a)=>row.map((v,b)=>v-Kri[a].reduce((sum,k,ii)=>sum+k*X[ii][b],0))),Fc=Fr.map((v,a)=>v-Kri[a].reduce((sum,k,ii)=>sum+k*y[ii],0));
+  return {Kc,Fc,internal,Kii,Kir,Fi};
+}
 function v1472Element(slab,m3,pat){
   const ids=(slab.nodes||[]).map(Number),coords=ids.map(id=>(m3.nodes||[]).find(n=>Number(n.id)===id));
   if(coords.length!==4||coords.some(x=>!x))throw new Error('Slab S'+slab.id+' has invalid node connectivity.');
   const z0=coords[0].z;if(coords.some(n=>Math.abs(Number(n.z)-Number(z0))>1e-5))throw new Error('V1.47.2 supports horizontal floor slabs; S'+slab.id+' is not horizontal.');
-  const pr=v1472ShellProps(slab,m3),{t,E,nu}=pr,G=E/(2*(1+nu)),den=1-nu*nu;
-  const Dm=[[E*t/den,E*t*nu/den,0],[E*t*nu/den,E*t/den,0],[0,0,E*t*(1-nu)/(2*den)]];
-  const cb=E*t*t*t/(12*den),Db=[[cb,cb*nu,0],[cb*nu,cb,0],[0,0,cb*(1-nu)/2]];
-  const cs=(5/6)*G*t,Ds=[[cs,0],[0,cs]],Ke=zeros(20,20),fe=Array(20).fill(0),g=1/Math.sqrt(3);
-  const q0=pat==='DL'?-(Math.abs(Number(slab.dl)||0)+(pr.selfWeight?pr.gamma*t:0)):pat==='LL'?-Math.abs(Number(slab.ll)||0):0;
-  for(const xi of [-g,g])for(const eta of [-g,g]){
-    const b=v1472BAt(coords,xi,eta),Bm=zeros(3,20),Bb=zeros(3,20);
-    for(let i=0;i<4;i++){const o=i*5;Bm[0][o]=b.dx[i];Bm[1][o+1]=b.dy[i];Bm[2][o]=b.dy[i];Bm[2][o+1]=b.dx[i];Bb[0][o+3]=b.dx[i];Bb[1][o+4]=b.dy[i];Bb[2][o+3]=b.dy[i];Bb[2][o+4]=b.dx[i];if(q0)fe[o+2]+=b.N[i]*q0*b.det}
-    v1472AddBtDB(Ke,Bm,Dm,b.det);v1472AddBtDB(Ke,Bb,Db,b.det);
+  const pr=v1472ShellProps(slab,m3),{t}=pr,q0=pat==='DL'?-(Math.abs(Number(slab.dl)||0)+(pr.selfWeight?pr.gamma*t:0)):pat==='LL'?-Math.abs(Number(slab.ll)||0):0;
+  const Ke=zeros(20,20),fe=Array(20).fill(0);
+  // Membrane stiffness remains the compatible 4-corner Q4 formulation.
+  const Km=v14723MembraneElement(coords,pr);for(let a=0;a<4;a++)for(let b=0;b<4;b++)for(let da=0;da<2;da++)for(let db=0;db<2;db++)Ke[a*5+da][b*5+db]+=Km[a*2+da][b*2+db];
+  // V1.47.2.3: 2x2 solver-internal bending patch condensed to corner w/rx/ry DOFs.
+  const ndiv=2,nside=3,patchCoords=[];for(let iy=0;iy<nside;iy++)for(let ix=0;ix<nside;ix++)patchCoords.push(v14723InterpQuad(coords,ix/ndiv,iy/ndiv));
+  const nd=patchCoords.length*3,Kp=zeros(nd,nd),Fp=Array(nd).fill(0),subs=[],pidx=(ix,iy)=>iy*nside+ix;
+  for(let ey=0;ey<ndiv;ey++)for(let ex=0;ex<ndiv;ex++){
+    const pn=[pidx(ex,ey),pidx(ex+1,ey),pidx(ex+1,ey+1),pidx(ex,ey+1)],cc=pn.map(i=>patchCoords[i]),se=v14723BendingSubElement(cc,pr,q0),dofs=[];
+    for(const pi of pn)for(let d=0;d<3;d++)dofs.push(pi*3+d);
+    for(let i=0;i<12;i++){Fp[dofs[i]]+=se.fe[i];for(let j=0;j<12;j++)Kp[dofs[i]][dofs[j]]+=se.Ke[i][j]}
+    subs.push({pn,coords:cc,dofs,Db:se.Db,Ds:se.Ds});
   }
-  // Reduced integration for Mindlin transverse shear to limit shear locking.
-  {const b=v1472BAt(coords,0,0),Bs=zeros(2,20);for(let i=0;i<4;i++){const o=i*5;Bs[0][o+2]=b.dx[i];Bs[0][o+3]=b.N[i];Bs[1][o+2]=b.dy[i];Bs[1][o+4]=b.N[i]}v1472AddBtDB(Ke,Bs,Ds,b.det*4)}
-  return {slab,ids,coords,pr,Ke,fe,Db,Ds};
+  const cornerPatch=[pidx(0,0),pidx(2,0),pidx(2,2),pidx(0,2)],retain=[];for(const pi of cornerPatch)for(let d=0;d<3;d++)retain.push(pi*3+d);
+  const cond=v14723StaticCondense(Kp,Fp,retain),bendGlobal=[];for(let a=0;a<4;a++)bendGlobal.push(a*5+2,a*5+3,a*5+4);
+  for(let i=0;i<12;i++){fe[bendGlobal[i]]+=cond.Fc[i];for(let j=0;j<12;j++)Ke[bendGlobal[i]][bendGlobal[j]]+=cond.Kc[i][j]}
+  return {slab,ids,coords,pr,Ke,fe,patch:{ndiv,patchCoords,Kp,Fp,retain,subs,...cond},q0,bendGlobal};
 }
 function v1472AssembleSlabs(m3,K,F,imap,pat){
   const els=[];for(const slab of (m3.slabs||[])){
@@ -1944,10 +1992,17 @@ function v1472AssembleSlabs(m3,K,F,imap,pat){
     e.dofs=dofs;els.push(e);
   }return els;
 }
+function v14723RecoverAtSub(sub,up){
+  const ue=sub.dofs.map(d=>Number(up[d]||0)),b=v1472BAt(sub.coords,0,0),kap=[0,0,0],gam=[0,0];let w=0;
+  for(let i=0;i<4;i++){const o=i*3;w+=b.N[i]*ue[o];kap[0]+=b.dx[i]*ue[o+1];kap[1]+=b.dy[i]*ue[o+2];kap[2]+=b.dy[i]*ue[o+1]+b.dx[i]*ue[o+2];gam[0]+=b.dx[i]*ue[o]+b.N[i]*ue[o+1];gam[1]+=b.dy[i]*ue[o]+b.N[i]*ue[o+2]}
+  return {w,M:matVec(sub.Db,kap),V:matVec(sub.Ds,gam)};
+}
 function v1472RecoverSlabs(els,U){
-  const out=[];for(const e of els){const ue=e.dofs.map(d=>Number(U[d]||0)),b=v1472BAt(e.coords,0,0),kap=[0,0,0],gam=[0,0];let w=0;
-    for(let i=0;i<4;i++){const o=i*5;w+=b.N[i]*ue[o+2];kap[0]+=b.dx[i]*ue[o+3];kap[1]+=b.dy[i]*ue[o+4];kap[2]+=b.dy[i]*ue[o+3]+b.dx[i]*ue[o+4];gam[0]+=b.dx[i]*ue[o+2]+b.N[i]*ue[o+3];gam[1]+=b.dy[i]*ue[o+2]+b.N[i]*ue[o+4]}
-    const M=matVec(e.Db,kap),V=matVec(e.Ds,gam);out.push({id:e.slab.id,story:e.slab.story,w,M11:M[0],M22:M[1],M12:M[2],V13:V[0],V23:V[1],analysisType:'Q4_SHELL_PLATE',location:'element center'});
+  const out=[];for(const e of els){
+    const ur=e.bendGlobal.map(k=>Number(U[e.dofs[k]]||0)),p=e.patch,up=Array(p.Kp.length).fill(0);p.retain.forEach((d,i)=>up[d]=ur[i]);
+    if(p.internal.length){const rhs=p.Fi.map((v,i)=>v-p.Kir[i].reduce((sum,k,j)=>sum+k*ur[j],0)),ui=solveLinear(p.Kii.map(r=>r.slice()),rhs.slice());p.internal.forEach((d,i)=>up[d]=ui[i])}
+    const rr=p.subs.map(s=>v14723RecoverAtSub(s,up)),centerPi=4,wCenter=Number(up[centerPi*3]||0),avg=k=>rr.reduce((a,r)=>a+Number(k(r)||0),0)/Math.max(1,rr.length),env=getter=>rr.reduce((best,r)=>Math.abs(getter(r))>Math.abs(best)?getter(r):best,0);
+    out.push({id:e.slab.id,story:e.slab.story,w:wCenter,M11:env(r=>r.M[0]),M22:env(r=>r.M[1]),M12:env(r=>r.M[2]),V13:env(r=>r.V[0]),V23:env(r=>r.V[1]),analysisType:'Q4_SHELL_PLATE_2X2_CONDENSED',location:'2x2 internal patch envelope',recovery:{subElements:rr.length,avgM11:avg(r=>r.M[0]),avgM22:avg(r=>r.M[1])}});
   }return out;
 }
 function v1472CombineSlabs(terms,solved,keyName='pattern'){
@@ -1967,7 +2022,7 @@ function solve3DV128(){
  const diaphragm=solveConstrained3DV135(K,F,nodes,imap,fixed,m3),U=diaphragm.U;const RF=matVec(K,U).map((v,i)=>v-F[i]);
  const displacements=nodes.map(n=>{const q=imap.get(n.id)*6;return{id:n.id,ux:U[q],uy:U[q+1],uz:U[q+2],rx:U[q+3],ry:U[q+4],rz:U[q+5]}});
  const reactions=nodes.map(n=>{const q=imap.get(n.id)*6;return{id:n.id,fx:RF[q],fy:RF[q+1],fz:RF[q+2],mx:RF[q+3],my:RF[q+4],mz:RF[q+5]}});
- const memberForces=elements.map(e=>{const ug=e.dofs.map(d=>U[d]),ul=matVec(e.T,ug),fl=matVec(e.kl,ul).map((v,i)=>v-(e.feLocal?.[i]||0));return{id:e.m.id,i:e.m.i,j:e.m.j,local:fl}});const slabResults=v1472RecoverSlabs(slabElements,U);const equilibrium=equilibriumCheckV132(nodes,F,RF,imap);m3.results={U,F,K,displacements,reactions,memberForces,slabResults,slabFEM:{elements:slabElements.length,type:'Q4 Shell/Plate',formulation:'Plane-stress membrane + Mindlin-Reissner bending/shear',mesh:'1x1 per bay'},loadPattern:pat,equilibrium,diaphragm,loadAudit};m3.results.noAppliedLoad=resultAppliedMagnitudeV1372(m3.results)<1e-10;m3.results.storyResponse=storyResponseV133(m3,m3.results);m3.results.storyForces=storyForcesV134(m3,m3.results,imap);return m3.results
+ const memberForces=elements.map(e=>{const ug=e.dofs.map(d=>U[d]),ul=matVec(e.T,ug),fl=matVec(e.kl,ul).map((v,i)=>v-(e.feLocal?.[i]||0));return{id:e.m.id,i:e.m.i,j:e.m.j,local:fl}});const slabResults=v1472RecoverSlabs(slabElements,U);const equilibrium=equilibriumCheckV132(nodes,F,RF,imap);m3.results={U,F,K,displacements,reactions,memberForces,slabResults,slabFEM:{elements:slabElements.length,type:'Q4 Shell/Plate',formulation:'2x2 internal Q4 patch + static condensation + Mindlin-Reissner bending/shear',mesh:'2x2 internal / bay (condensed to 4 frame corners)'},loadPattern:pat,equilibrium,diaphragm,loadAudit};m3.results.noAppliedLoad=resultAppliedMagnitudeV1372(m3.results)<1e-10;m3.results.storyResponse=storyResponseV133(m3,m3.results);m3.results.storyForces=storyForcesV134(m3,m3.results,imap);return m3.results
 }
 
 function storyForcesV134(m3,res,imap){
@@ -3910,7 +3965,7 @@ function createWebGLPhysicalRendererV14712(canvas,m3,getFocus){
 
 function integrated3DWorkspaceV128(){
  if(integrated3dActiveV128){closeIntegrated3DV128();return}integrated3dActiveV128=true;document.querySelector('.workspace')?.classList.add('v130-3d-workspace');const center=document.querySelector('.center');[...center.children].forEach(x=>x.classList.add('v128-hide2d'));$('frame3dBtn').textContent='▣ 2D Frame';$('frame3dBtn').classList.add('active3d');
- const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>V1.47.2.2 — Full Model Regeneration + Analysis Result Reset Integrity Fix</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn" title="RC prototype frozen at V1.46.1.2">▦ RC Beam (Frozen)</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v1471Physical" class="primary">Physical Model</button><button id="v1471Analysis">Analysis Model</button><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member (Display Only)</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.47.2.2 • MODEL REGENERATION INTEGRITY • SLAB SHELL/PLATE FEM • Whole Building • Beam + Column + Slab + Foundation</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v14712GLCanvas" aria-label="WebGL Physical Building"></canvas><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="slabs">Slab FEM</button><button class="tab" data-v128-tab="foundation">Foundation</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
+ const host=document.createElement('div');host.id='integrated3dV128';host.innerHTML=`<div class="v128-toolbar"><b>V1.47.2.3 — Slab FEM Bending Moment + Shear Force Recovery Fix</b><button id="v128Edit3d">3D Model Data</button><button id="v130Building3d" class="v130-building-btn">▦ 3D Building</button><button id="v131Loads3d" class="v131-load-btn">⇩ 3D Loads</button><button id="v135Diaphragm">▦ Diaphragm</button><button id="v136Combos" class="btn">Σ 3D Combos</button><button id="v140Envelope" class="btn">⌁ Envelope</button><button id="v141RCBeam" class="btn" title="RC prototype frozen at V1.46.1.2">▦ RC Beam (Frozen)</button><button id="v138LoadCases" class="btn">▤ Load Cases</button><label class="v131-active-pattern">Pattern <select id="v131ActivePattern"></select></label><button id="v1471Physical" class="primary">Physical Model</button><button id="v1471Analysis">Analysis Model</button><button id="v128Fit">Fit</button><button id="v128L">↺</button><button id="v128R">↻</button><button id="v128U">↑</button><button id="v128D">↓</button><button id="v128Fullscreen">⛶ Fullscreen Model</button><button id="v128Analyze" class="primary">▶ Analyze 3D</button><label class="v129-diagram-control">Diagram Scale <input id="v129DiagramScale" type="number" min="0.2" max="3" step="0.1" value="1"></label><label class="v129-values-control"><input id="v129Values" type="checkbox" checked> Values</label><label class="v129-scope-control">Diagram <select id="v129DiagramScope"><option value="selected">Selected Member (Display Only)</option><option value="all">Whole Model</option></select></label><label class="v129-axis-control"><input id="v129LocalAxes" type="checkbox"> Local 1-2-3</label><span id="v128TopStatus">V1.47.2.3 • SLAB MOMENT/SHEAR RECOVERY • 2×2 INTERNAL Q4 PATCH • Whole Building</span></div><div class="result-modes"><span class="result-modes-label">3D Results:</span><button class="result-mode active" data-v128-view="model">Model</button><button class="result-mode" data-v128-view="deformed">Deformed</button><button class="result-mode" data-v128-view="axial">Axial N</button><button class="result-mode" data-v128-view="v2">Shear V2</button><button class="result-mode" data-v128-view="v3">Shear V3</button><button class="result-mode" data-v128-view="t">Torsion T</button><button class="result-mode" data-v128-view="m2">Moment M2</button><button class="result-mode" data-v128-view="m3">Moment M3</button></div><div class="v128-view"><canvas id="v14712GLCanvas" aria-label="WebGL Physical Building"></canvas><canvas id="v128Canvas"></canvas><div id="v128Legend" class="diagram-legend" hidden></div></div><div class="v128-results-launch"><div><b>3D Analysis Results</b><span id="v128SolveStatus">Not analyzed</span></div><button id="v128ShowResults" class="primary" disabled>Show Analysis Results</button></div><div id="v128LocateBar" class="v128-locatebar" hidden><span id="v128LocateText">Located target</span><button id="v128BackResults">← Back to Results</button></div><div class="statusbar"><span>Integrated 3D workspace • 2D engine protected</span><span>Drag: Rotate • Wheel: Zoom</span></div><div id="v128ResultsModal" class="v128-results-modal" hidden><div class="v128-results-dialog"><div class="v128-results-head"><div><h2>3D Analysis Results</h2><span id="v128ModalStatus">Solved</span></div><button id="v128CloseResults" class="v128-close-results">✕</button></div><div class="tabs v128-modal-tabs"><button class="tab active" data-v128-tab="summary">Summary</button><button class="tab" data-v128-tab="disp">Displacement</button><button class="tab" data-v128-tab="story">Story Response</button><button class="tab" data-v128-tab="storyforces">Story Forces</button><button class="tab" data-v128-tab="slabs">Slab FEM</button><button class="tab" data-v128-tab="foundation">Foundation</button><button class="tab" data-v128-tab="react">Reactions</button><button class="tab" data-v128-tab="forces">Member End Forces</button></div><div id="v128Out" class="result-content v128-modal-out"><div class="empty">Press Analyze 3D to solve the model.</div></div><div class="v128-results-foot">Click a Node or Member row to locate and highlight it in the 3D model.</div></div></div>`;center.appendChild(host);initIntegrated3DV128(host)
 }
 function closeIntegrated3DV128(){if(!integrated3dActiveV128)return;integrated3dActiveV128=false;integrated3dRefreshV128=null;document.querySelector('.workspace')?.classList.remove('v130-3d-workspace');document.querySelector('#integrated3dV128')?.remove();document.querySelectorAll('.v128-hide2d').forEach(x=>x.classList.remove('v128-hide2d'));$('frame3dBtn').textContent='◈ 3D Frame';$('frame3dBtn').classList.remove('active3d');resize();render();updateUI();renderResults()}
 function initIntegrated3DV128(host){
@@ -4041,8 +4096,8 @@ drawMemberLoadsV131();drawMemberLocalAxes();drawForceDiagrams();drawAxisTriad();
 }
  function hideResults(){host.querySelector('#v128ResultsModal').hidden=true}
  function locateResult(type,id){focusTarget={type,id};if(type==='member'){diagramScope='selected';const sc=host.querySelector('#v129DiagramScope');if(sc)sc.value='selected'}if(type==='node'){const n=m3.nodes.find(x=>x.id===id);if(n){m3.view.cx=n.x;m3.view.cy=n.y;m3.view.cz=n.z;m3.view.scale=Math.max(m3.view.scale,65)}}else{const mm=m3.members.find(x=>x.id===id),a=mm&&m3.nodes.find(n=>n.id===mm.i),b=mm&&m3.nodes.find(n=>n.id===mm.j);if(a&&b){m3.view.cx=(a.x+b.x)/2;m3.view.cy=(a.y+b.y)/2;m3.view.cz=(a.z+b.z)/2;const L=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)||1;m3.view.scale=Math.max(35,Math.min(110,240/L))}}hideResults();host.querySelector('#v128LocateText').textContent=(type==='node'?'Node N'+id+' located':'Member M'+id+' display filter • Whole Model solution');host.querySelector('#v128LocateBar').hidden=false;draw()}
- function analyze(){try{const res=solve3DV128();mark3DAnalysisFreshV1451(res);m3.activeResultType='Pattern';m3.activeResultName=res.loadPattern;const audit=res.loadAudit||patternLoadAuditV1372(m3,res.loadPattern);host.querySelector('#v128SolveStatus').textContent=(res.noAppliedLoad?'Solved • NO LOAD • ':'Solved • ')+(m3.nodes.length*6)+' DOF • '+res.loadPattern;host.querySelector('#v128ShowResults').disabled=false;host.querySelector('#v128ModalStatus').textContent=(res.noAppliedLoad?'Solved • NO LOAD • ':'Solved • ')+(m3.nodes.length*6)+' DOF • '+res.loadPattern;focusTarget=m3.members.length?{type:'member',id:m3.members[0].id}:null;diagramScope='selected';host.querySelector('#v129DiagramScope').value='selected';if(focusTarget){host.querySelector('#v128LocateText').textContent='Member M'+focusTarget.id+' selected for diagram';host.querySelector('#v128LocateBar').hidden=false}else host.querySelector('#v128LocateBar').hidden=true;renderTab();draw();toast('V1.47.2.2 solved current regenerated model only • no stale result reuse • Slab FEM + Frame')}catch(e){alert(e.message)}}
- host.querySelector('#v1471Physical').onclick=()=>{physicalMode=true;m3.showLoads=false;host.querySelector('#v1471Physical').classList.add('primary');host.querySelector('#v1471Analysis').classList.remove('primary');host.querySelector('#v128TopStatus').textContent='V1.47.2.2 • MODEL REGENERATION INTEGRITY • SLAB SHELL/PLATE FEM • Whole Building • Beam + Column + Slab + Foundation';draw()};host.querySelector('#v1471Analysis').onclick=()=>{physicalMode=false;host.querySelector('#v1471Analysis').classList.add('primary');host.querySelector('#v1471Physical').classList.remove('primary');host.querySelector('#v128TopStatus').textContent='V1.47.2.1 • ANALYSIS MODEL • Frame + Shell/Plate FEM + Loads + Results';draw()};
+ function analyze(){try{const res=solve3DV128();mark3DAnalysisFreshV1451(res);m3.activeResultType='Pattern';m3.activeResultName=res.loadPattern;const audit=res.loadAudit||patternLoadAuditV1372(m3,res.loadPattern);host.querySelector('#v128SolveStatus').textContent=(res.noAppliedLoad?'Solved • NO LOAD • ':'Solved • ')+(m3.nodes.length*6)+' DOF • '+res.loadPattern;host.querySelector('#v128ShowResults').disabled=false;host.querySelector('#v128ModalStatus').textContent=(res.noAppliedLoad?'Solved • NO LOAD • ':'Solved • ')+(m3.nodes.length*6)+' DOF • '+res.loadPattern;focusTarget=m3.members.length?{type:'member',id:m3.members[0].id}:null;diagramScope='selected';host.querySelector('#v129DiagramScope').value='selected';if(focusTarget){host.querySelector('#v128LocateText').textContent='Member M'+focusTarget.id+' selected for diagram';host.querySelector('#v128LocateBar').hidden=false}else host.querySelector('#v128LocateBar').hidden=true;renderTab();draw();toast('V1.47.2.3 solved • 2x2 condensed slab patch • bending/shear recovery active')}catch(e){alert(e.message)}}
+ host.querySelector('#v1471Physical').onclick=()=>{physicalMode=true;m3.showLoads=false;host.querySelector('#v1471Physical').classList.add('primary');host.querySelector('#v1471Analysis').classList.remove('primary');host.querySelector('#v128TopStatus').textContent='V1.47.2.3 • SLAB MOMENT/SHEAR RECOVERY • 2×2 INTERNAL Q4 PATCH • Whole Building';draw()};host.querySelector('#v1471Analysis').onclick=()=>{physicalMode=false;host.querySelector('#v1471Analysis').classList.add('primary');host.querySelector('#v1471Physical').classList.remove('primary');host.querySelector('#v128TopStatus').textContent='V1.47.2.3 • ANALYSIS MODEL • Frame + Shell/Plate FEM + Loads + Results';draw()};
  host.querySelector('#v128Edit3d').onclick=frame3dCenterV127;host.querySelector('#v130Building3d').onclick=building3dCenterV130;host.querySelector('#v131Loads3d').onclick=loadSystem3dCenterV131;host.querySelector('#v135Diaphragm').onclick=diaphragmCenterV135;host.querySelector('#v136Combos').onclick=loadCombinationCenterV139;host.querySelector('#v140Envelope').onclick=envelopeCenterV140;host.querySelector('#v141RCBeam').onclick=rcBeamDesignCenterV141;host.querySelector('#v138LoadCases').onclick=loadCasesCenterV138;
 const d135=ensureDiaphragmsV135(),a135=Object.values(d135.stories||{}).filter(Boolean).length;
 host.querySelector('#v135Diaphragm').textContent=d135.enabled?`▦ Diaphragm ON (${a135})`:'▦ Diaphragm OFF';
@@ -4052,5 +4107,5 @@ const patSel=host.querySelector('#v131ActivePattern');const syncPatterns=()=>{pa
 
 $('frame3dBtn').onclick=integrated3DWorkspaceV128;
 
-updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.47.2.2 — Full Model Regeneration + Analysis Result Reset Integrity Fix');
+updateEngineeringSelectors();migrateLoads();resize();updateUI();renderResults();updateResultModeButtons();setResultView('model',false);setTool('select');syncScaleUI();initResultsWorkspaceV113();toast('V1.47.2.3 — Slab FEM Bending Moment + Shear Force Recovery Fix');
 })();

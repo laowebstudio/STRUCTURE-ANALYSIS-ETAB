@@ -1,3 +1,12 @@
+# V1.47.2.3 — Slab FEM Bending Moment + Shear Force Recovery Fix
+- Added 2×2 solver-internal Q4 Mindlin bending patch per structural bay.
+- Added static condensation of internal slab bending DOFs to the four frame corner joints.
+- Added post-solve internal-DOF back-substitution for slab force recovery.
+- Fixed symmetric gravity case where w was non-zero but M11/M22/M12/V13/V23 could recover as zero.
+- Added selective shear integration with small stabilization against hourglass modes.
+- Slab result UI now identifies the 2×2 internal recovery mesh.
+- Preserved V1.47.2.2 full regeneration/result reset integrity and V1.47.2.1 easy positive gravity input.
+
 # V1.47.2.2 — Full Model Regeneration + Analysis Result Reset Integrity Fix
 
 - Added complete 3D model + analysis result reset on replacement regeneration.

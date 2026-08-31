@@ -1,0 +1,19 @@
+SAPUDOM Structure Analysis V1.47.2.3
+Slab FEM Bending Moment + Shear Force Recovery Fix
+
+Purpose
+- Fix the T2 condition where a symmetric 1-bay slab could deflect while M11/M22/M12 and V13/V23 recovered as zero.
+
+Changes
+- Replaced one-Q4-per-bay bending recovery with a solver-internal 2x2 Q4 Mindlin patch.
+- Internal slab bending DOFs are statically condensed to the existing four structural corner joints, preserving Beam/Column connectivity and the whole-building global matrix interface.
+- Added selective transverse-shear integration with small stabilization to suppress hourglass modes while limiting shear locking.
+- After the global solve, internal slab DOFs are back-substituted and plate moments/shears are recovered from sub-element fields.
+- Slab FEM reports signed envelope M11, M22, M12, V13 and V23 and center deflection w.
+- V1.47.2.2 full-regeneration/reset integrity remains active.
+
+Verification status
+- JavaScript syntax: PASS.
+- Condensed slab gravity vector benchmark 4m x 4m, total DL 8.10 kN/m2: 129.60 kN recovered at four structural corners: PASS.
+- Standalone fixed-corner recovery benchmark now gives non-zero M/V under symmetric gravity: PASS for regression purpose.
+- This version is still a development FEM and must pass mesh-convergence/reference-solution benchmarks before RC slab design or construction use.
