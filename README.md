@@ -1,3 +1,10 @@
+# SAPUDOM Structure Analysis V1.47.2.2 — Full Model Regeneration + Analysis Result Reset Integrity Fix
+
+This release fixes stale 3D analysis data after regenerating a building with **Replace current 3D geometry**. Geometry, IDs, selections and all derived analysis/design result caches are reset before the new model is built. The Slab Shell/Plate FEM and Easy Slab Input workflow from V1.47.2.1 remain in place.
+
+## Integrity guarantee
+After regeneration, Analysis Results are unavailable until **Analyze 3D** is run again. Story Forces, Reactions, Member End Forces, Slab FEM and Foundation results then come only from the current regenerated model.
+
 # SAPUDOM Structure Analysis V1.47.2.1
 ## Easy Slab Input + Validation Fix
 

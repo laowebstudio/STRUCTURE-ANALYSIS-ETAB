@@ -1,0 +1,25 @@
+SAPUDOM Structure Analysis V1.47.2.2
+Full Model Regeneration + Analysis Result Reset Integrity Fix
+
+Purpose
+- Prevent stale analysis results from a previous 3D building from appearing after Replace Current 3D Geometry.
+- Ensure generated model IDs, stories, slabs, footings and all result tables correspond to the current model only.
+
+Changes
+- Added full model/analysis reset before replacement regeneration.
+- Resets nodes, members, slabs, footings, next IDs, selection state and current results.
+- Clears Load Case Results, Combination Results, Envelope, Whole-Model Design Envelope and RC design result cache.
+- Invalidates analysis revision and records regeneration revision/time.
+- Added geometry integrity validation before solve.
+- Integrated 3D workspace now returns to Not analyzed and disables stale Show Analysis Results whenever model geometry changes.
+- New generated model IDs restart from N1 / M1 when Replace Current 3D Geometry is enabled.
+
+T2 regression target
+1-Story / 1x1 Bay:
+- 8 nodes
+- 4 columns + 4 beams
+- 1 slab
+- 4 footings
+- 48 frame DOF
+- Story Results must contain Story 1 only
+- Reactions and Member End Forces must use only current-model IDs.

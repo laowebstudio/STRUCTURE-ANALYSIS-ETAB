@@ -1,3 +1,12 @@
+# V1.47.2.2 — Full Model Regeneration + Analysis Result Reset Integrity Fix
+
+- Added complete 3D model + analysis result reset on replacement regeneration.
+- Clears stale Story/Reaction/Member/Slab result state and derived load-case/combination/envelope caches.
+- Resets Node/Member IDs to 1 for a replacement model.
+- Added pre-solve geometry integrity validation.
+- Integrated 3D Results UI now disables stale results immediately after geometry changes.
+- Preserves V1.47.2.1 Easy Slab Input and V1.47.2 Q4 shell/plate FEM behavior.
+
 ## V1.47.2 — Slab Shell/Plate Analysis Engine
 - Added solver-linked Q4 shell/plate slab stiffness.
 - Added membrane + Mindlin bending/shear formulation.
